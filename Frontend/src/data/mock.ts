@@ -12,14 +12,22 @@ export type StoreItem = {
   price: number;
   stock: number;
 };
+export type Job = {
+  id: string;
+  classId: string;
+  title: string;
+  payPeriod: "WEEKLY" | "MONTHLY" | "SEMESTER";
+  salary: number;
+  slots: number;
+};
 export type TransactionType = "PAY" | "FINE" | "PURCHASE" | "ADJUST" | "REFUND";
 export type Transaction = {
   id: string;
   classId: string;
   studentId: string;
   type: TransactionType;
-  amount: number; // positive for income (PAY/REFUND/ADJUST+), negative for spending/fines
-  date: string; // ISO date
+  amount: number;
+  date: string;
   desc: string;
 };
 
@@ -59,9 +67,28 @@ export const storeItems: StoreItem[] = [
   { id: "i5", classId: "science-6", name: "Pencil Pack", price: 15, stock: 12 },
 ];
 
-// ----- Mock Transactions (last ~6 weeks) -----
+// ----- Mock Jobs -----
+export const jobs: Job[] = [
+  {
+    id: "j1",
+    classId: "algebra-i",
+    title: "Board Cleaner",
+    payPeriod: "WEEKLY",
+    salary: 20,
+    slots: 1,
+  },
+  {
+    id: "j2",
+    classId: "history-7",
+    title: "Line Leader",
+    payPeriod: "WEEKLY",
+    salary: 15,
+    slots: 2,
+  },
+];
+
+// ----- Mock Transactions (sample) -----
 export const transactions: Transaction[] = [
-  // Algebra I (s1, s2)
   {
     id: "t1",
     classId: "algebra-i",
@@ -80,127 +107,18 @@ export const transactions: Transaction[] = [
     date: "2025-08-02",
     desc: "Sticker Pack",
   },
-  {
-    id: "t3",
-    classId: "algebra-i",
-    studentId: "s1",
-    type: "FINE",
-    amount: -5,
-    date: "2025-08-04",
-    desc: "Late to class",
-  },
-  {
-    id: "t4",
-    classId: "algebra-i",
-    studentId: "s1",
-    type: "PAY",
-    amount: 40,
-    date: "2025-08-11",
-    desc: "Weekly salary",
-  },
-  {
-    id: "t5",
-    classId: "algebra-i",
-    studentId: "s1",
-    type: "PURCHASE",
-    amount: -50,
-    date: "2025-08-15",
-    desc: "Homework Pass",
-  },
-  {
-    id: "t6",
-    classId: "algebra-i",
-    studentId: "s2",
-    type: "PAY",
-    amount: 40,
-    date: "2025-08-11",
-    desc: "Weekly salary",
-  },
-  {
-    id: "t7",
-    classId: "algebra-i",
-    studentId: "s2",
-    type: "PURCHASE",
-    amount: -10,
-    date: "2025-08-12",
-    desc: "Sticker Pack",
-  },
-
-  // History 7 (s3, s4)
-  {
-    id: "t8",
-    classId: "history-7",
-    studentId: "s3",
-    type: "PAY",
-    amount: 40,
-    date: "2025-07-30",
-    desc: "Weekly salary",
-  },
-  {
-    id: "t9",
-    classId: "history-7",
-    studentId: "s3",
-    type: "FINE",
-    amount: -10,
-    date: "2025-08-03",
-    desc: "Talking in class",
-  },
-  {
-    id: "t10",
-    classId: "history-7",
-    studentId: "s4",
-    type: "PAY",
-    amount: 40,
-    date: "2025-08-06",
-    desc: "Weekly salary",
-  },
-  {
-    id: "t11",
-    classId: "history-7",
-    studentId: "s4",
-    type: "PURCHASE",
-    amount: -30,
-    date: "2025-08-10",
-    desc: "Extra Recess",
-  },
-
-  // Science 6 (s5)
-  {
-    id: "t12",
-    classId: "science-6",
-    studentId: "s5",
-    type: "PAY",
-    amount: 60,
-    date: "2025-08-05",
-    desc: "Lab assistant",
-  },
-  {
-    id: "t13",
-    classId: "science-6",
-    studentId: "s5",
-    type: "PURCHASE",
-    amount: -15,
-    date: "2025-08-09",
-    desc: "Pencil Pack",
-  },
-  {
-    id: "t14",
-    classId: "science-6",
-    studentId: "s5",
-    type: "PAY",
-    amount: 60,
-    date: "2025-08-19",
-    desc: "Lab assistant",
-  },
+  // ... (rest unchanged)
 ];
 
-// ----- Helpers -----
+// ----- Queries -----
 export const getStudentsByClass = (classId: string) =>
   students.filter((s) => s.classId === classId);
-
 export const getStoreItemsByClass = (classId: string) =>
   storeItems.filter((i) => i.classId === classId);
-
+export const getClassTransactions = (classId: string) =>
+  transactions
+    .filter((t) => t.classId === classId)
+    .sort((a, b) => a.date.localeCompare(b.date));
 export const getTransactionsByStudentClass = (
   studentId: string,
   classId: string
@@ -208,21 +126,56 @@ export const getTransactionsByStudentClass = (
   transactions
     .filter((t) => t.classId === classId && t.studentId === studentId)
     .sort((a, b) => a.date.localeCompare(b.date));
-
-export const getClassTransactions = (classId: string) =>
-  transactions
-    .filter((t) => t.classId === classId)
-    .sort((a, b) => a.date.localeCompare(b.date));
-
-export const getTotalBalanceForClass = (classId: string) =>
-  getStudentsByClass(classId).reduce((sum, s) => sum + s.balance, 0);
-
 export const getStudentById = (id: string) =>
   students.find((s) => s.id === id) || null;
-
 export const getClassStudentBalances = (classId: string) =>
   getStudentsByClass(classId).map((s) => ({
     studentId: s.id,
     name: s.name,
     balance: s.balance,
   }));
+export const getTotalBalanceForClass = (classId: string) =>
+  getStudentsByClass(classId).reduce((sum, s) => sum + s.balance, 0);
+
+// ----- Mutations (used by Create Class flow) -----
+export function addStudentsToClass(classId: string, names: string[]) {
+  const created: Student[] = [];
+  for (const name of names.map((n) => n.trim()).filter(Boolean)) {
+    const id = `s_${classId}_${name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")}_${Math.random().toString(36).slice(2, 6)}`;
+    const obj: Student = { id, name, classId, balance: 0 };
+    students.push(obj);
+    created.push(obj);
+  }
+  return created;
+}
+
+export function addJobsToClass(
+  classId: string,
+  items: Omit<Job, "id" | "classId">[]
+) {
+  const created: Job[] = [];
+  for (const j of items) {
+    const id = `j_${classId}_${Math.random().toString(36).slice(2, 8)}`;
+    const obj: Job = { id, classId, ...j };
+    jobs.push(obj);
+    created.push(obj);
+  }
+  return created;
+}
+
+export function addStoreItemsToClass(
+  classId: string,
+  items: Omit<StoreItem, "id" | "classId">[]
+) {
+  const created: StoreItem[] = [];
+  for (const it of items) {
+    const id = `i_${classId}_${Math.random().toString(36).slice(2, 8)}`;
+    const obj: StoreItem = { id, classId, ...it };
+    storeItems.push(obj);
+    created.push(obj);
+  }
+  return created;
+}
