@@ -6,6 +6,8 @@ export type ClassSummary = {
   id: string;
   name: string;
   term?: string;
+  room?: string;
+  defaultCurrency?: string;
 };
 
 type ClassContextState = {
@@ -14,9 +16,9 @@ type ClassContextState = {
   currentClassId: string | null;
   setCurrentClassId: (id: string) => void;
   setRole: (r: Role) => void;
-  /** For demo: which student is “me” when role === STUDENT */
   currentStudentId: string | null;
   setCurrentStudentId: (id: string) => void;
+  addClass: (c: ClassSummary) => string; // returns final id (unique)
 };
 
 const ClassContext = createContext<ClassContextState | null>(null);
@@ -33,11 +35,28 @@ export function ClassProvider({
   children,
   initialRole = "TEACHER",
   initialClasses = [
-    { id: "algebra-i", name: "Algebra I", term: "Fall" },
-    { id: "history-7", name: "History 7", term: "Fall" },
-    { id: "science-6", name: "Science 6", term: "Fall" },
+    {
+      id: "algebra-i",
+      name: "Algebra I",
+      term: "Fall",
+      room: "201",
+      defaultCurrency: "CE$",
+    },
+    {
+      id: "history-7",
+      name: "History 7",
+      term: "Fall",
+      room: "105",
+      defaultCurrency: "CE$",
+    },
+    {
+      id: "science-6",
+      name: "Science 6",
+      term: "Fall",
+      room: "Lab A",
+      defaultCurrency: "CE$",
+    },
   ],
-  /** For demo when role === STUDENT */
   initialStudentId = "s1",
 }: {
   children: React.ReactNode;
@@ -46,13 +65,27 @@ export function ClassProvider({
   initialStudentId?: string;
 }) {
   const [role, setRole] = useState<Role>(initialRole);
-  const [classes] = useState<ClassSummary[]>(initialClasses);
+  const [classes, setClasses] = useState<ClassSummary[]>(initialClasses);
   const [currentClassId, setCurrentClassId] = useState<string | null>(
     initialClasses[0]?.id ?? null
   );
   const [currentStudentId, setCurrentStudentId] = useState<string | null>(
     initialStudentId
   );
+
+  const addClass = (c: ClassSummary) => {
+    // ensure unique id
+    let base = c.id;
+    let id = base;
+    let i = 2;
+    const ids = new Set(classes.map((x) => x.id));
+    while (ids.has(id)) {
+      id = `${base}-${i++}`;
+    }
+    const finalClass = { ...c, id };
+    setClasses((prev) => [...prev, finalClass]);
+    return id;
+  };
 
   const value = useMemo(
     () => ({
@@ -63,6 +96,7 @@ export function ClassProvider({
       setRole,
       currentStudentId,
       setCurrentStudentId,
+      addClass,
     }),
     [role, classes, currentClassId, currentStudentId]
   );
