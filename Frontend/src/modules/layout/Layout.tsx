@@ -8,7 +8,8 @@ import { cn } from "@/lib/utils";
 
 export function Layout() {
   const [open, setOpen] = React.useState(false);
-  const { role, setRole } = useClassContext();
+  const { role, setRole, currentStudentId, setCurrentStudentId } =
+    useClassContext();
   const compact = role === "STUDENT";
 
   return (
@@ -89,6 +90,21 @@ export function Layout() {
               <option value="TEACHER">Teacher</option>
               <option value="STUDENT">Student</option>
             </select>
+            {role === "STUDENT" && (
+              <select
+                value={currentStudentId ?? ""}
+                onChange={(e) => setCurrentStudentId(e.target.value)}
+                className="rounded-md border px-2 py-1 text-sm"
+                aria-label="Pick demo student"
+              >
+                {/* keep in sync with mock student IDs present in chosen class */}
+                <option value="s1">Ava M.</option>
+                <option value="s2">Liam K.</option>
+                <option value="s3">Noah S.</option>
+                <option value="s4">Emma R.</option>
+                <option value="s5">Olivia C.</option>
+              </select>
+            )}
           </div>
         </div>
       </header>
