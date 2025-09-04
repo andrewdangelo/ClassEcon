@@ -19,7 +19,7 @@ async function main() {
   app.use(
     "/graphql",
     cors({ origin: ORIGIN, credentials: false }),
-    express.json(), // ✅ built-in parser in Express 4.16+
+    express.json(), 
     expressMiddleware(server, { context: async () => ({ prisma }) })
   )
 

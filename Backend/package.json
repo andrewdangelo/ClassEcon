@@ -10,7 +10,9 @@
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:seed": "tsx prisma/seed.ts",
-    "prisma:reset": "pnpm prisma:generate && pnpm prisma:push && pnpm prisma:seed"
+    "prisma:reset": "pnpm prisma:generate && pnpm prisma:push && pnpm prisma:seed",
+    "seed:mock": "tsx prisma/seed.mock.ts"
+
   },
   "keywords": [],
   "author": "",
