@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum TransactionType {
+  PAY
+  FINE
+  PURCHASE
+  ADJUST
+  REFUND
+}
+
+enum PayPeriod {
+  WEEKLY
+  MONTHLY
+  SEMESTER
+}
+
+enum PayRequestStatus {
+  SUBMITTED
+  APPROVED
+  PAID
+  REBUKED
+  DENIED
+}
+
+model Class {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  slug            String   @unique
+  name            String
+  term            String?
+  room            String?
+  defaultCurrency String   @default("CE$")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  students     Student[]
+  storeItems   StoreItem[]
+  jobs         Job[]
+  transactions Transaction[]
+  payRequests  PayRequest[]
+  reasons      ClassReason[]
+}
+
+model ClassReason {
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  label   String
+  classId String @db.ObjectId
+  class   Class  @relation(fields: [classId], references: [id])
+
+  @@unique([classId, label])
+}
+
+model Student {
+  id       String        @id @default(auto()) @map("_id") @db.ObjectId
+  name     String
+  balance  Int           @default(0)
+  classId  String        @db.ObjectId
+  class    Class         @relation(fields: [classId], references: [id])
+  requests PayRequest[]
+  txns     Transaction[]
+}
+
+model StoreItem {
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  name    String
+  price   Int
+  stock   Int
+  classId String @db.ObjectId
+  class   Class  @relation(fields: [classId], references: [id])
+}
+
+model Job {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  payPeriod PayPeriod
+  salary    Int
+  slots     Int
+  classId   String    @db.ObjectId
+  class     Class     @relation(fields: [classId], references: [id])
+}
+
+model Transaction {
+  id        String          @id @default(auto()) @map("_id") @db.ObjectId
+  type      TransactionType
+  amount    Int
+  date      DateTime        @default(now())
+  desc      String
+  classId   String          @db.ObjectId
+  studentId String          @db.ObjectId
+  class     Class           @relation(fields: [classId], references: [id])
+  student   Student         @relation(fields: [studentId], references: [id])
+}
+
+model PayRequest {
+  id             String           @id @default(auto()) @map("_id") @db.ObjectId
+  amount         Int
+  reason         String
+  justification  String
+  status         PayRequestStatus @default(SUBMITTED)
+  teacherComment String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  classId   String  @db.ObjectId
+  studentId String  @db.ObjectId
+  class     Class   @relation(fields: [classId], references: [id])
+  student   Student @relation(fields: [studentId], references: [id])
+}

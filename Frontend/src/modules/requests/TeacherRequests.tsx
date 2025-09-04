@@ -1,158 +1,206 @@
-import * as React from "react"
-import { useParams } from "react-router-dom"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { useToast } from "@/components/ui/toast"
-import { StatusPill } from "@/components/StatusPill/StatusPill"
+import { useState } from "react";
+import { useQuery, useMutation } from "@apollo/client/react";
+import { PAY_REQUESTS_BY_CLASS } from "@/graphql/queries/requests";
 import {
-  apiApproveRequest,
-  apiDenyRequest,
-  apiGetRequestsByClass,
-  apiRebukeRequest,
-  apiSubmitPayment,
-} from "@/api/requests"
-import { getStudentsByClass } from "@/data/mock"
-import { useClassContext } from "@/context/ClassContext"
+  APPROVE_PAY_REQUEST,
+  SUBMIT_PAY_REQUEST,
+  REBUKE_PAY_REQUEST,
+  DENY_PAY_REQUEST,
+} from "@/graphql/mutations/payRequests";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "@/components/ui/use-toast";
 
-export default function TeacherRequests() {
-  const { classId } = useParams<{ classId: string }>()
-  const { push } = useToast()
-  const { role } = useClassContext()
+type Status =
+  | "SUBMITTED"
+  | "APPROVED"
+  | "PAID"
+  | "REBUKED"
+  | "DENIED"
+  | undefined;
 
-  const [loading, setLoading] = React.useState(true)
-  const [list, setList] = React.useState<any[]>([])
-  const [q, setQ] = React.useState("")
-  const [notes, setNotes] = React.useState<Record<string, string>>({})
+export default function TeacherRequests({ classId }: { classId: string }) {
+  const [filterStatus, setFilterStatus] = useState<Status>(undefined);
+  const [comment, setComment] = useState<string>("");
 
-  const [studentNames, setStudentNames] = React.useState<Record<string, string>>({})
+  const { data, loading, error, refetch } = useQuery(PAY_REQUESTS_BY_CLASS, {
+    variables: { classId, status: filterStatus },
+    fetchPolicy: "cache-and-network",
+  });
 
-  React.useEffect(() => {
-    let mounted = true
-    async function load() {
-      if (!classId) return
-      try {
-        const [reqs, studs] = await Promise.all([apiGetRequestsByClass(classId), Promise.resolve(getStudentsByClass(classId))])
-        if (!mounted) return
-        setList(reqs)
-        setStudentNames(Object.fromEntries(studs.map((s) => [s.id, s.name])))
-      } catch (e: any) {
-        push({ title: "Failed to load", description: e.message, variant: "destructive" })
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
-    return () => { mounted = false }
-  }, [classId, push])
+  const [approve] = useMutation(APPROVE_PAY_REQUEST, {
+    onCompleted: () => {
+      toast({ title: "Approved" });
+      refetch();
+    },
+    onError: (e) => toast({ title: e.message, variant: "destructive" }),
+  });
+  const [submit] = useMutation(SUBMIT_PAY_REQUEST, {
+    onCompleted: () => {
+      toast({ title: "Paid" });
+      refetch();
+    },
+    onError: (e) => toast({ title: e.message, variant: "destructive" }),
+  });
+  const [rebuke] = useMutation(REBUKE_PAY_REQUEST, {
+    onCompleted: () => {
+      toast({ title: "Rebuked" });
+      refetch();
+    },
+    onError: (e) => toast({ title: e.message, variant: "destructive" }),
+  });
+  const [deny] = useMutation(DENY_PAY_REQUEST, {
+    onCompleted: () => {
+      toast({ title: "Denied" });
+      refetch();
+    },
+    onError: (e) => toast({ title: e.message, variant: "destructive" }),
+  });
 
-  if (!classId) return <div>Missing class id.</div>
-  if (role !== "TEACHER") return <div className="text-sm text-muted-foreground">Teachers only.</div>
-  if (loading) return <div className="text-sm text-muted-foreground">Loading…</div>
+  if (loading)
+    return (
+      <div className="text-sm text-muted-foreground">Loading requests…</div>
+    );
+  if (error)
+    return (
+      <div className="text-sm text-destructive">Error: {error.message}</div>
+    );
 
-  const filtered = list.filter((r) =>
-    (studentNames[r.studentId] || "").toLowerCase().includes(q.toLowerCase()) ||
-    r.reason.toLowerCase().includes(q.toLowerCase())
-  )
-
-  const update = (updated: any) => setList((prev) => prev.map((r) => (r.id === updated.id ? updated : r)))
-
-  const approve = async (id: string) => {
-    try {
-      const updated = await apiApproveRequest(id, notes[id])
-      if (updated) {
-        update(updated)
-        push({ title: "Approved", description: "Marked as approved" })
-      }
-    } catch (e: any) {
-      push({ title: "Action failed", description: e.message, variant: "destructive" })
-    }
-  }
-
-  const pay = async (id: string) => {
-    try {
-      const updated = await apiSubmitPayment(id)
-      if (updated) {
-        update(updated)
-        push({ title: "Payment submitted", description: "Student balance updated" })
-      }
-    } catch (e: any) {
-      push({ title: "Payment failed", description: e.message, variant: "destructive" })
-    }
-  }
-
-  const rebuke = async (id: string) => {
-    const msg = notes[id]?.trim()
-    if (!msg) return push({ title: "Comment required", description: "Provide guidance for resubmission.", variant: "destructive" })
-    try {
-      const updated = await apiRebukeRequest(id, msg)
-      if (updated) {
-        update(updated)
-        push({ title: "Rebuked", description: "Sent back to student for resubmission" })
-      }
-    } catch (e: any) {
-      push({ title: "Action failed", description: e.message, variant: "destructive" })
-    }
-  }
-
-  const deny = async (id: string) => {
-    try {
-      const updated = await apiDenyRequest(id, notes[id])
-      if (updated) {
-        update(updated)
-        push({ title: "Denied", description: "Request denied" })
-      }
-    } catch (e: any) {
-      push({ title: "Action failed", description: e.message, variant: "destructive" })
-    }
-  }
+  const rows = data?.payRequestsByClass ?? [];
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Payment Requests</h2>
-        <Input placeholder="Filter by student or reason…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-sm" />
-      </div>
-
-      {filtered.length === 0 ? (
-        <div className="text-sm text-muted-foreground">No requests yet.</div>
-      ) : (
-        <div className="grid gap-4">
-          {filtered.map((r) => (
-            <Card key={r.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">
-                    {studentNames[r.studentId] ?? r.studentId} • {r.reason} — <span className="font-semibold">CE$ {r.amount}</span>
-                  </CardTitle>
-                  <StatusPill status={r.status} />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="text-sm"><span className="font-medium">Justification:</span> {r.justification}</div>
-                {r.teacherComment && <div className="text-sm"><span className="font-medium">Your last comment:</span> {r.teacherComment}</div>}
-
-                <div>
-                  <label className="mb-1 block text-sm font-medium">Teacher comment (optional, required for rebuke)</label>
-                  <Textarea
-                    placeholder="Feedback or reason…"
-                    value={notes[r.id] ?? ""}
-                    onChange={(e) => setNotes((prev) => ({ ...prev, [r.id]: e.target.value }))}
-                  />
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <Button onClick={() => approve(r.id)} disabled={r.status === "PAID" || r.status === "DENIED"}>Approve</Button>
-                  <Button onClick={() => pay(r.id)} disabled={r.status === "PAID"}>Submit (Pay)</Button>
-                  <Button variant="secondary" onClick={() => rebuke(r.id)} disabled={r.status === "PAID" || r.status === "DENIED"}>Rebuke</Button>
-                  <Button variant="secondary" onClick={() => deny(r.id)} disabled={r.status === "PAID"}>Deny</Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-4">
+        <CardTitle>Class requests</CardTitle>
+        <div className="flex items-center gap-2">
+          <Select
+            value={filterStatus}
+            onValueChange={(v) => setFilterStatus((v || undefined) as Status)}
+          >
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All</SelectItem>
+              <SelectItem value="SUBMITTED">Submitted</SelectItem>
+              <SelectItem value="APPROVED">Approved</SelectItem>
+              <SelectItem value="PAID">Paid</SelectItem>
+              <SelectItem value="REBUKED">Rebuked</SelectItem>
+              <SelectItem value="DENIED">Denied</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" onClick={() => refetch()}>
+            Refresh
+          </Button>
         </div>
-      )}
-    </div>
-  )
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex gap-2">
+          <Input
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="Optional teacher comment…"
+          />
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left border-b">
+                <th className="py-2 pr-4">Student</th>
+                <th className="py-2 pr-4">Reason</th>
+                <th className="py-2 pr-4">Amount</th>
+                <th className="py-2 pr-4">Status</th>
+                <th className="py-2 pr-4">When</th>
+                <th className="py-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r: any) => (
+                <tr key={r.id} className="border-b last:border-0">
+                  <td className="py-2 pr-4">{r.student?.name ?? "—"}</td>
+                  <td className="py-2 pr-4">{r.reason}</td>
+                  <td className="py-2 pr-4">${r.amount}</td>
+                  <td className="py-2 pr-4">
+                    <Badge variant="outline">{r.status}</Badge>
+                  </td>
+                  <td className="py-2 pr-4">
+                    {new Date(r.createdAt).toLocaleString()}
+                  </td>
+                  <td className="py-2 flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() =>
+                        approve({
+                          variables: { id: r.id, comment: comment || null },
+                        })
+                      }
+                      disabled={r.status !== "SUBMITTED"}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => submit({ variables: { id: r.id } })}
+                      disabled={
+                        !(r.status === "APPROVED" || r.status === "SUBMITTED")
+                      }
+                    >
+                      Pay
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        rebuke({
+                          variables: {
+                            id: r.id,
+                            comment: comment || "Needs more detail",
+                          },
+                        })
+                      }
+                      disabled={r.status === "PAID" || r.status === "DENIED"}
+                    >
+                      Rebuke
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() =>
+                        deny({
+                          variables: { id: r.id, comment: comment || null },
+                        })
+                      }
+                      disabled={r.status === "PAID"}
+                    >
+                      Deny
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+              {rows.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="py-6 text-center text-muted-foreground"
+                  >
+                    No requests.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
