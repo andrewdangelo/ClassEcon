@@ -1,37 +1,76 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useClassContext } from "@/context/ClassContext"
-import { getStudentById, getTransactionsByStudentClass } from "@/data/mock"
-import { formatCurrency, formatDate } from "@/lib/format"
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-import * as React from "react"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useClassContext } from "@/context/ClassContext";
+import { getStudentById, getTransactionsByStudentClass } from "@/data/mock";
+import { formatCurrency, formatDate } from "@/lib/format";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { Link, useParams } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import * as React from "react";
 
 /** Build a running balance series from transactions */
-function buildBalanceSeries(startBalance: number, txns: { date: string; amount: number }[]) {
-  let running = startBalance
+function buildBalanceSeries(
+  startBalance: number,
+  txns: { date: string; amount: number }[]
+) {
+  let running = startBalance;
   // Start from earliest → compute balance after each txn
-  const sorted = [...txns].sort((a, b) => a.date.localeCompare(b.date))
+  const sorted = [...txns].sort((a, b) => a.date.localeCompare(b.date));
   const series = sorted.map((t) => {
-    running += t.amount
-    return { date: t.date, balance: running }
-  })
+    running += t.amount;
+    return { date: t.date, balance: running };
+  });
   // If no txns, keep a flat point at start
-  if (series.length === 0) return [{ date: new Date().toISOString().slice(0,10), balance: startBalance }]
-  return series
+  if (series.length === 0)
+    return [
+      { date: new Date().toISOString().slice(0, 10), balance: startBalance },
+    ];
+  return series;
 }
 
 export function StudentClassOverview({ classId }: { classId: string }) {
-  const { currentStudentId } = useClassContext()
-  const student = currentStudentId ? getStudentById(currentStudentId) : null
+  const { currentStudentId } = useClassContext();
+  const { classId: cid } = useParams<{ classId: string }>();
+
+  const student = currentStudentId ? getStudentById(currentStudentId) : null;
   if (!student || student.classId !== classId) {
-    return <div>This demo assumes the current student belongs to this class.</div>
+    return (
+      <div>This demo assumes the current student belongs to this class.</div>
+    );
   }
 
-  const txns = getTransactionsByStudentClass(student.id, classId)
-  const chartData = buildBalanceSeries(0, txns.map((t) => ({ date: t.date, amount: t.amount })))
+  const txns = getTransactionsByStudentClass(student.id, classId);
+  const chartData = buildBalanceSeries(
+    0,
+    txns.map((t) => ({ date: t.date, amount: t.amount }))
+  );
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold">My Class Overview — {student.name}</h2>
+      <h2 className="text-xl font-semibold">
+        My Class Overview — {student.name}
+      </h2>
+
+      {cid && (
+        <div className="flex justify-end">
+          <Link to={`/classes/${cid}/request-payment`}>
+            <Button variant="secondary">Request One-time Payment</Button>
+          </Link>
+        </div>
+      )}
 
       <div className="grid gap-6 md:grid-cols-3">
         <Card>
@@ -40,7 +79,9 @@ export function StudentClassOverview({ classId }: { classId: string }) {
             <CardDescription>Latest available</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{formatCurrency(student.balance)}</div>
+            <div className="text-3xl font-bold">
+              {formatCurrency(student.balance)}
+            </div>
           </CardContent>
         </Card>
 
@@ -85,7 +126,13 @@ export function StudentClassOverview({ classId }: { classId: string }) {
               <XAxis dataKey="date" />
               <YAxis />
               <Tooltip />
-              <Area type="monotone" dataKey="balance" strokeWidth={2} fillOpacity={1} fill="url(#bal)" />
+              <Area
+                type="monotone"
+                dataKey="balance"
+                strokeWidth={2}
+                fillOpacity={1}
+                fill="url(#bal)"
+              />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>
@@ -107,25 +154,37 @@ export function StudentClassOverview({ classId }: { classId: string }) {
               </tr>
             </thead>
             <tbody>
-              {txns.slice(-10).reverse().map((t) => (
-                <tr key={t.id} className="border-b last:border-0">
-                  <td className="py-2 pr-4">{formatDate(t.date)}</td>
-                  <td className="py-2 pr-4">{t.type}</td>
-                  <td className="py-2 pr-4">{t.desc}</td>
-                  <td className="py-2 text-right">
-                    <span className={t.amount < 0 ? "text-destructive" : "text-emerald-600"}>
-                      {t.amount < 0 ? "−" : "+"}{formatCurrency(Math.abs(t.amount))}
-                    </span>
+              {txns
+                .slice(-10)
+                .reverse()
+                .map((t) => (
+                  <tr key={t.id} className="border-b last:border-0">
+                    <td className="py-2 pr-4">{formatDate(t.date)}</td>
+                    <td className="py-2 pr-4">{t.type}</td>
+                    <td className="py-2 pr-4">{t.desc}</td>
+                    <td className="py-2 text-right">
+                      <span
+                        className={
+                          t.amount < 0 ? "text-destructive" : "text-emerald-600"
+                        }
+                      >
+                        {t.amount < 0 ? "−" : "+"}
+                        {formatCurrency(Math.abs(t.amount))}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              {txns.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="py-4 text-muted-foreground">
+                    No transactions yet.
                   </td>
                 </tr>
-              ))}
-              {txns.length === 0 && (
-                <tr><td colSpan={4} className="py-4 text-muted-foreground">No transactions yet.</td></tr>
               )}
             </tbody>
           </table>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

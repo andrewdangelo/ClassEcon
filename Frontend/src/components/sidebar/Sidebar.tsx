@@ -3,7 +3,13 @@ import { NavLink } from "react-router-dom";
 import { ClassSwitcher } from "./ClassSwitcher";
 import { useClassContext, Role } from "@/context/ClassContext";
 import { cn } from "@/lib/utils";
-import { BookOpen, GraduationCap, ShoppingBag, Users } from "lucide-react";
+import {
+  BookOpen,
+  GraduationCap,
+  ShoppingBag,
+  Users,
+  Inbox,
+} from "lucide-react";
 
 type NavItem = { to: string; label: string; icon: any; roles: Role[] };
 
@@ -20,13 +26,14 @@ const NAV_ITEMS: NavItem[] = [
     icon: GraduationCap,
     roles: ["TEACHER", "STUDENT"],
   },
-  { to: "/students", label: "Students", icon: Users, roles: ["TEACHER"] }, // admin-only
+  { to: "/students", label: "Students", icon: Users, roles: ["TEACHER"] },
   {
     to: "/store",
     label: "Store",
     icon: ShoppingBag,
     roles: ["TEACHER", "STUDENT"],
   },
+  { to: "/requests", label: "Requests", icon: Inbox, roles: ["TEACHER"] }, // <-- NEW
 ];
 
 export function Sidebar({

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/toast"
-import { StatusPill } from "@/components/StatusPill"
+import { StatusPill } from "@/components/StatusPill/StatusPill"
 import { apiCreatePayRequest, apiGetReasons, apiGetRequestsByStudent, apiResubmitRequest } from "@/api/requests"
 
 export default function StudentRequestPayment() {

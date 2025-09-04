@@ -14,6 +14,8 @@ import { ToastProvider } from "@/components/ui/toast";
 import { CartProvider } from "@/context/CartContext";
 import StudentRequestPayment from "./modules/requests/StudentRequestPayment"
 import TeacherRequests from "./modules/requests/TeacherRequests"
+import TeacherRequestsAll from "./modules/requests/TeacherRequestsAll"
+
 
 const router = createBrowserRouter([
   {
@@ -26,6 +28,7 @@ const router = createBrowserRouter([
       { path: "classes/:classId", element: <ClassOverview /> },
       { path: "students", element: <Students /> },
       { path: "store", element: <Store /> },
+      { path: "requests", element: <TeacherRequestsAll /> },
       {
         path: "classes/:classId/request-payment",
         element: <StudentRequestPayment />,
