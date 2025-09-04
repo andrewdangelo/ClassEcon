@@ -1,23 +1,44 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { getClassStudentBalances, getClassTransactions } from "@/data/mock"
-import { formatCurrency, formatDate } from "@/lib/format"
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { getClassStudentBalances, getClassTransactions } from "@/data/mock";
+import { formatCurrency, formatDate } from "@/lib/format";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 export function TeacherClassOverview({ classId }: { classId: string }) {
-  const balances = getClassStudentBalances(classId)
-  const txns = getClassTransactions(classId)
+  const balances = getClassStudentBalances(classId);
+  const txns = getClassTransactions(classId);
 
-  const totalBalance = balances.reduce((s, b) => s + b.balance, 0)
-  const studentCount = balances.length
+  const totalBalance = balances.reduce((s, b) => s + b.balance, 0);
+  const studentCount = balances.length;
 
   const top5 = [...balances]
     .sort((a, b) => b.balance - a.balance)
     .slice(0, 5)
-    .map((b) => ({ name: b.name, balance: b.balance }))
+    .map((b) => ({ name: b.name, balance: b.balance }));
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold">Class Overview — Teacher</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold">Class Overview — Teacher</h2>
+        <Link to={`/classes/${classId}/requests`}>
+          <Button variant="secondary">Payment Requests</Button>
+        </Link>
+      </div>
 
       <div className="grid gap-6 md:grid-cols-3">
         <Card>
@@ -26,7 +47,9 @@ export function TeacherClassOverview({ classId }: { classId: string }) {
             <CardDescription>Sum across students</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{formatCurrency(totalBalance)}</div>
+            <div className="text-3xl font-bold">
+              {formatCurrency(totalBalance)}
+            </div>
           </CardContent>
         </Card>
 
@@ -86,28 +109,41 @@ export function TeacherClassOverview({ classId }: { classId: string }) {
               </tr>
             </thead>
             <tbody>
-              {txns.slice(-12).reverse().map((t) => (
-                <tr key={t.id} className="border-b last:border-0">
-                  <td className="py-2 pr-4">{formatDate(t.date)}</td>
-                  <td className="py-2 pr-4">
-                    {balances.find((b) => b.studentId === t.studentId)?.name ?? t.studentId}
-                  </td>
-                  <td className="py-2 pr-4">{t.type}</td>
-                  <td className="py-2 pr-4">{t.desc}</td>
-                  <td className="py-2 text-right">
-                    <span className={t.amount < 0 ? "text-destructive" : "text-emerald-600"}>
-                      {t.amount < 0 ? "−" : "+"}{formatCurrency(Math.abs(t.amount))}
-                    </span>
+              {txns
+                .slice(-12)
+                .reverse()
+                .map((t) => (
+                  <tr key={t.id} className="border-b last:border-0">
+                    <td className="py-2 pr-4">{formatDate(t.date)}</td>
+                    <td className="py-2 pr-4">
+                      {balances.find((b) => b.studentId === t.studentId)
+                        ?.name ?? t.studentId}
+                    </td>
+                    <td className="py-2 pr-4">{t.type}</td>
+                    <td className="py-2 pr-4">{t.desc}</td>
+                    <td className="py-2 text-right">
+                      <span
+                        className={
+                          t.amount < 0 ? "text-destructive" : "text-emerald-600"
+                        }
+                      >
+                        {t.amount < 0 ? "−" : "+"}
+                        {formatCurrency(Math.abs(t.amount))}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              {txns.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-4 text-muted-foreground">
+                    No transactions yet.
                   </td>
                 </tr>
-              ))}
-              {txns.length === 0 && (
-                <tr><td colSpan={5} className="py-4 text-muted-foreground">No transactions yet.</td></tr>
               )}
             </tbody>
           </table>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
