@@ -1,171 +1,674 @@
-import type { PrismaClient, PayRequestStatus, TransactionType } from "@prisma/client"
-import { GraphQLError } from "graphql"
-import { DateTimeResolver } from "graphql-scalars"
+// src/graphql/resolvers.ts
+import { GraphQLError } from "graphql";
+import { DateTimeResolver, JSONResolver } from "graphql-scalars";
+import { Types } from "mongoose";
+import {
+  hashPassword,
+  verifyPassword,
+  signAccessToken,
+  signRefreshToken,
+  setRefreshCookie,
+  clearRefreshCookie,
+  requireAuth,
+  requireRole,
+  verifyRefreshToken,
+} from "./auth";
 
-type Ctx = { prisma: PrismaClient }
+import {
+  User,
+  type IUser,
+  Classroom,
+  type IClassroom,
+  ClassModel,
+  type IClass,
+  Membership,
+  type IMembership,
+  Account,
+  type IAccount,
+  Transaction,
+  type ITransaction,
+  StoreItem,
+  Purchase,
+  Job,
+  JobApplication,
+  Employment,
+  Payslip,
+  ClassReason,
+  PayRequest,
+} from "./models";
 
+type Role = "TEACHER" | "STUDENT" | "PARENT";
+type PayRequestStatus =
+  | "SUBMITTED"
+  | "APPROVED"
+  | "PAID"
+  | "REBUKED"
+  | "DENIED";
+type TxType =
+  | "DEPOSIT"
+  | "WITHDRAWAL"
+  | "TRANSFER"
+  | "ADJUSTMENT"
+  | "PURCHASE"
+  | "REFUND"
+  | "PAYROLL"
+  | "FINE";
+
+type Ctx = { userId?: string | null };
+
+const toId = (id: string) => new Types.ObjectId(id);
+
+// Map Mongo _id → GraphQL id
+const pickId = (p: any) => (p?.id ?? p?._id)?.toString() ?? null;
+
+// ----------------------
+// Helpers
+// ----------------------
+async function getOrCreateAccount(studentId: string, classId: string) {
+  const found = await Account.findOne({ studentId, classId })
+    .lean<IAccount | null>()
+    .exec();
+  if (found) return found;
+
+  const klass = await ClassModel.findById(classId).lean<IClass | null>().exec();
+  if (!klass) throw new GraphQLError("Class not found");
+
+  const created = await Account.create({
+    studentId: toId(studentId),
+    classId: toId(classId),
+    classroomId: klass.classroomId,
+  });
+  return created.toObject() as IAccount;
+}
+
+async function computeAccountBalance(accountId: Types.ObjectId) {
+  const res = await Transaction.aggregate<{
+    _id: Types.ObjectId;
+    balance: number;
+  }>([
+    { $match: { accountId } },
+    {
+      $group: {
+        _id: "$accountId",
+        balance: {
+          $sum: {
+            $switch: {
+              branches: [
+                {
+                  case: { $in: ["$type", ["DEPOSIT", "REFUND", "PAYROLL"]] },
+                  then: "$amount",
+                },
+                {
+                  case: { $in: ["$type", ["WITHDRAWAL", "PURCHASE", "FINE"]] },
+                  then: { $multiply: [-1, "$amount"] },
+                },
+                { case: { $eq: ["$type", "ADJUSTMENT"] }, then: "$amount" },
+                { case: { $eq: ["$type", "TRANSFER"] }, then: 0 }, // neutral here; see note in docs
+              ],
+              default: 0,
+            },
+          },
+        },
+      },
+    },
+  ]).exec();
+  return res[0]?.balance ?? 0;
+}
+
+function mapPayToTxType(): TxType {
+  // Legacy "PAY" ≈ PAYROLL
+  return "PAYROLL";
+}
+
+// Derived Student DTO (compat with your old UI)
+type StudentDTO = {
+  id: string; // User._id
+  name: string;
+  classId: string;
+  balance: number; // computed
+};
+
+// ----------------------
+// Resolvers
+// ----------------------
 export const resolvers = {
-  // wire up custom scalar
+  // Scalars
   DateTime: DateTimeResolver,
+  JSON: JSONResolver,
 
+  // ----------------------
+  // Queries
+  // ----------------------
   Query: {
-    classes: (_: any, __: any, { prisma }: Ctx) => prisma.class.findMany(),
-    class: (_: any, args: { id?: string; slug?: string }, { prisma }: Ctx) =>
-      prisma.class.findFirst({ where: { OR: [{ id: args.id ?? "" }, { slug: args.slug ?? "" }] } }),
-    studentsByClass: (_: any, { classId }: { classId: string }, { prisma }: Ctx) =>
-      prisma.student.findMany({ where: { classId } }),
-    storeItemsByClass: (_: any, { classId }: { classId: string }, { prisma }: Ctx) =>
-      prisma.storeItem.findMany({ where: { classId } }),
-    payRequestsByClass: (_: any, { classId, status }: { classId: string; status?: PayRequestStatus }, { prisma }: Ctx) =>
-      prisma.payRequest.findMany({ where: { classId, ...(status ? { status } : {}) }, orderBy: { createdAt: "desc" } }),
-    payRequestsByStudent: (_: any, { classId, studentId }: { classId: string; studentId: string }, { prisma }: Ctx) =>
-      prisma.payRequest.findMany({ where: { classId, studentId }, orderBy: { createdAt: "desc" } }),
-    reasonsByClass: (_: any, { classId }: { classId: string }, { prisma }: Ctx) =>
-      prisma.classReason.findMany({ where: { classId }, orderBy: { label: "asc" } }),
+    classrooms: () => Classroom.find({}).lean<IClassroom[]>().exec(),
+
+    classroom: (_: any, { id }: { id: string }) =>
+      Classroom.findById(id).lean<IClassroom | null>().exec(),
+
+    classes: () => ClassModel.find({}).lean<IClass[]>().exec(),
+
+    class: (_: any, args: { id?: string; slug?: string }) => {
+      if (args.id)
+        return ClassModel.findById(args.id).lean<IClass | null>().exec();
+      if (args.slug)
+        return ClassModel.findOne({ slug: args.slug })
+          .lean<IClass | null>()
+          .exec();
+      return null;
+    },
+
+    membershipsByClass: (
+      _: any,
+      { classId, role }: { classId: string; role?: Role }
+    ) =>
+      Membership.find({ classId, ...(role ? { role } : {}) })
+        .lean<IMembership[]>()
+        .exec(),
+
+    account: async (
+      _: any,
+      { studentId, classId }: { studentId: string; classId: string }
+    ) => {
+      const acct = await getOrCreateAccount(studentId, classId);
+      const balance = await computeAccountBalance(acct._id);
+      return { ...acct, id: acct._id.toString(), balance };
+    },
+
+    // Derived student view
+    studentsByClass: async (_: any, { classId }: { classId: string }) => {
+      const memberships = await Membership.find({ classId, role: "STUDENT" })
+        .lean<IMembership[]>()
+        .exec();
+      if (!memberships.length) return [];
+
+      const userIds = memberships.map((m) => m.userId);
+      const users = await User.find({ _id: { $in: userIds } })
+        .lean<IUser[]>()
+        .exec();
+      const usersById = new Map(users.map((u) => [u._id.toString(), u]));
+
+      const results: StudentDTO[] = [];
+      for (const m of memberships) {
+        const u = usersById.get(m.userId.toString());
+        if (!u) continue;
+        const acct = await getOrCreateAccount(u._id.toString(), classId);
+        const balance = await computeAccountBalance(acct._id);
+        results.push({ id: u._id.toString(), name: u.name, classId, balance });
+      }
+      return results;
+    },
+
+    storeItemsByClass: (_: any, { classId }: { classId: string }) =>
+      StoreItem.find({ classId }).lean().exec(),
+
+    payRequestsByClass: (
+      _: any,
+      { classId, status }: { classId: string; status?: PayRequestStatus }
+    ) =>
+      PayRequest.find({ classId, ...(status ? { status } : {}) })
+        .sort({ createdAt: -1 })
+        .lean()
+        .exec(),
+
+    payRequestsByStudent: (
+      _: any,
+      { classId, studentId }: { classId: string; studentId: string }
+    ) =>
+      PayRequest.find({ classId, studentId })
+        .sort({ createdAt: -1 })
+        .lean()
+        .exec(),
+
+    reasonsByClass: (_: any, { classId }: { classId: string }) =>
+      ClassReason.find({ classId }).sort({ label: 1 }).lean().exec(),
+
+    transactionsByAccount: (_: any, { accountId }: { accountId: string }) =>
+      Transaction.find({ accountId })
+        .sort({ createdAt: -1 })
+        .lean<ITransaction[]>()
+        .exec(),
+
+    me: async (_: any, __: any, ctx: Ctx & { role?: string | null }) => {
+      if (!ctx.userId) return null;
+      return User.findById(ctx.userId).lean().exec();
+    },
   },
 
+  // ----------------------
+  // Mutations
+  // ----------------------
   Mutation: {
-    async createClass(_: any, { input }: any, { prisma }: Ctx) {
-      const exists = await prisma.class.findUnique({ where: { slug: input.slug } })
-      if (exists) throw new GraphQLError("Slug already exists")
+    // Creates a Class (and optionally a Classroom if not supplied).
+    // Seeds reasons, students (Users+Memberships+Accounts), jobs, and storeItems.
+    async createClass(
+      _: any,
+      { input }: any,
+      ctx: Ctx & { role?: string | null }
+    ) {
+      requireAuth(ctx);
+      requireRole(ctx, ["TEACHER"]);
+      // Optional slug uniqueness
+      if (input.slug) {
+        const exists = await ClassModel.findOne({ slug: input.slug })
+          .lean()
+          .exec();
+        if (exists) throw new GraphQLError("Slug already exists");
+      }
 
-      const cls = await prisma.class.create({
-        data: {
-          slug: input.slug,
+      // Determine classroom
+      let classroomId: Types.ObjectId;
+      if (input.classroomId) {
+        classroomId = toId(input.classroomId);
+      } else {
+        const ownerId: Types.ObjectId = input.ownerId
+          ? toId(input.ownerId)
+          : (await User.findOne({ role: "TEACHER" }).lean().exec())?._id!;
+        if (!ownerId)
+          throw new GraphQLError(
+            "No owner teacher found; provide ownerId or create a TEACHER first."
+          );
+        const classroom = await Classroom.create({
           name: input.name,
-          term: input.term ?? null,
-          room: input.room ?? null,
-          defaultCurrency: input.defaultCurrency ?? "CE$",
-        }
-      })
+          ownerId,
+          settings: { currency: input.defaultCurrency ?? "CE$" },
+        });
+        classroomId = classroom._id;
+      }
 
+      // Create class
+      const cls = await ClassModel.create({
+        classroomId,
+        name: input.name,
+        period: input.term ?? null, // Prisma term -> period
+        subject: input.room ?? null, // Prisma room -> subject
+        teacherIds: input.teacherIds?.map((id: string) => toId(id)) ?? [],
+        storeSettings: input.storeSettings ?? undefined,
+        slug: input.slug ?? undefined,
+      });
+
+      // Reasons (skip duplicates)
       if (Array.isArray(input.reasons) && input.reasons.length) {
-        await prisma.classReason.createMany({
-          data: input.reasons.map((label: string) => ({ classId: cls.id, label })),
-          skipDuplicates: true,
-        })
+        try {
+          await ClassReason.insertMany(
+            input.reasons.map((label: string) => ({ classId: cls._id, label })),
+            { ordered: false }
+          );
+        } catch {
+          /* ignore dup errors */
+        }
       }
+
+      // Students: create User (role=STUDENT) if needed, membership, and account
       if (Array.isArray(input.students) && input.students.length) {
-        await prisma.student.createMany({
-          data: input.students.map((s: any) => ({ name: s.name, classId: cls.id }))
-        })
+        for (const s of input.students) {
+          let userId: Types.ObjectId;
+          if (s.userId) {
+            userId = toId(s.userId);
+          } else if (s.name) {
+            const user = await User.create({ role: "STUDENT", name: s.name });
+            userId = user._id;
+          } else {
+            continue;
+          }
+
+          await Membership.updateOne(
+            { userId, classId: cls._id, role: "STUDENT" },
+            { $setOnInsert: { status: "ACTIVE" } },
+            { upsert: true }
+          );
+
+          const existingAccount = await Account.findOne({
+            studentId: userId,
+            classId: cls._id,
+          })
+            .lean()
+            .exec();
+          if (!existingAccount) {
+            await Account.create({
+              studentId: userId,
+              classId: cls._id,
+              classroomId,
+            });
+          }
+        }
       }
+
+      // Jobs
       if (Array.isArray(input.jobs) && input.jobs.length) {
-        await prisma.job.createMany({
-          data: input.jobs.map((j: any) => ({ ...j, classId: cls.id }))
-        })
+        await Job.insertMany(
+          input.jobs.map((j: any) => ({
+            classId: cls._id,
+            title: j.title,
+            description: j.description ?? undefined,
+            salary: { amount: j.salary ?? 0, unit: "FIXED" },
+            period: j.payPeriod,
+            schedule: j.schedule ?? undefined,
+            capacity: { current: 0, max: j.slots ?? 1 },
+            active: j.active ?? true,
+          })),
+          { ordered: false }
+        ).catch(() => {});
       }
+
+      // Store Items
       if (Array.isArray(input.storeItems) && input.storeItems.length) {
-        await prisma.storeItem.createMany({
-          data: input.storeItems.map((i: any) => ({ ...i, classId: cls.id }))
-        })
+        await StoreItem.insertMany(
+          input.storeItems.map((i: any) => ({
+            classId: cls._id,
+            title: i.title,
+            price: i.price,
+            description: i.description ?? undefined,
+            imageUrl: i.imageUrl ?? undefined,
+            stock: i.stock ?? null,
+            perStudentLimit: i.perStudentLimit ?? null,
+            active: i.active ?? true,
+            sort: i.sort ?? 0,
+          })),
+          { ordered: false }
+        ).catch(() => {});
       }
-      return cls
+
+      return cls.toObject();
     },
 
-    async addReasons(_: any, { classId, labels }: { classId: string; labels: string[] }, { prisma }: Ctx) {
-      await prisma.classReason.createMany({
-        data: labels.map((label) => ({ classId, label })),
-        skipDuplicates: true,
-      })
-      return prisma.classReason.findMany({ where: { classId }, orderBy: { label: "asc" } })
+    async addReasons(
+      _: any,
+      { classId, labels }: { classId: string; labels: string[] }
+    ) {
+      if (!labels?.length)
+        return ClassReason.find({ classId }).sort({ label: 1 }).lean().exec();
+      try {
+        await ClassReason.insertMany(
+          labels.map((label) => ({ classId: toId(classId), label })),
+          {
+            ordered: false,
+          }
+        );
+      } catch {
+        /* swallow dups */
+      }
+      return ClassReason.find({ classId }).sort({ label: 1 }).lean().exec();
     },
 
-    async setReasons(_: any, { classId, labels }: { classId: string; labels: string[] }, { prisma }: Ctx) {
-      await prisma.classReason.deleteMany({ where: { classId } })
-      await prisma.classReason.createMany({ data: labels.map((label) => ({ classId, label })) })
-      return prisma.classReason.findMany({ where: { classId }, orderBy: { label: "asc" } })
+    async setReasons(
+      _: any,
+      { classId, labels }: { classId: string; labels: string[] }
+    ) {
+      await ClassReason.deleteMany({ classId }).exec();
+      if (labels?.length) {
+        await ClassReason.insertMany(
+          labels.map((label) => ({ classId: toId(classId), label }))
+        );
+      }
+      return ClassReason.find({ classId }).sort({ label: 1 }).lean().exec();
     },
 
-    async createPayRequest(_: any, { input }: any, { prisma }: Ctx) {
-      const reason = await prisma.classReason.findFirst({ where: { classId: input.classId, label: input.reason } })
-      if (!reason) throw new GraphQLError("Reason not allowed for this class")
-      const student = await prisma.student.findFirst({ where: { id: input.studentId, classId: input.classId } })
-      if (!student) throw new GraphQLError("Student not found in this class")
-
-      return prisma.payRequest.create({
-        data: {
-          classId: input.classId,
-          studentId: input.studentId,
-          amount: input.amount,
-          reason: input.reason,
-          justification: input.justification,
-          status: "SUBMITTED",
-        }
+    async createPayRequest(_: any, { input }: any) {
+      const reason = await ClassReason.findOne({
+        classId: input.classId,
+        label: input.reason,
       })
+        .lean()
+        .exec();
+      if (!reason) throw new GraphQLError("Reason not allowed for this class");
+
+      const isMember = await Membership.findOne({
+        classId: input.classId,
+        userId: input.studentId,
+        role: "STUDENT",
+      })
+        .lean()
+        .exec();
+      if (!isMember) throw new GraphQLError("Student not found in this class");
+
+      return PayRequest.create({
+        classId: toId(input.classId),
+        studentId: toId(input.studentId),
+        amount: input.amount,
+        reason: input.reason,
+        justification: input.justification,
+        status: "SUBMITTED",
+      });
     },
 
-    approvePayRequest: (_: any, { id, comment }: any, { prisma }: Ctx) =>
-      prisma.payRequest.update({
-        where: { id },
-        data: { status: "APPROVED", teacherComment: comment ?? null }
-      }),
+    approvePayRequest: (
+      _: any,
+      { id, comment }: { id: string; comment?: string }
+    ) =>
+      PayRequest.findByIdAndUpdate(
+        id,
+        { $set: { status: "APPROVED", teacherComment: comment ?? null } },
+        { new: true }
+      )
+        .lean()
+        .exec(),
 
-    async submitPayRequest(_: any, { id }: { id: string }, { prisma }: Ctx) {
-      const req = await prisma.payRequest.findUnique({ where: { id } })
-      if (!req) throw new GraphQLError("Request not found")
-      if (req.status === "DENIED") throw new GraphQLError("Denied request cannot be paid")
-      if (req.status === "PAID") return req
+    async submitPayRequest(_: any, { id }: { id: string }, ctx: Ctx) {
+      const req = await PayRequest.findById(id).lean().exec();
+      if (!req) throw new GraphQLError("Request not found");
+      if (req.status === "DENIED")
+        throw new GraphQLError("Denied request cannot be paid");
+      if (req.status === "PAID") return req;
 
-      const updated = await prisma.payRequest.update({
-        where: { id },
-        data: { status: "PAID" }
-      })
+      const acct = await getOrCreateAccount(
+        req.studentId.toString(),
+        req.classId.toString()
+      );
+      const klass = await ClassModel.findById(req.classId)
+        .lean<IClass | null>()
+        .exec();
+      if (!klass) throw new GraphQLError("Class not found");
 
-      await prisma.transaction.create({
-        data: {
-          classId: req.classId,
-          studentId: req.studentId,
-          type: "PAY" as TransactionType,
-          amount: req.amount,
-          desc: `One-time payment: ${req.reason}`,
-        }
-      })
-      await prisma.student.update({
-        where: { id: req.studentId },
-        data: { balance: { increment: req.amount } }
-      })
+      await Transaction.create({
+        accountId: acct._id,
+        classId: klass._id,
+        classroomId: klass.classroomId,
+        type: mapPayToTxType(), // PAYROLL
+        amount: req.amount,
+        memo: `One-time payment: ${req.reason}`,
+        createdByUserId: ctx.userId ? toId(ctx.userId) : req.studentId, // use approver if available
+      });
 
-      return updated
+      const updated = await PayRequest.findByIdAndUpdate(
+        id,
+        { $set: { status: "PAID" } },
+        { new: true }
+      )
+        .lean()
+        .exec();
+
+      return updated;
     },
 
-    async rebukePayRequest(_: any, { id, comment }: any, { prisma }: Ctx) {
-      if (!comment?.trim()) throw new GraphQLError("Comment required for rebuke")
-      return prisma.payRequest.update({
-        where: { id },
-        data: { status: "REBUKED", teacherComment: comment }
-      })
+    async rebukePayRequest(
+      _: any,
+      { id, comment }: { id: string; comment: string }
+    ) {
+      if (!comment?.trim())
+        throw new GraphQLError("Comment required for rebuke");
+      return PayRequest.findByIdAndUpdate(
+        id,
+        { $set: { status: "REBUKED", teacherComment: comment } },
+        { new: true }
+      )
+        .lean()
+        .exec();
     },
 
-    denyPayRequest: (_: any, { id, comment }: any, { prisma }: Ctx) =>
-      prisma.payRequest.update({
-        where: { id },
-        data: { status: "DENIED", teacherComment: comment ?? null }
-      }),
+    denyPayRequest: (
+      _: any,
+      { id, comment }: { id: string; comment?: string }
+    ) =>
+      PayRequest.findByIdAndUpdate(
+        id,
+        { $set: { status: "DENIED", teacherComment: comment ?? null } },
+        { new: true }
+      )
+        .lean()
+        .exec(),
+
+    async signUp(_: any, { input }: any, ctx: any) {
+      const { name, email, password, role } = input;
+      const existing = await User.findOne({ email: email.toLowerCase() })
+        .lean()
+        .exec();
+      if (existing) throw new GraphQLError("Email already in use");
+
+      const passwordHash = await hashPassword(password);
+      const user = await User.create({
+        name,
+        email: email.toLowerCase(),
+        passwordHash,
+        role,
+      });
+
+      const accessToken = signAccessToken(user._id.toString(), role);
+      const refreshToken = signRefreshToken(user._id.toString(), role);
+      setRefreshCookie(ctx.res, refreshToken);
+
+      return { user: user.toObject(), accessToken };
+    },
+
+    // NEW: login
+    async login(_: any, { email, password }: any, ctx: any) {
+      const user = await User.findOne({ email: email.toLowerCase() })
+        .lean()
+        .exec();
+      if (!user) throw new GraphQLError("Invalid credentials");
+
+      const ok = await verifyPassword(password, (user as any).passwordHash);
+      if (!ok) throw new GraphQLError("Invalid credentials");
+
+      const accessToken = signAccessToken(user._id.toString(), user.role);
+      const refreshToken = signRefreshToken(user._id.toString(), user.role);
+      setRefreshCookie(ctx.res, refreshToken);
+
+      return { user, accessToken };
+    },
+
+    // NEW: refreshAccessToken
+    async refreshAccessToken(_: any, __: any, ctx: any) {
+      const cookie = ctx.req.cookies?.refresh_token;
+      if (!cookie) throw new GraphQLError("No refresh token");
+      try {
+        const { sub, role } = verifyRefreshToken(cookie);
+        const accessToken = signAccessToken(sub, role as any);
+        // optional: roll refresh cookie lifetime
+        // setRefreshCookie(ctx.res, cookie);
+        return accessToken;
+      } catch {
+        throw new GraphQLError("Invalid refresh token");
+      }
+    },
+
+    // NEW: logout
+    async logout(_: any, __: any, ctx: any) {
+      clearRefreshCookie(ctx.res);
+      return true;
+    },
   },
+
+  // ----------------------
+  // Field Resolvers
+  // ----------------------
+
+  // id mappers
+  Classroom: { id: pickId },
+  Class: { id: pickId },
+  User: { id: pickId },
+  Membership: { id: pickId },
+  Account: { id: pickId },
+  Transaction: { id: pickId },
+  StoreItem: { id: pickId },
+  Purchase: { id: pickId },
+  Job: { id: pickId },
+  JobApplication: { id: pickId },
+  Employment: { id: pickId },
+  Payslip: { id: pickId },
+  ClassReason: { id: pickId },
 
   Class: {
-    students: (p: any, _: any, { prisma }: Ctx) => prisma.student.findMany({ where: { classId: p.id } }),
-    storeItems: (p: any, _: any, { prisma }: Ctx) => prisma.storeItem.findMany({ where: { classId: p.id } }),
-    jobs: (p: any, _: any, { prisma }: Ctx) => prisma.job.findMany({ where: { classId: p.id } }),
-    transactions: (p: any, _: any, { prisma }: Ctx) =>
-      prisma.transaction.findMany({ where: { classId: p.id }, orderBy: { date: "desc" } }),
-    payRequests: (p: any, _: any, { prisma }: Ctx) =>
-      prisma.payRequest.findMany({ where: { classId: p.id }, orderBy: { createdAt: "desc" } }),
-    reasons: (p: any, _: any, { prisma }: Ctx) =>
-      prisma.classReason.findMany({ where: { classId: p.id }, orderBy: { label: "asc" } }),
+    // keep id resolver while also adding other fields
+    id: pickId,
+
+    // Resolve defaultCurrency for compatibility by looking up the Classroom
+    defaultCurrency: async (p: IClass) => {
+      const classroom = await Classroom.findById(p.classroomId)
+        .lean<IClassroom | null>()
+        .exec();
+      return classroom?.settings?.currency ?? "CE$";
+    },
+
+    students: async (p: IClass) => {
+      const memberships = await Membership.find({
+        classId: p._id,
+        role: "STUDENT",
+      })
+        .lean<IMembership[]>()
+        .exec();
+      if (!memberships.length) return [];
+
+      const userIds = memberships.map((m) => m.userId);
+      const users = await User.find({ _id: { $in: userIds } })
+        .lean<IUser[]>()
+        .exec();
+
+      const out: StudentDTO[] = [];
+      for (const u of users) {
+        const acct = await getOrCreateAccount(
+          u._id.toString(),
+          p._id.toString()
+        );
+        const balance = await computeAccountBalance(acct._id);
+        out.push({
+          id: u._id.toString(),
+          name: u.name,
+          classId: p._id.toString(),
+          balance,
+        });
+      }
+      return out;
+    },
+
+    storeItems: (p: IClass) => StoreItem.find({ classId: p._id }).lean().exec(),
+    jobs: (p: IClass) => Job.find({ classId: p._id }).lean().exec(),
+    transactions: (p: IClass) =>
+      Transaction.find({ classId: p._id })
+        .sort({ createdAt: -1 })
+        .lean()
+        .exec(),
+    payRequests: (p: IClass) =>
+      PayRequest.find({ classId: p._id }).sort({ createdAt: -1 }).lean().exec(),
+    reasons: (p: IClass) =>
+      ClassReason.find({ classId: p._id }).sort({ label: 1 }).lean().exec(),
   },
 
   PayRequest: {
-    class: (p: any, _: any, { prisma }: Ctx) => prisma.class.findUnique({ where: { id: p.classId } }),
-    student: (p: any, _: any, { prisma }: Ctx) => prisma.student.findUnique({ where: { id: p.studentId } }),
+    id: pickId,
+    class: (p: any) => ClassModel.findById(p.classId).lean().exec(),
+    student: (p: any) => User.findById(p.studentId).lean().exec(), // a User with role=STUDENT
   },
 
+  // Student DTO resolvers (compat)
   Student: {
-    class: (p: any, _: any, { prisma }: Ctx) => prisma.class.findUnique({ where: { id: p.classId } }),
-    txns: (p: any, _: any, { prisma }: Ctx) =>
-      prisma.transaction.findMany({ where: { studentId: p.id }, orderBy: { date: "desc" } }),
-    requests: (p: any, _: any, { prisma }: Ctx) =>
-      prisma.payRequest.findMany({ where: { studentId: p.id }, orderBy: { createdAt: "desc" } }),
-  }
-}
+    class: (p: StudentDTO) => ClassModel.findById(p.classId).lean().exec(),
+    txns: async (p: StudentDTO) => {
+      const acct = await Account.findOne({
+        studentId: p.id,
+        classId: p.classId,
+      })
+        .lean()
+        .exec();
+      if (!acct) return [];
+      return Transaction.find({ accountId: acct._id })
+        .sort({ createdAt: -1 })
+        .lean()
+        .exec();
+    },
+    requests: (p: StudentDTO) =>
+      PayRequest.find({ studentId: p.id, classId: p.classId })
+        .sort({ createdAt: -1 })
+        .lean()
+        .exec(),
+  },
+};

@@ -29,6 +29,29 @@ enum PayRequestStatus {
   DENIED
 }
 
+enum Role {
+TEACHER
+STUDENT
+PARENT
+}
+
+
+model User {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  email       String   @unique
+  password    String
+  displayName String
+  role        Role
+
+  // Back-relation to the join model:
+  teaching    ClassTeacher[]
+  studentDoc  Student?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+
 model Class {
   id              String   @id @default(auto()) @map("_id") @db.ObjectId
   slug            String   @unique
@@ -45,7 +68,24 @@ model Class {
   transactions Transaction[]
   payRequests  PayRequest[]
   reasons      ClassReason[]
+
+  // Back-relation to the join model (replaces teachers User[]):
+  classTeachers ClassTeacher[]
 }
+
+
+model ClassTeacher {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  classId   String   @db.ObjectId
+  userId    String   @db.ObjectId
+  assignedAt DateTime @default(now())
+
+  class     Class    @relation(fields: [classId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([classId, userId]) // prevent duplicates
+}
+
 
 model ClassReason {
   id      String @id @default(auto()) @map("_id") @db.ObjectId
@@ -57,14 +97,23 @@ model ClassReason {
 }
 
 model Student {
-  id       String        @id @default(auto()) @map("_id") @db.ObjectId
+  id       String   @id @default(auto()) @map("_id") @db.ObjectId
   name     String
-  balance  Int           @default(0)
-  classId  String        @db.ObjectId
-  class    Class         @relation(fields: [classId], references: [id])
+  balance  Int      @default(0)
+  classId  String   @db.ObjectId
+  class    Class    @relation(fields: [classId], references: [id])
   requests PayRequest[]
   txns     Transaction[]
+
+  // was: userId String? @db.ObjectId @unique
+  userId   String?  @db.ObjectId
+  user     User?    @relation(fields: [userId], references: [id])
+
+  // optional (non-unique) index for performance:
+  @@index([userId], map: "Student_userId_idx")
 }
+
+
 
 model StoreItem {
   id      String @id @default(auto()) @map("_id") @db.ObjectId
