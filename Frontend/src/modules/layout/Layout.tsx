@@ -5,9 +5,18 @@ import { Menu } from "lucide-react";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { useClassContext } from "@/context/ClassContext";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { LoginSignupCard } from "@/components/auth/LoginSignupCard";
 
 export function Layout() {
   const [open, setOpen] = React.useState(false);
+  const [authOpen, setAuthOpen] = React.useState(false);
+
   const { role, setRole, currentStudentId, setCurrentStudentId } =
     useClassContext();
   const compact = role === "STUDENT";
@@ -79,7 +88,9 @@ export function Layout() {
 
           {/* Right side: sign in + temporary role toggle */}
           <div className="flex items-center gap-2">
-            <Button variant="secondary">Sign in</Button>
+            <Button variant="secondary" onClick={() => setAuthOpen(true)}>
+              Sign in
+            </Button>
             {/* Temporary role toggle for testing */}
             <select
               value={role}
@@ -97,7 +108,6 @@ export function Layout() {
                 className="rounded-md border px-2 py-1 text-sm"
                 aria-label="Pick demo student"
               >
-                {/* keep in sync with mock student IDs present in chosen class */}
                 <option value="s1">Ava M.</option>
                 <option value="s2">Liam K.</option>
                 <option value="s3">Noah S.</option>
@@ -113,6 +123,16 @@ export function Layout() {
       <main className="container py-6">
         <Outlet />
       </main>
+
+      {/* Auth dialog */}
+      <Dialog open={authOpen} onOpenChange={setAuthOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Welcome back</DialogTitle>
+          </DialogHeader>
+          <LoginSignupCard defaultMode="login" />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -5,9 +5,10 @@ export const CREATE_CLASS = gql`
     createClass(input: $input) {
       id
       name
-      term
-      room
+      period
+      subject
       defaultCurrency
     }
   }
-`
+`;
+

@@ -1,15 +1,15 @@
 import * as React from "react";
 import { useNavigate } from "react-router-dom";
+import { useMutation } from "@apollo/client/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { useClassContext } from "@/context/ClassContext";
-import { apiCreateClass, apiSeedClassEntities } from "@/api/classes";
-import { slugify } from "@/lib/slug";
 import { z } from "zod";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CREATE_CLASS } from "@/graphql/mutations/createClass";
 
 const jobPeriods = ["WEEKLY", "MONTHLY", "SEMESTER"] as const;
 const currencyRegex = /^[A-Z$€£¥]{1,4}$/;
@@ -32,10 +32,11 @@ const StoreItemSchema = z.object({
   stock: z.coerce.number().int().nonnegative("Stock must be ≥ 0"),
 });
 
+// 🔁 Rename form fields to period/subject
 const FormSchema = z.object({
   name: z.string().min(2, "Class name is required"),
-  term: z.string().optional(),
-  room: z.string().optional(),
+  period: z.string().optional(),
+  subject: z.string().optional(),
   defaultCurrency: z
     .string()
     .regex(currencyRegex, "Use a short code like CE$, USD, EUR"),
@@ -60,10 +61,12 @@ type FormValues = z.infer<typeof FormSchema>;
 type Mode = "edit" | "review";
 
 export default function ClassCreate() {
-  const { role, addClass, setCurrentClassId } = useClassContext();
+  const { role, setCurrentClassId } = useClassContext();
   const { push } = useToast();
   const navigate = useNavigate();
   const [mode, setMode] = React.useState<Mode>("edit");
+
+  const [createClassMutation] = useMutation(CREATE_CLASS);
 
   if (role !== "TEACHER") {
     return (
@@ -84,8 +87,8 @@ export default function ClassCreate() {
     resolver: zodResolver(FormSchema),
     defaultValues: {
       name: "",
-      term: "Fall",
-      room: "",
+      period: "Fall",
+      subject: "",
       defaultCurrency: "CE$",
       allowNegative: false,
       requireFineReason: true,
@@ -103,13 +106,13 @@ export default function ClassCreate() {
   // ---- submit handler (final confirm) ----
   const onSubmit = async (data: FormValues) => {
     try {
-      // 1) create core class
-      const created = await apiCreateClass({
+      // Map UI fields (period/subject) → resolver input (term/room)
+      const input = {
         name: data.name.trim(),
-        term: data.term || undefined,
-        room: data.room || undefined,
+        term: data.period || undefined, // backend expects `term`
+        room: data.subject || undefined, // backend expects `room`
         defaultCurrency: data.defaultCurrency || "CE$",
-        policies: {
+        storeSettings: {
           allowNegative: data.allowNegative,
           requireFineReason: data.requireFineReason,
           perItemPurchaseLimit:
@@ -117,27 +120,40 @@ export default function ClassCreate() {
               ? null
               : Number(data.perItemPurchaseLimit),
         },
-      });
-      // 2) add to context + finalize id
-      const baseId = slugify(created.name || "class");
-      const finalId = addClass({ ...created, id: baseId });
-      setCurrentClassId(finalId);
-
-      // 3) seed entities
-      const seed = {
-        students: data.students.filter((s) => s.name.trim() !== ""),
-        jobs: data.jobs.filter((j) => j.title.trim() !== ""),
-        storeItems: data.storeItems.filter((i) => i.name.trim() !== ""),
+        students: data.students
+          .filter((s) => s.name.trim() !== "")
+          .map((s) => ({ name: s.name.trim() })),
+        jobs: data.jobs
+          .filter((j) => j.title.trim() !== "")
+          .map((j) => ({
+            title: j.title.trim(),
+            payPeriod: j.payPeriod,
+            salary: j.salary,
+            slots: j.slots,
+          })),
+        storeItems: data.storeItems
+          .filter((i) => i.name.trim() !== "")
+          .map((i) => ({
+            title: i.name.trim(), // resolver expects `title`
+            price: i.price,
+            stock: i.stock,
+          })),
       };
-      if (seed.students.length || seed.jobs.length || seed.storeItems.length) {
-        await apiSeedClassEntities(finalId, seed);
-      }
+
+      const { data: result } = await createClassMutation({
+        variables: { input },
+      });
+      const created = result?.createClass;
+      if (!created) throw new Error("CreateClass returned no data");
+
+      setCurrentClassId(created.id);
 
       push({
         title: "Class created",
-        description: `${created.name} (${created.term || "—"})`,
+        description: `${created.name} (${created.period || "—"})`, // selection set returns period/subject
       });
-      navigate(`/classes/${finalId}`);
+
+      navigate(`/classes/${created.id}`);
     } catch (err: any) {
       push({
         title: "Failed to create class",
@@ -149,7 +165,7 @@ export default function ClassCreate() {
 
   // ---- move to review if valid ----
   const goToReview = async () => {
-    const ok = await trigger(); // validates entire form
+    const ok = await trigger();
     if (ok) setMode("review");
   };
 
@@ -158,7 +174,7 @@ export default function ClassCreate() {
     msg ? <div className="mt-1 text-xs text-destructive">{msg}</div> : null;
 
   // =========================
-  // EDIT MODE (original form)
+  // EDIT MODE
   // =========================
   if (mode === "edit") {
     return (
@@ -177,10 +193,10 @@ export default function ClassCreate() {
               <Err msg={errors.name?.message} />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Term</label>
+              <label className="mb-1 block text-sm font-medium">Period</label>
               <select
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                {...register("term")}
+                {...register("period")}
               >
                 <option value="Fall">Fall</option>
                 <option value="Winter">Winter</option>
@@ -190,8 +206,11 @@ export default function ClassCreate() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Room</label>
-              <Input placeholder="e.g., 201" {...register("room")} />
+              <label className="mb-1 block text-sm font-medium">Subject</label>
+              <Input
+                placeholder="e.g., 201 or Algebra"
+                {...register("subject")}
+              />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">
@@ -439,12 +458,12 @@ export default function ClassCreate() {
             <div className="font-medium">{vals.name}</div>
           </div>
           <div>
-            <div className="text-sm text-muted-foreground">Term</div>
-            <div className="font-medium">{vals.term || "—"}</div>
+            <div className="text-sm text-muted-foreground">Period</div>
+            <div className="font-medium">{vals.period || "—"}</div>
           </div>
           <div>
-            <div className="text-sm text-muted-foreground">Room</div>
-            <div className="font-medium">{vals.room || "—"}</div>
+            <div className="text-sm text-muted-foreground">Subject</div>
+            <div className="font-medium">{vals.subject || "—"}</div>
           </div>
           <div>
             <div className="text-sm text-muted-foreground">Currency</div>

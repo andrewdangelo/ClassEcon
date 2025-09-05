@@ -128,6 +128,58 @@ type StudentDTO = {
   balance: number; // computed
 };
 
+function isTeacher(ctx: Ctx & { role?: string | null }) {
+  return ctx.role === "TEACHER";
+}
+function requireAuth(ctx: Ctx & { role?: string | null }) {
+  if (!ctx.userId) throw new GraphQLError("Unauthorized");
+}
+function requireTeacher(ctx: Ctx & { role?: string | null }) {
+  requireAuth(ctx);
+  if (!isTeacher(ctx)) throw new GraphQLError("Forbidden");
+}
+async function requireClassTeacher(
+  ctx: Ctx & { role?: string | null },
+  classId: string
+) {
+  requireTeacher(ctx);
+  const klass = await ClassModel.findById(classId).lean<IClass | null>().exec();
+  if (!klass) throw new GraphQLError("Class not found");
+  const teacherIds = (klass.teacherIds ?? []).map((t) => t.toString());
+  if (!teacherIds.includes(ctx.userId!)) throw new GraphQLError("Forbidden");
+  return klass;
+}
+async function assertSelfOrTeacherForStudent(
+  ctx: Ctx & { role?: string | null },
+  studentId: string
+) {
+  requireAuth(ctx);
+  if (ctx.userId !== studentId && !isTeacher(ctx))
+    throw new GraphQLError("Forbidden");
+}
+async function assertAccountAccess(
+  ctx: Ctx & { role?: string | null },
+  accountId: string
+) {
+  requireAuth(ctx);
+  const acct = await Account.findById(accountId).lean<IAccount | null>().exec();
+  if (!acct) throw new GraphQLError("Account not found");
+  if (ctx.role === "TEACHER") {
+    // Optionally: ensure teacher teaches this class
+    const klass = await ClassModel.findById(acct.classId)
+      .lean<IClass | null>()
+      .exec();
+    if (!klass) throw new GraphQLError("Class not found");
+    const teacherIds = (klass.teacherIds ?? []).map((t) => t.toString());
+    if (!teacherIds.includes(ctx.userId!)) throw new GraphQLError("Forbidden");
+    return acct;
+  }
+  // Student can only view their own account
+  if (acct.studentId.toString() !== ctx.userId)
+    throw new GraphQLError("Forbidden");
+  return acct;
+}
+
 // ----------------------
 // Resolvers
 // ----------------------
@@ -140,13 +192,11 @@ export const resolvers = {
   // Queries
   // ----------------------
   Query: {
+    // Public/browse:
     classrooms: () => Classroom.find({}).lean<IClassroom[]>().exec(),
-
     classroom: (_: any, { id }: { id: string }) =>
       Classroom.findById(id).lean<IClassroom | null>().exec(),
-
     classes: () => ClassModel.find({}).lean<IClass[]>().exec(),
-
     class: (_: any, args: { id?: string; slug?: string }) => {
       if (args.id)
         return ClassModel.findById(args.id).lean<IClass | null>().exec();
@@ -157,36 +207,47 @@ export const resolvers = {
       return null;
     },
 
-    membershipsByClass: (
+    // Teacher-only (rosters / memberships expose student lists)
+    membershipsByClass: async (
       _: any,
-      { classId, role }: { classId: string; role?: Role }
-    ) =>
-      Membership.find({ classId, ...(role ? { role } : {}) })
+      { classId, role }: { classId: string; role?: Role },
+      ctx: Ctx & { role?: string | null }
+    ) => {
+      await requireClassTeacher(ctx, classId);
+      return Membership.find({ classId, ...(role ? { role } : {}) })
         .lean<IMembership[]>()
-        .exec(),
+        .exec();
+    },
 
+    // Self or Teacher
     account: async (
       _: any,
-      { studentId, classId }: { studentId: string; classId: string }
+      { studentId, classId }: { studentId: string; classId: string },
+      ctx: Ctx & { role?: string | null }
     ) => {
+      await assertSelfOrTeacherForStudent(ctx, studentId);
       const acct = await getOrCreateAccount(studentId, classId);
       const balance = await computeAccountBalance(acct._id);
       return { ...acct, id: acct._id.toString(), balance };
     },
 
-    // Derived student view
-    studentsByClass: async (_: any, { classId }: { classId: string }) => {
+    // Teacher-only (returns all students with balances)
+    studentsByClass: async (
+      _: any,
+      { classId }: { classId: string },
+      ctx: Ctx & { role?: string | null }
+    ) => {
+      await requireClassTeacher(ctx, classId);
+      // (existing body unchanged)
       const memberships = await Membership.find({ classId, role: "STUDENT" })
         .lean<IMembership[]>()
         .exec();
       if (!memberships.length) return [];
-
       const userIds = memberships.map((m) => m.userId);
       const users = await User.find({ _id: { $in: userIds } })
         .lean<IUser[]>()
         .exec();
       const usersById = new Map(users.map((u) => [u._id.toString(), u]));
-
       const results: StudentDTO[] = [];
       for (const m of memberships) {
         const u = usersById.get(m.userId.toString());
@@ -201,32 +262,53 @@ export const resolvers = {
     storeItemsByClass: (_: any, { classId }: { classId: string }) =>
       StoreItem.find({ classId }).lean().exec(),
 
-    payRequestsByClass: (
+    // Teacher-only (class-wide pay requests)
+    payRequestsByClass: async (
       _: any,
-      { classId, status }: { classId: string; status?: PayRequestStatus }
-    ) =>
-      PayRequest.find({ classId, ...(status ? { status } : {}) })
+      { classId, status }: { classId: string; status?: PayRequestStatus },
+      ctx: Ctx & { role?: string | null }
+    ) => {
+      await requireClassTeacher(ctx, classId);
+      return PayRequest.find({ classId, ...(status ? { status } : {}) })
         .sort({ createdAt: -1 })
         .lean()
-        .exec(),
+        .exec();
+    },
 
-    payRequestsByStudent: (
+    payRequestsByStudent: async (
       _: any,
-      { classId, studentId }: { classId: string; studentId: string }
-    ) =>
-      PayRequest.find({ classId, studentId })
+      { classId, studentId }: { classId: string; studentId: string },
+      ctx: Ctx & { role?: string | null }
+    ) => {
+      await assertSelfOrTeacherForStudent(ctx, studentId);
+      return PayRequest.find({ classId, studentId })
         .sort({ createdAt: -1 })
         .lean()
-        .exec(),
+        .exec();
+    },
 
-    reasonsByClass: (_: any, { classId }: { classId: string }) =>
-      ClassReason.find({ classId }).sort({ label: 1 }).lean().exec(),
+    // Teacher-only (reason management is a teacher function)
+    reasonsByClass: async (
+      _: any,
+      { classId }: { classId: string },
+      ctx: Ctx & { role?: string | null }
+    ) => {
+      await requireClassTeacher(ctx, classId);
+      return ClassReason.find({ classId }).sort({ label: 1 }).lean().exec();
+    },
 
-    transactionsByAccount: (_: any, { accountId }: { accountId: string }) =>
-      Transaction.find({ accountId })
+    // Self or Teacher for account transactions
+    transactionsByAccount: async (
+      _: any,
+      { accountId }: { accountId: string },
+      ctx: Ctx & { role?: string | null }
+    ) => {
+      await assertAccountAccess(ctx, accountId);
+      return Transaction.find({ accountId })
         .sort({ createdAt: -1 })
         .lean<ITransaction[]>()
-        .exec(),
+        .exec();
+    },
 
     me: async (_: any, __: any, ctx: Ctx & { role?: string | null }) => {
       if (!ctx.userId) return null;
@@ -375,6 +457,7 @@ export const resolvers = {
       _: any,
       { classId, labels }: { classId: string; labels: string[] }
     ) {
+      await requireClassTeacher(ctx, classId);
       if (!labels?.length)
         return ClassReason.find({ classId }).sort({ label: 1 }).lean().exec();
       try {
@@ -392,8 +475,11 @@ export const resolvers = {
 
     async setReasons(
       _: any,
-      { classId, labels }: { classId: string; labels: string[] }
+      { classId, labels }: { classId: string; labels: string[] },
+      ctx: Ctx & { role?: string | null }
     ) {
+      await requireClassTeacher(ctx, classId);
+
       await ClassReason.deleteMany({ classId }).exec();
       if (labels?.length) {
         await ClassReason.insertMany(

@@ -14,8 +14,13 @@ import { ToastProvider } from "@/components/ui/toast";
 import { CartProvider } from "@/context/CartContext";
 
 import { ApolloProvider } from "@apollo/client/react";
-import { client } from "@/graphql/client";
+import { createApolloClient } from "@/lib/apollo";
+import { Provider } from "react-redux";
+import { store } from "@/redux/store/store";
 import GraphQLTest from "./modules/dev/GraphQLTest";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+
+const client = createApolloClient();
 
 const router = createBrowserRouter([
   {
@@ -29,21 +34,25 @@ const router = createBrowserRouter([
       { path: "students", element: <Students /> },
       { path: "store", element: <Store /> },
       { path: "dev/graphql-test", element: <GraphQLTest /> },
-
     ],
   },
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <ApolloProvider client={client}>
-      <ClassProvider initialRole="TEACHER">
-        <CartProvider>
-          <ToastProvider>
-            <RouterProvider router={router} />
-          </ToastProvider>
-        </CartProvider>
-      </ClassProvider>
-    </ApolloProvider>
+    <Provider store={store}>
+      <ApolloProvider client={client}>
+        <ClassProvider initialRole="TEACHER">
+          <CartProvider>
+            <ToastProvider>
+              <ProtectedRoute>
+                <RouterProvider router={router} />
+              </ProtectedRoute>
+            </ToastProvider>
+          </CartProvider>
+        </ClassProvider>
+      </ApolloProvider>
+    </Provider>
   </React.StrictMode>
 );
+
