@@ -4,17 +4,34 @@ import { useMutation } from "@apollo/client/react";
 import { LOGIN, SIGN_UP } from "../../graphql/operations";
 import { useAppDispatch } from "../../redux/store/store";
 import { setCredentials } from "../../redux/authSlice";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
+
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+// NOTE: if your Label file is actually lowercase (`/label`), update this import path:
+import { Label } from "@/components/ui/Label";
+
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter as DialogFooterUI,
+  DialogClose,
+} from "@/components/ui/dialog";
 
 const roles = ["TEACHER", "STUDENT", "PARENT"] as const;
 
-type Mode = "login" | "signup";
-
 type LoginForm = { email: string; password: string };
-
 type SignupForm = {
   name: string;
   email: string;
@@ -22,119 +39,237 @@ type SignupForm = {
   role: (typeof roles)[number];
 };
 
-export const LoginSignupCard: React.FC<{ defaultMode?: Mode }> = ({
-  defaultMode = "login",
-}) => {
-  const [mode, setMode] = React.useState<Mode>(defaultMode);
+type LoginPayload = {
+  accessToken: string;
+  user: { id: string; name: string; email: string; role: string };
+};
+type SignupPayload = {
+  accessToken: string;
+  user: { id: string; name: string; email: string; role: string };
+};
+
+export const LoginSignupCard: React.FC = () => {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
 
+  // --- Login form ---
   const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginForm & SignupForm>({
-    defaultValues: { role: "STUDENT" as any },
-  });
+    register: registerLogin,
+    handleSubmit: handleLoginSubmit,
+    formState: { errors: loginErrors, isSubmitting: isLoggingIn },
+  } = useForm<LoginForm>();
 
-  const [doLogin, { error: loginError }] = useMutation(LOGIN);
-  const [doSignup, { error: signupError }] = useMutation(SIGN_UP);
+  // --- Signup form (inside modal) ---
+  const {
+    register: registerSignup,
+    handleSubmit: handleSignupSubmit,
+    formState: { errors: signupErrors, isSubmitting: isSigningUp },
+    reset: resetSignup,
+  } = useForm<SignupForm>({ defaultValues: { role: "STUDENT" } });
 
-  const onSubmit = async (data: any) => {
-    if (mode === "login") {
-      const res = await doLogin({
-        variables: { email: data.email, password: data.password },
-      });
-      const payload = res.data?.login;
-      if (payload?.accessToken && payload?.user)
-        dispatch(setCredentials(payload));
-    } else {
-      const res = await doSignup({
-        variables: {
-          input: {
-            name: data.name,
-            email: data.email,
-            password: data.password,
-            role: data.role,
-          },
-        },
-      });
-      const payload = res.data?.signUp;
-      if (payload?.accessToken && payload?.user)
-        dispatch(setCredentials(payload));
+  const [doLogin, { error: loginError }] = useMutation<
+    { login: LoginPayload },
+    { email: string; password: string }
+  >(LOGIN);
+
+  const [doSignup, { error: signupError }] = useMutation<
+    { signUp: SignupPayload },
+    { input: { name: string; email: string; password: string; role: string } }
+  >(SIGN_UP);
+
+  const onLogin = async (data: LoginForm) => {
+    const res = await doLogin({
+      variables: { email: data.email, password: data.password },
+    });
+    const payload = res.data?.login;
+    if (payload?.accessToken && payload?.user) {
+      dispatch(setCredentials(payload));
+      // Optional: navigate after login if you want
+      // navigate("/");
     }
   };
 
-  const err = loginError?.message || signupError?.message;
+  const onSignup = async (data: SignupForm) => {
+    const res = await doSignup({
+      variables: {
+        input: {
+          name: data.name,
+          email: data.email,
+          password: data.password,
+          role: data.role,
+        },
+      },
+    });
+
+    const payload = res.data?.signUp;
+    if (payload?.accessToken && payload?.user) {
+      dispatch(setCredentials(payload));
+      // preserve info for onboarding
+      const isTeacher = (payload.user.role ?? data.role) === "TEACHER";
+      if (isTeacher) {
+        const onboardState = {
+          fromSignup: true,
+          userId: payload.user.id,
+          name: payload.user.name,
+          email: payload.user.email,
+        };
+        // survive page refresh:
+        sessionStorage.setItem(
+          "onboardingPrefill",
+          JSON.stringify(onboardState)
+        );
+        // navigate to onboarding:
+        navigate("/onboarding", { replace: true, state: onboardState });
+      }
+      resetSignup();
+    }
+  };
 
   return (
     <div className="w-full max-w-md mx-auto">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>
-            {mode === "login" ? "Log in" : "Create an account"}
-          </CardTitle>
-          <Button
-            variant="ghost"
-            onClick={() => setMode(mode === "login" ? "signup" : "login")}
-          >
-            {mode === "login" ? "Sign up" : "Log in"}
-          </Button>
+        <CardHeader>
+          <CardTitle>Log in</CardTitle>
         </CardHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
+
+        {/* LOGIN FORM ONLY */}
+        <form onSubmit={handleLoginSubmit(onLogin)}>
           <CardContent className="space-y-4">
-            {mode === "signup" && (
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" {...register("name", { required: true })} />
-                {errors.name && (
-                  <p className="text-sm text-red-500">Required</p>
-                )}
-              </div>
-            )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="login-email">Email / Username</Label>
               <Input
-                id="email"
-                type="email"
-                {...register("email", { required: true })}
+                id="login-email"
+                type="text"
+                autoComplete="username"
+                {...registerLogin("email", { required: true })}
               />
-              {errors.email && <p className="text-sm text-red-500">Required</p>}
+              {loginErrors.email && (
+                <p className="text-sm text-red-500">Required</p>
+              )}
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="login-password">Password</Label>
               <Input
-                id="password"
+                id="login-password"
                 type="password"
-                {...register("password", { required: true, minLength: 6 })}
+                autoComplete="current-password"
+                {...registerLogin("password", { required: true, minLength: 6 })}
               />
-              {errors.password && (
+              {loginErrors.password && (
                 <p className="text-sm text-red-500">Min 6 characters</p>
               )}
             </div>
-            {mode === "signup" && (
-              <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
-                <select
-                  id="role"
-                  className="border rounded-md h-9 px-3"
-                  {...register("role", { required: true })}
-                >
-                  {roles.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </div>
+
+            {loginError?.message && (
+              <p className="text-sm text-red-600">{loginError.message}</p>
             )}
-            {err && <p className="text-sm text-red-600">{err}</p>}
           </CardContent>
-          <CardFooter className="justify-end">
-            <Button type="submit" disabled={isSubmitting}>
-              {mode === "login" ? "Log in" : "Sign up"}
+
+          <CardFooter className="flex flex-col items-stretch gap-4">
+            <Button type="submit" disabled={isLoggingIn}>
+              {isLoggingIn ? "Logging in..." : "Log in"}
             </Button>
           </CardFooter>
         </form>
+
+        {/* "or Sign up" */}
+        <div className="pb-6 -mt-2">
+          <Dialog>
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <span>or</span>
+              <DialogTrigger asChild>
+                <Button variant="link" type="button" className="px-1">
+                  Sign up
+                </Button>
+              </DialogTrigger>
+            </div>
+
+            <DialogContent className="sm:max-w-[480px]">
+              <DialogHeader>
+                <DialogTitle>Create an account</DialogTitle>
+                <DialogDescription>
+                  Fill in your details to get started.
+                </DialogDescription>
+              </DialogHeader>
+
+              <form
+                onSubmit={handleSignupSubmit(onSignup)}
+                className="space-y-4 py-2"
+              >
+                <div className="space-y-2">
+                  <Label htmlFor="signup-name">Name</Label>
+                  <Input
+                    id="signup-name"
+                    {...registerSignup("name", { required: true })}
+                  />
+                  {signupErrors.name && (
+                    <p className="text-sm text-red-500">Required</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Email</Label>
+                  <Input
+                    id="signup-email"
+                    type="email"
+                    autoComplete="email"
+                    {...registerSignup("email", { required: true })}
+                  />
+                  {signupErrors.email && (
+                    <p className="text-sm text-red-500">Required</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Password</Label>
+                  <Input
+                    id="signup-password"
+                    type="password"
+                    autoComplete="new-password"
+                    {...registerSignup("password", {
+                      required: true,
+                      minLength: 6,
+                    })}
+                  />
+                  {signupErrors.password && (
+                    <p className="text-sm text-red-500">Min 6 characters</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-role">Role</Label>
+                  <select
+                    id="signup-role"
+                    className="border rounded-md h-9 px-3 w-full bg-background"
+                    {...registerSignup("role", { required: true })}
+                  >
+                    {roles.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {signupError?.message && (
+                  <p className="text-sm text-red-600">{signupError.message}</p>
+                )}
+
+                <DialogFooterUI className="gap-2">
+                  <DialogClose asChild>
+                    <Button type="button" variant="outline">
+                      Cancel
+                    </Button>
+                  </DialogClose>
+                  <Button type="submit" disabled={isSigningUp}>
+                    {isSigningUp ? "Creating..." : "Sign up"}
+                  </Button>
+                </DialogFooterUI>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </Card>
     </div>
   );

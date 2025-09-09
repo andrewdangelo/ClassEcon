@@ -5,13 +5,14 @@ export const typeDefs = [
   DateTimeTypeDefinition,
   gql`
     scalar JSON
-    scalar DateTime
+    # Note: DateTime is provided by DateTimeTypeDefinition; don't redeclare it here.
 
     enum Role {
       TEACHER
       STUDENT
       PARENT
     }
+
     enum UserStatus {
       ACTIVE
       INVITED
@@ -35,20 +36,24 @@ export const typeDefs = [
       MONTHLY
       SEMESTER
     }
+
     enum JobSalaryUnit {
       FIXED
       HOURLY
     }
+
     enum JobApplicationStatus {
       PENDING
       APPROVED
       REJECTED
       WITHDRAWN
     }
+
     enum EmploymentStatus {
       ACTIVE
       ENDED
     }
+
     enum PayRequestStatus {
       SUBMITTED
       APPROVED
@@ -60,10 +65,6 @@ export const typeDefs = [
     type AuthPayload {
       user: User!
       accessToken: String!
-    }
-
-    extend type Query {
-      me: User
     }
 
     type User {
@@ -96,8 +97,14 @@ export const typeDefs = [
       classroomId: ID!
       slug: String
       name: String!
-      period: String
       subject: String
+      period: String
+      gradeLevel: Int
+      joinCode: String!
+      schoolName: String
+      district: String
+      payPeriodDefault: PayPeriod
+      startingBalance: Int
       teacherIds: [ID!]!
       defaultCurrency: String
       students: [Student!]!
@@ -106,6 +113,7 @@ export const typeDefs = [
       transactions: [Transaction!]!
       payRequests: [PayRequest!]!
       reasons: [ClassReason!]!
+      isArchived: Boolean!
       createdAt: DateTime!
       updatedAt: DateTime!
     }
@@ -127,7 +135,6 @@ export const typeDefs = [
       classroomId: ID!
       createdAt: DateTime!
       updatedAt: DateTime!
-      # ADDED: the resolver returns this computed value
       balance: Int!
     }
 
@@ -192,11 +199,13 @@ export const typeDefs = [
       amount: Int!
       unit: JobSalaryUnit!
     }
+
     type JobSchedule {
       weekday: Int
       dayOfMonth: Int
       anchorDate: DateTime
     }
+
     type JobCapacity {
       current: Int!
       max: Int!
@@ -274,45 +283,32 @@ export const typeDefs = [
       requests: [PayRequest!]!
     }
 
-    # --------- Queries ----------
-    type Query {
-      classrooms: [Classroom!]!
-      classroom(id: ID!): Classroom
-      membershipsByClass(classId: ID!, role: Role): [Membership!]!
-      account(studentId: ID!, classId: ID!): Account
-      transactionsByAccount(accountId: ID!): [Transaction!]!
-      classes: [Class!]!
-      class(id: ID, slug: String): Class
-      studentsByClass(classId: ID!): [Student!]!
-      storeItemsByClass(classId: ID!): [StoreItem!]!
-      payRequestsByClass(classId: ID!, status: PayRequestStatus): [PayRequest!]!
-      payRequestsByStudent(classId: ID!, studentId: ID!): [PayRequest!]!
-      reasonsByClass(classId: ID!): [ClassReason!]!
+    # ---------- Students directory ----------
+    input StudentsFilter {
+      classId: ID
+      search: String
+      status: UserStatus
     }
 
-    # --------- Mutations ----------
-    input SignUpInput {
-      name: String!
-      email: String!
-      password: String!
-      role: Role! # "TEACHER" | "STUDENT" | "PARENT"
+    type StudentsResult {
+      nodes: [User!]!
+      totalCount: Int!
     }
 
-    extend type Mutation {
-      signUp(input: SignUpInput!): AuthPayload!
-      login(email: String!, password: String!): AuthPayload!
-      refreshAccessToken: String! # returns a fresh access token if refresh cookie is valid
-      logout: Boolean! # clears refresh cookie
-    }
-
+    # ---------- Class CRUD Inputs ----------
     input CreateClassInput {
       classroomId: ID
       ownerId: ID
       slug: String
       name: String!
-      term: String
-      room: String
-      defaultCurrency: String = "CE$"
+      subject: String
+      period: String
+      gradeLevel: Int
+      schoolName: String
+      district: String
+      payPeriodDefault: PayPeriod
+      startingBalance: Int
+      defaultCurrency: String = "CE$" # still stored at Classroom.settings
       teacherIds: [ID!]
       reasons: [String!]
       students: [StudentInput!]
@@ -320,25 +316,82 @@ export const typeDefs = [
       storeItems: [StoreItemInput!]
     }
 
+    input UpdateClassInput {
+      slug: String
+      name: String
+      subject: String
+      period: String
+      gradeLevel: Int
+      schoolName: String
+      district: String
+      payPeriodDefault: PayPeriod
+      startingBalance: Int
+      teacherIds: [ID!]
+      storeSettings: JSON
+      isArchived: Boolean
+    }
+
+    # Existing inputs used by seeding
     input StudentInput {
       userId: ID
       name: String
     }
+
     input JobInput {
       title: String!
       description: String
-      salary: Int!
+      salary: Int! # amount
       payPeriod: PayPeriod!
-      slots: Int
+      schedule: JobScheduleInput
+      slots: Int = 1
+      active: Boolean = true
     }
+
+    input JobScheduleInput {
+      weekday: Int
+      dayOfMonth: Int
+      anchorDate: DateTime
+    }
+
     input StoreItemInput {
       title: String!
       price: Int!
       description: String
+      imageUrl: String
       stock: Int
       perStudentLimit: Int
-      active: Boolean
-      sort: Int
+      active: Boolean = true
+      sort: Int = 0
+    }
+
+    # --------- Queries ----------
+    type Query {
+      me: User
+      classrooms: [Classroom!]!
+      classroom(id: ID!): Classroom
+      membershipsByClass(classId: ID!, role: Role): [Membership!]!
+      account(studentId: ID!, classId: ID!): Account
+      transactionsByAccount(accountId: ID!): [Transaction!]!
+      classes(includeArchived: Boolean = false): [Class!]!
+      class(id: ID, slug: String): Class
+      studentsByClass(classId: ID!): [Student!]!
+      storeItemsByClass(classId: ID!): [StoreItem!]!
+      payRequestsByClass(classId: ID!, status: PayRequestStatus): [PayRequest!]!
+      payRequestsByStudent(classId: ID!, studentId: ID!): [PayRequest!]!
+      reasonsByClass(classId: ID!): [ClassReason!]!
+      students(
+        filter: StudentsFilter
+        limit: Int = 50
+        offset: Int = 0
+      ): StudentsResult!
+    }
+
+    # --------- Mutations ----------
+    input SignUpInput {
+      name: String!
+      email: String!
+      password: String!
+      role: Role!
     }
 
     input CreatePayRequestInput {
@@ -350,9 +403,23 @@ export const typeDefs = [
     }
 
     type Mutation {
+      # auth
+      signUp(input: SignUpInput!): AuthPayload!
+      login(email: String!, password: String!): AuthPayload!
+      refreshAccessToken: String!
+      logout: Boolean!
+
+      # class CRUD
       createClass(input: CreateClassInput!): Class!
+      updateClass(id: ID!, input: UpdateClassInput!): Class!
+      rotateJoinCode(id: ID!): Class!
+      deleteClass(id: ID!, hard: Boolean = false): Boolean!
+
+      # Reason management
       addReasons(classId: ID!, labels: [String!]!): [ClassReason!]!
       setReasons(classId: ID!, labels: [String!]!): [ClassReason!]!
+
+      # Pay request lifecycle
       createPayRequest(input: CreatePayRequestInput!): PayRequest!
       approvePayRequest(id: ID!, comment: String): PayRequest!
       submitPayRequest(id: ID!): PayRequest!

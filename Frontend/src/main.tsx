@@ -1,3 +1,4 @@
+// src/main.tsx
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
@@ -20,12 +21,38 @@ import { store } from "@/redux/store/store";
 import GraphQLTest from "./modules/dev/GraphQLTest";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
+import { LoginSignupCard } from "@/components/auth/LoginSignupCard";
+import TeacherOnboarding from "./modules/onboarding/TeacherOnboarding";
+import { RequireClassGuard } from "@/components/auth/RequireClassGuard";
+
 const client = createApolloClient();
 
 const router = createBrowserRouter([
+  // Public auth page
+  { path: "/auth", element: <LoginSignupCard /> },
+
+  // Onboarding is a standalone page (not in Layout), but protected
+  {
+    path: "/onboarding",
+    element: (
+      <ProtectedRoute>
+        <RequireClassGuard>
+          <TeacherOnboarding />
+        </RequireClassGuard>
+      </ProtectedRoute>
+    ),
+  },
+
+  // App shell — protected and gated by RequireClassGuard
   {
     path: "/",
-    element: <Layout />,
+    element: (
+      <ProtectedRoute>
+        <RequireClassGuard>
+          <Layout />
+        </RequireClassGuard>
+      </ProtectedRoute>
+    ),
     children: [
       { index: true, element: <Dashboard /> },
       { path: "classes", element: <Classes /> },
@@ -45,9 +72,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <ClassProvider initialRole="TEACHER">
           <CartProvider>
             <ToastProvider>
-              <ProtectedRoute>
-                <RouterProvider router={router} />
-              </ProtectedRoute>
+              <RouterProvider router={router} />
             </ToastProvider>
           </CartProvider>
         </ClassProvider>
@@ -55,4 +80,3 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     </Provider>
   </React.StrictMode>
 );
-

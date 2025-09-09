@@ -180,6 +180,14 @@ async function assertAccountAccess(
   return acct;
 }
 
+function genJoinCode(len = 6) {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let out = "";
+  for (let i = 0; i < len; i++)
+    out += alphabet[(Math.random() * alphabet.length) | 0];
+  return out;
+}
+
 // ----------------------
 // Resolvers
 // ----------------------
@@ -193,10 +201,20 @@ export const resolvers = {
   // ----------------------
   Query: {
     // Public/browse:
+    // CHANGED: classes now hides archived by default; can includeArchived=true to see all
+    classes: (
+      _: any,
+      { includeArchived = false }: { includeArchived?: boolean }
+    ) =>
+      ClassModel.find(includeArchived ? {} : { isArchived: false })
+        .lean<IClass[]>()
+        .exec(),
+
+    // Unchanged:
     classrooms: () => Classroom.find({}).lean<IClassroom[]>().exec(),
     classroom: (_: any, { id }: { id: string }) =>
       Classroom.findById(id).lean<IClassroom | null>().exec(),
-    classes: () => ClassModel.find({}).lean<IClass[]>().exec(),
+
     class: (_: any, args: { id?: string; slug?: string }) => {
       if (args.id)
         return ClassModel.findById(args.id).lean<IClass | null>().exec();
@@ -314,6 +332,60 @@ export const resolvers = {
       if (!ctx.userId) return null;
       return User.findById(ctx.userId).lean().exec();
     },
+
+    students: async (
+      _,
+      args: {
+        filter?: { classId?: string; search?: string; status?: string };
+        limit?: number;
+        offset?: number;
+      },
+      ctx: Ctx & { role?: string | null }
+    ) => {
+      // Only teachers should be able to list all students
+      requireTeacher(ctx);
+
+      const { filter, limit = 50, offset = 0 } = args;
+      const { classId, search, status } = filter ?? {};
+
+      // base query: only STUDENT role
+      const query: any = { role: "STUDENT" };
+
+      if (status) query.status = status;
+
+      // optional free-text search (name/email, case-insensitive)
+      if (search?.trim()) {
+        const rx = new RegExp(search.trim(), "i");
+        query.$or = [{ name: rx }, { email: rx }];
+      }
+
+      // optional class membership filter
+      if (classId) {
+        const userIds = await Membership.find({
+          classId: toId(classId),
+          role: "STUDENT",
+        })
+          .distinct("userId")
+          .exec();
+
+        if (!userIds.length) {
+          return { nodes: [], totalCount: 0 };
+        }
+        query._id = { $in: userIds };
+      }
+
+      const [nodes, totalCount] = await Promise.all([
+        User.find(query)
+          .sort({ name: 1 })
+          .skip(offset)
+          .limit(Math.min(limit, 200)) // safety cap
+          .lean<IUser[]>()
+          .exec(),
+        User.countDocuments(query),
+      ]);
+
+      return { nodes, totalCount };
+    },
   },
 
   // ----------------------
@@ -322,13 +394,11 @@ export const resolvers = {
   Mutation: {
     // Creates a Class (and optionally a Classroom if not supplied).
     // Seeds reasons, students (Users+Memberships+Accounts), jobs, and storeItems.
-    async createClass(
-      _: any,
-      { input }: any,
-      ctx: Ctx & { role?: string | null }
-    ) {
+    async createClass(_: any, { input }: any, ctx: any) {
       requireAuth(ctx);
-      requireRole(ctx, ["TEACHER"]);
+      requireTeacher(ctx);
+
+
       // Optional slug uniqueness
       if (input.slug) {
         const exists = await ClassModel.findOne({ slug: input.slug })
@@ -337,35 +407,45 @@ export const resolvers = {
         if (exists) throw new GraphQLError("Slug already exists");
       }
 
-      // Determine classroom
+      // Determine classroom (create if needed)
       let classroomId: Types.ObjectId;
       if (input.classroomId) {
-        classroomId = toId(input.classroomId);
+        classroomId = new Types.ObjectId(input.classroomId);
       } else {
         const ownerId: Types.ObjectId = input.ownerId
-          ? toId(input.ownerId)
+          ? new Types.ObjectId(input.ownerId)
           : (await User.findOne({ role: "TEACHER" }).lean().exec())?._id!;
-        if (!ownerId)
+        if (!ownerId) {
           throw new GraphQLError(
             "No owner teacher found; provide ownerId or create a TEACHER first."
           );
+        }
         const classroom = await Classroom.create({
           name: input.name,
           ownerId,
-          settings: { currency: input.defaultCurrency ?? "CE$" },
+          settings: { currency: input.defaultCurrency ?? "CE$" }, // currency stored at Classroom level
         });
         classroomId = classroom._id;
       }
 
-      // Create class
+      // Create the Class
       const cls = await ClassModel.create({
         classroomId,
         name: input.name,
-        period: input.term ?? null, // Prisma term -> period
-        subject: input.room ?? null, // Prisma room -> subject
-        teacherIds: input.teacherIds?.map((id: string) => toId(id)) ?? [],
+        subject: input.subject ?? null,
+        period: input.period ?? null,
+        gradeLevel: input.gradeLevel ?? null,
+        joinCode: undefined, // will be set by schema pre-validate if not provided
+        schoolName: input.schoolName ?? null,
+        district: input.district ?? null,
+        payPeriodDefault: input.payPeriodDefault ?? null,
+        startingBalance: input.startingBalance ?? null,
+        slug: input.slug ?? null,
+        teacherIds: input.teacherIds?.map(
+          (id: string) => new Types.ObjectId(id)
+        ) ?? [new Types.ObjectId(ctx.userId)],
         storeSettings: input.storeSettings ?? undefined,
-        slug: input.slug ?? undefined,
+        isArchived: false,
       });
 
       // Reasons (skip duplicates)
@@ -376,22 +456,21 @@ export const resolvers = {
             { ordered: false }
           );
         } catch {
-          /* ignore dup errors */
+          /* ignore dups */
         }
       }
 
-      // Students: create User (role=STUDENT) if needed, membership, and account
+      // Students: create (User role=STUDENT) if needed, add membership + account (+ optional starting balance)
       if (Array.isArray(input.students) && input.students.length) {
         for (const s of input.students) {
-          let userId: Types.ObjectId;
+          let userId: Types.ObjectId | null = null;
           if (s.userId) {
-            userId = toId(s.userId);
+            userId = new Types.ObjectId(s.userId);
           } else if (s.name) {
             const user = await User.create({ role: "STUDENT", name: s.name });
             userId = user._id;
-          } else {
-            continue;
           }
+          if (!userId) continue;
 
           await Membership.updateOne(
             { userId, classId: cls._id, role: "STUDENT" },
@@ -399,17 +478,34 @@ export const resolvers = {
             { upsert: true }
           );
 
-          const existingAccount = await Account.findOne({
+          const account = await Account.findOne({
             studentId: userId,
             classId: cls._id,
           })
             .lean()
             .exec();
-          if (!existingAccount) {
-            await Account.create({
+          let acctId: Types.ObjectId;
+          if (account) {
+            acctId = account._id;
+          } else {
+            const created = await Account.create({
               studentId: userId,
               classId: cls._id,
               classroomId,
+            });
+            acctId = created._id;
+          }
+
+          // Seed starting balance, if defined and > 0
+          if ((cls.startingBalance ?? 0) > 0) {
+            await Transaction.create({
+              accountId: acctId,
+              classId: cls._id,
+              classroomId,
+              type: "DEPOSIT",
+              amount: cls.startingBalance!,
+              memo: "Starting balance",
+              createdByUserId: new Types.ObjectId(ctx.userId),
             });
           }
         }
@@ -451,6 +547,101 @@ export const resolvers = {
       }
 
       return cls.toObject();
+    },
+
+    // NEW: updateClass
+    async updateClass(_: any, { id, input }: any, ctx: any) {
+      requireAuth(ctx);
+      const klass = await ClassModel.findById(id).lean<IClass | null>().exec();
+      if (!klass) throw new GraphQLError("Class not found");
+      await requireClassTeacher(ctx, id);
+
+      if (input.slug) {
+        const exists = await ClassModel.findOne({
+          slug: input.slug,
+          _id: { $ne: id },
+        })
+          .lean()
+          .exec();
+        if (exists) throw new GraphQLError("Slug already exists");
+      }
+
+      const update: any = {};
+      for (const k of [
+        "name",
+        "subject",
+        "period",
+        "gradeLevel",
+        "schoolName",
+        "district",
+        "payPeriodDefault",
+        "startingBalance",
+        "slug",
+        "storeSettings",
+        "isArchived",
+      ]) {
+        if (k in input) update[k] = input[k];
+      }
+      if (Array.isArray(input.teacherIds)) {
+        update.teacherIds = input.teacherIds.map(
+          (x: string) => new Types.ObjectId(x)
+        );
+      }
+
+      const updated = await ClassModel.findByIdAndUpdate(
+        id,
+        { $set: update },
+        { new: true }
+      )
+        .lean()
+        .exec();
+      return updated;
+    },
+
+    // NEW: rotateJoinCode
+    async rotateJoinCode(_: any, { id }: any, ctx: any) {
+      requireAuth(ctx);
+      await requireClassTeacher(ctx, id);
+      const next = genJoinCode();
+      const updated = await ClassModel.findByIdAndUpdate(
+        id,
+        { $set: { joinCode: next } },
+        { new: true }
+      )
+        .lean()
+        .exec();
+      if (!updated) throw new GraphQLError("Class not found");
+      return updated;
+    },
+
+    // NEW: deleteClass (soft by default, hard optional)
+    async deleteClass(_: any, { id, hard = false }: any, ctx: any) {
+      requireAuth(ctx);
+      await requireClassTeacher(ctx, id);
+
+      if (!hard) {
+        await ClassModel.findByIdAndUpdate(id, {
+          $set: { isArchived: true },
+        }).exec();
+        return true;
+      }
+
+      // HARD DELETE (remove dependents)
+      // Note: if you prefer, wrap in a transaction with Mongo sessions.
+      await Promise.all([
+        Membership.deleteMany({ classId: id }).exec(),
+        Account.deleteMany({ classId: id }).exec(),
+        Transaction.deleteMany({ classId: id }).exec(),
+        StoreItem.deleteMany({ classId: id }).exec(),
+        Job.deleteMany({ classId: id }).exec(),
+        JobApplication.deleteMany({ classId: id }).exec(),
+        Employment.deleteMany({ classId: id }).exec(),
+        Payslip.deleteMany({ classId: id }).exec(),
+        ClassReason.deleteMany({ classId: id }).exec(),
+        PayRequest.deleteMany({ classId: id }).exec(),
+      ]);
+      await ClassModel.findByIdAndDelete(id).exec();
+      return true;
     },
 
     async addReasons(
@@ -658,9 +849,8 @@ export const resolvers = {
   // Field Resolvers
   // ----------------------
 
-  // id mappers
+  // id mappers for simple types (keep once)
   Classroom: { id: pickId },
-  Class: { id: pickId },
   User: { id: pickId },
   Membership: { id: pickId },
   Account: { id: pickId },
@@ -673,8 +863,8 @@ export const resolvers = {
   Payslip: { id: pickId },
   ClassReason: { id: pickId },
 
+  // Merge Class into a single resolver entry
   Class: {
-    // keep id resolver while also adding other fields
     id: pickId,
 
     // Resolve defaultCurrency for compatibility by looking up the Classroom
@@ -685,6 +875,7 @@ export const resolvers = {
       return classroom?.settings?.currency ?? "CE$";
     },
 
+    // ✅ Provide a real implementation (no placeholder)
     students: async (p: IClass) => {
       const memberships = await Membership.find({
         classId: p._id,
@@ -701,11 +892,57 @@ export const resolvers = {
 
       const out: StudentDTO[] = [];
       for (const u of users) {
-        const acct = await getOrCreateAccount(
-          u._id.toString(),
-          p._id.toString()
-        );
-        const balance = await computeAccountBalance(acct._id);
+        const acct = await Account.findOne({
+          studentId: u._id,
+          classId: p._id,
+        })
+          .lean()
+          .exec();
+
+        let balance = 0;
+        if (acct) {
+          // reuse your helper if you prefer:
+          // balance = await computeAccountBalance(acct._id);
+          const res = await Transaction.aggregate<{
+            _id: Types.ObjectId;
+            balance: number;
+          }>([
+            { $match: { accountId: acct._id } },
+            {
+              $group: {
+                _id: "$accountId",
+                balance: {
+                  $sum: {
+                    $switch: {
+                      branches: [
+                        {
+                          case: {
+                            $in: ["$type", ["DEPOSIT", "REFUND", "PAYROLL"]],
+                          },
+                          then: "$amount",
+                        },
+                        {
+                          case: {
+                            $in: ["$type", ["WITHDRAWAL", "PURCHASE", "FINE"]],
+                          },
+                          then: { $multiply: [-1, "$amount"] },
+                        },
+                        {
+                          case: { $eq: ["$type", "ADJUSTMENT"] },
+                          then: "$amount",
+                        },
+                        { case: { $eq: ["$type", "TRANSFER"] }, then: 0 },
+                      ],
+                      default: 0,
+                    },
+                  },
+                },
+              },
+            },
+          ]).exec();
+          balance = res[0]?.balance ?? 0;
+        }
+
         out.push({
           id: u._id.toString(),
           name: u.name,
