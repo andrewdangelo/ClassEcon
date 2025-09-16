@@ -1,5 +1,6 @@
 import { useQuery } from "@apollo/client/react";
-import { GET_CLASSES } from "@/graphql/queries/classes";
+import { ME } from "@/graphql/queries/me";
+import { GET_CLASSES_BY_USER } from "@/graphql/queries/classes";
 import {
   Card,
   CardHeader,
@@ -11,13 +12,43 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 export default function Classes() {
-  const { data, loading, error, refetch } = useQuery(GET_CLASSES, {
+  // 1) Get current user
+  const {
+    data: meData,
+    loading: meLoading,
+    error: meError,
+  } = useQuery(ME, {
+    fetchPolicy: "cache-first",
+  });
+
+  const userId = meData?.me?.id as string | undefined;
+
+  // 2) Get classes for that userId
+  const { data, loading, error, refetch } = useQuery(GET_CLASSES_BY_USER, {
+    variables: {
+      userId: userId!, // required by schema
+      // role: "TEACHER",        // optional: uncomment to filter by role
+      includeArchived: false, // set true to include archived classes
+    },
+    skip: !userId, // wait until we know the userId
     fetchPolicy: "cache-and-network",
   });
 
-  if (loading) {
+  // Loading states (ME or classes)
+  if (meLoading || (!userId && loading)) {
     return (
       <div className="p-6 text-sm text-muted-foreground">Loading classes…</div>
+    );
+  }
+
+  // Error states
+  if (meError) {
+    return (
+      <div className="p-6">
+        <p className="text-sm text-destructive">
+          Failed to load user: {meError.message}
+        </p>
+      </div>
     );
   }
 
@@ -34,11 +65,11 @@ export default function Classes() {
     );
   }
 
-  const classes = data?.classes ?? [];
+  const classes = data?.classesByUser ?? [];
   if (classes.length === 0) {
     return (
       <div className="p-6 text-sm text-muted-foreground">
-        No classes yet. Create one to get started.
+        No classes for your account yet.
       </div>
     );
   }
@@ -48,7 +79,14 @@ export default function Classes() {
       {classes.map((c: any) => (
         <Card key={c.id} className="hover:shadow-md transition-shadow">
           <CardHeader>
-            <CardTitle>{c.name}</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              {c.name}
+              {c.isArchived && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                  Archived
+                </span>
+              )}
+            </CardTitle>
             <CardDescription>
               {[c.period, c.subject].filter(Boolean).join(" • ")}
             </CardDescription>
@@ -57,7 +95,7 @@ export default function Classes() {
             <div className="text-xs text-muted-foreground">
               Currency: {c.defaultCurrency}
             </div>
-            <Button asChild size="sm">
+            <Button asChild size="sm" disabled={!!c.isArchived}>
               <Link to={`/classes/${c.id}`}>Open</Link>
             </Button>
           </CardContent>

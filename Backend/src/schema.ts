@@ -121,7 +121,7 @@ export const typeDefs = [
     type Membership {
       id: ID!
       userId: ID!
-      classId: ID!
+      classId: [ID!]
       role: Role!
       status: String!
       createdAt: DateTime!
@@ -384,6 +384,16 @@ export const typeDefs = [
         limit: Int = 50
         offset: Int = 0
       ): StudentsResult!
+    }
+
+    extend type Query {
+      classesByUser(
+        userId: ID!
+        role: Role
+        includeArchived: Boolean = false
+      ): [Class!]!
+
+      myClasses(role: Role, includeArchived: Boolean = false): [Class!]!
     }
 
     # --------- Mutations ----------

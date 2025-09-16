@@ -21,6 +21,7 @@ const CREATE_CLASS = gql`
     createClass(input: $input) {
       id
       name
+      slug # ✅ need this to route by slug
       joinCode
     }
   }
@@ -33,11 +34,21 @@ type OnboardingPrefill = {
   email?: string;
 };
 
+// simple slugify (strip accents, non-word chars, compress dashes)
+function slugify(s: string) {
+  return s
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64); // cap length
+}
+
 export default function TeacherOnboarding() {
   const navigate = useNavigate();
   const location = useLocation() as { state?: OnboardingPrefill };
 
-  // Pull preserved info from location.state, then sessionStorage (survives refresh)
   const [prefill, setPrefill] = React.useState<OnboardingPrefill | null>(null);
   React.useEffect(() => {
     const fromState = location?.state ?? null;
@@ -49,9 +60,7 @@ export default function TeacherOnboarding() {
     try {
       const raw = sessionStorage.getItem("onboardingPrefill");
       if (raw) setPrefill(JSON.parse(raw));
-    } catch {
-      // ignore
-    }
+    } catch {}
   }, [location?.state]);
 
   const [form, setForm] = React.useState({
@@ -70,8 +79,10 @@ export default function TeacherOnboarding() {
   const [createClass, { loading }] = useMutation(CREATE_CLASS, {
     onCompleted: (data) => {
       sessionStorage.removeItem("onboardingPrefill");
-      const id = data?.createClass?.id;
-      navigate(id ? `/classes/${id}` : "/classes", { replace: true });
+      const slug = data?.createClass?.slug;
+      // ✅ go to slug route inside the app shell
+      if (slug) navigate(`/c/${slug}`, { replace: true });
+      else navigate(`/classes/${data?.createClass?.id}`, { replace: true });
     },
     onError: (err) => {
       setErrorMsg(err.message || "Something went wrong creating the class.");
@@ -86,7 +97,6 @@ export default function TeacherOnboarding() {
     e.preventDefault();
     setErrorMsg(null);
 
-    // minimal validations
     if (!form.name.trim()) return setErrorMsg("Class name is required.");
     if (!form.subject.trim()) return setErrorMsg("Subject is required.");
     if (!form.period.trim()) return setErrorMsg("Period is required.");
@@ -99,9 +109,12 @@ export default function TeacherOnboarding() {
         ? undefined
         : Number(form.startingBalance);
 
-    // Build CreateClassInput — teacherIds omitted to default to ctx.userId in backend
+    // ✅ generate a slug from the name
+    const candidateSlug = slugify(form.name.trim());
+
     const input: any = {
       name: form.name.trim(),
+      slug: candidateSlug || undefined, // let backend omit if empty
       subject: form.subject.trim(),
       period: form.period.trim(),
       gradeLevel: Number.isFinite(gradeLevelNum) ? gradeLevelNum : undefined,
@@ -254,7 +267,6 @@ export default function TeacherOnboarding() {
               <Button type="submit" disabled={loading}>
                 {loading ? "Creating..." : "Create class"}
               </Button>
-              {/* No skip button on purpose */}
             </div>
           </form>
 

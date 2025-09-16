@@ -9,8 +9,6 @@ import {
   signRefreshToken,
   setRefreshCookie,
   clearRefreshCookie,
-  requireAuth,
-  requireRole,
   verifyRefreshToken,
 } from "./auth";
 
@@ -54,9 +52,10 @@ type TxType =
   | "PAYROLL"
   | "FINE";
 
-type Ctx = { userId?: string | null };
+type Ctx = { userId?: string | null; role?: string | null };
 
-const toId = (id: string) => new Types.ObjectId(id);
+const toId = (id: string | Types.ObjectId) =>
+  typeof id === "string" ? new Types.ObjectId(id) : id;
 
 // Map Mongo _id → GraphQL id
 const pickId = (p: any) => (p?.id ?? p?._id)?.toString() ?? null;
@@ -103,7 +102,7 @@ async function computeAccountBalance(accountId: Types.ObjectId) {
                   then: { $multiply: [-1, "$amount"] },
                 },
                 { case: { $eq: ["$type", "ADJUSTMENT"] }, then: "$amount" },
-                { case: { $eq: ["$type", "TRANSFER"] }, then: 0 }, // neutral here; see note in docs
+                { case: { $eq: ["$type", "TRANSFER"] }, then: 0 },
               ],
               default: 0,
             },
@@ -116,7 +115,6 @@ async function computeAccountBalance(accountId: Types.ObjectId) {
 }
 
 function mapPayToTxType(): TxType {
-  // Legacy "PAY" ≈ PAYROLL
   return "PAYROLL";
 }
 
@@ -128,20 +126,17 @@ type StudentDTO = {
   balance: number; // computed
 };
 
-function isTeacher(ctx: Ctx & { role?: string | null }) {
+function isTeacher(ctx: Ctx) {
   return ctx.role === "TEACHER";
 }
-function requireAuth(ctx: Ctx & { role?: string | null }) {
+function requireAuthLocal(ctx: Ctx) {
   if (!ctx.userId) throw new GraphQLError("Unauthorized");
 }
-function requireTeacher(ctx: Ctx & { role?: string | null }) {
-  requireAuth(ctx);
+function requireTeacher(ctx: Ctx) {
+  requireAuthLocal(ctx);
   if (!isTeacher(ctx)) throw new GraphQLError("Forbidden");
 }
-async function requireClassTeacher(
-  ctx: Ctx & { role?: string | null },
-  classId: string
-) {
+async function requireClassTeacher(ctx: Ctx, classId: string) {
   requireTeacher(ctx);
   const klass = await ClassModel.findById(classId).lean<IClass | null>().exec();
   if (!klass) throw new GraphQLError("Class not found");
@@ -149,23 +144,16 @@ async function requireClassTeacher(
   if (!teacherIds.includes(ctx.userId!)) throw new GraphQLError("Forbidden");
   return klass;
 }
-async function assertSelfOrTeacherForStudent(
-  ctx: Ctx & { role?: string | null },
-  studentId: string
-) {
-  requireAuth(ctx);
+async function assertSelfOrTeacherForStudent(ctx: Ctx, studentId: string) {
+  requireAuthLocal(ctx);
   if (ctx.userId !== studentId && !isTeacher(ctx))
     throw new GraphQLError("Forbidden");
 }
-async function assertAccountAccess(
-  ctx: Ctx & { role?: string | null },
-  accountId: string
-) {
-  requireAuth(ctx);
+async function assertAccountAccess(ctx: Ctx, accountId: string) {
+  requireAuthLocal(ctx);
   const acct = await Account.findById(accountId).lean<IAccount | null>().exec();
   if (!acct) throw new GraphQLError("Account not found");
   if (ctx.role === "TEACHER") {
-    // Optionally: ensure teacher teaches this class
     const klass = await ClassModel.findById(acct.classId)
       .lean<IClass | null>()
       .exec();
@@ -174,7 +162,6 @@ async function assertAccountAccess(
     if (!teacherIds.includes(ctx.userId!)) throw new GraphQLError("Forbidden");
     return acct;
   }
-  // Student can only view their own account
   if (acct.studentId.toString() !== ctx.userId)
     throw new GraphQLError("Forbidden");
   return acct;
@@ -200,7 +187,6 @@ export const resolvers = {
   // Queries
   // ----------------------
   Query: {
-    // Public/browse:
     // CHANGED: classes now hides archived by default; can includeArchived=true to see all
     classes: (
       _: any,
@@ -210,7 +196,6 @@ export const resolvers = {
         .lean<IClass[]>()
         .exec(),
 
-    // Unchanged:
     classrooms: () => Classroom.find({}).lean<IClassroom[]>().exec(),
     classroom: (_: any, { id }: { id: string }) =>
       Classroom.findById(id).lean<IClassroom | null>().exec(),
@@ -229,10 +214,13 @@ export const resolvers = {
     membershipsByClass: async (
       _: any,
       { classId, role }: { classId: string; role?: Role },
-      ctx: Ctx & { role?: string | null }
+      ctx: Ctx
     ) => {
       await requireClassTeacher(ctx, classId);
-      return Membership.find({ classId, ...(role ? { role } : {}) })
+      return Membership.find({
+        classIds: toId(classId),
+        ...(role ? { role } : {}),
+      })
         .lean<IMembership[]>()
         .exec();
     },
@@ -241,7 +229,7 @@ export const resolvers = {
     account: async (
       _: any,
       { studentId, classId }: { studentId: string; classId: string },
-      ctx: Ctx & { role?: string | null }
+      ctx: Ctx
     ) => {
       await assertSelfOrTeacherForStudent(ctx, studentId);
       const acct = await getOrCreateAccount(studentId, classId);
@@ -253,19 +241,24 @@ export const resolvers = {
     studentsByClass: async (
       _: any,
       { classId }: { classId: string },
-      ctx: Ctx & { role?: string | null }
+      ctx: Ctx
     ) => {
       await requireClassTeacher(ctx, classId);
-      // (existing body unchanged)
-      const memberships = await Membership.find({ classId, role: "STUDENT" })
+
+      const memberships = await Membership.find({
+        classIds: toId(classId),
+        role: "STUDENT",
+      })
         .lean<IMembership[]>()
         .exec();
       if (!memberships.length) return [];
+
       const userIds = memberships.map((m) => m.userId);
       const users = await User.find({ _id: { $in: userIds } })
         .lean<IUser[]>()
         .exec();
       const usersById = new Map(users.map((u) => [u._id.toString(), u]));
+
       const results: StudentDTO[] = [];
       for (const m of memberships) {
         const u = usersById.get(m.userId.toString());
@@ -284,7 +277,7 @@ export const resolvers = {
     payRequestsByClass: async (
       _: any,
       { classId, status }: { classId: string; status?: PayRequestStatus },
-      ctx: Ctx & { role?: string | null }
+      ctx: Ctx
     ) => {
       await requireClassTeacher(ctx, classId);
       return PayRequest.find({ classId, ...(status ? { status } : {}) })
@@ -296,7 +289,7 @@ export const resolvers = {
     payRequestsByStudent: async (
       _: any,
       { classId, studentId }: { classId: string; studentId: string },
-      ctx: Ctx & { role?: string | null }
+      ctx: Ctx
     ) => {
       await assertSelfOrTeacherForStudent(ctx, studentId);
       return PayRequest.find({ classId, studentId })
@@ -309,7 +302,7 @@ export const resolvers = {
     reasonsByClass: async (
       _: any,
       { classId }: { classId: string },
-      ctx: Ctx & { role?: string | null }
+      ctx: Ctx
     ) => {
       await requireClassTeacher(ctx, classId);
       return ClassReason.find({ classId }).sort({ label: 1 }).lean().exec();
@@ -319,7 +312,7 @@ export const resolvers = {
     transactionsByAccount: async (
       _: any,
       { accountId }: { accountId: string },
-      ctx: Ctx & { role?: string | null }
+      ctx: Ctx
     ) => {
       await assertAccountAccess(ctx, accountId);
       return Transaction.find({ accountId })
@@ -328,41 +321,115 @@ export const resolvers = {
         .exec();
     },
 
-    me: async (_: any, __: any, ctx: Ctx & { role?: string | null }) => {
+    me: async (_: any, __: any, ctx: Ctx) => {
       if (!ctx.userId) return null;
       return User.findById(ctx.userId).lean().exec();
     },
 
+    classesByUser: async (
+      _: any,
+      {
+        userId,
+        role,
+        includeArchived = false,
+      }: { userId: string; role?: Role; includeArchived?: boolean },
+      ctx: Ctx
+    ) => {
+      //TEMP DEBUG
+      /* requireAuthLocal(ctx);
+      if (ctx.userId !== userId && ctx.role !== "TEACHER") {
+        throw new GraphQLError("Forbidden");
+      } */
+
+      const memberships = await Membership.find({
+        userId: toId(userId),
+        ...(role ? { role } : {}),
+        // ensure we only consider docs that actually have classes
+        classIds: { $exists: true, $ne: [] },
+      })
+        .lean<IMembership[]>()
+        .exec();
+
+      const classIdObjs = Array.from(
+        new Set(
+          memberships.flatMap((m) =>
+            (m.classIds ?? []).filter(Boolean).map((cid: any) => cid.toString())
+          )
+        )
+      ).map((s) => new Types.ObjectId(s));
+
+      if (!classIdObjs.length) return [];
+
+      return ClassModel.find({
+        _id: { $in: classIdObjs },
+        ...(includeArchived ? {} : { isArchived: false }),
+      })
+        .lean<IClass[]>()
+        .exec();
+    },
+
+    myClasses: async (
+      _: any,
+      {
+        role,
+        includeArchived = false,
+      }: { role?: Role; includeArchived?: boolean },
+      ctx: Ctx
+    ) => {
+      requireAuthLocal(ctx);
+      const userId = ctx.userId!;
+
+      const memberships = await Membership.find({
+        userId: toId(userId),
+        ...(role ? { role } : {}),
+        classIds: { $exists: true, $ne: [] },
+      })
+        .lean<IMembership[]>()
+        .exec();
+
+      const classIdObjs = Array.from(
+        new Set(
+          memberships.flatMap((m) =>
+            (m.classIds ?? []).filter(Boolean).map((cid: any) => cid.toString())
+          )
+        )
+      ).map((s) => new Types.ObjectId(s));
+
+      if (!classIdObjs.length) return [];
+
+      return ClassModel.find({
+        _id: { $in: classIdObjs },
+        ...(includeArchived ? {} : { isArchived: false }),
+      })
+        .lean<IClass[]>()
+        .exec();
+    },
+
     students: async (
-      _,
+      _: any,
       args: {
         filter?: { classId?: string; search?: string; status?: string };
         limit?: number;
         offset?: number;
       },
-      ctx: Ctx & { role?: string | null }
+      ctx: Ctx
     ) => {
-      // Only teachers should be able to list all students
       requireTeacher(ctx);
 
       const { filter, limit = 50, offset = 0 } = args;
       const { classId, search, status } = filter ?? {};
 
-      // base query: only STUDENT role
       const query: any = { role: "STUDENT" };
-
       if (status) query.status = status;
 
-      // optional free-text search (name/email, case-insensitive)
       if (search?.trim()) {
         const rx = new RegExp(search.trim(), "i");
         query.$or = [{ name: rx }, { email: rx }];
       }
 
-      // optional class membership filter
       if (classId) {
         const userIds = await Membership.find({
-          classId: toId(classId),
+          classIds: toId(classId),
           role: "STUDENT",
         })
           .distinct("userId")
@@ -378,7 +445,7 @@ export const resolvers = {
         User.find(query)
           .sort({ name: 1 })
           .skip(offset)
-          .limit(Math.min(limit, 200)) // safety cap
+          .limit(Math.min(limit, 200))
           .lean<IUser[]>()
           .exec(),
         User.countDocuments(query),
@@ -392,14 +459,10 @@ export const resolvers = {
   // Mutations
   // ----------------------
   Mutation: {
-    // Creates a Class (and optionally a Classroom if not supplied).
-    // Seeds reasons, students (Users+Memberships+Accounts), jobs, and storeItems.
-    async createClass(_: any, { input }: any, ctx: any) {
-      requireAuth(ctx);
+    async createClass(_: any, { input }: any, ctx: Ctx) {
+      requireAuthLocal(ctx);
       requireTeacher(ctx);
 
-
-      // Optional slug uniqueness
       if (input.slug) {
         const exists = await ClassModel.findOne({ slug: input.slug })
           .lean()
@@ -423,7 +486,7 @@ export const resolvers = {
         const classroom = await Classroom.create({
           name: input.name,
           ownerId,
-          settings: { currency: input.defaultCurrency ?? "CE$" }, // currency stored at Classroom level
+          settings: { currency: input.defaultCurrency ?? "CE$" },
         });
         classroomId = classroom._id;
       }
@@ -435,7 +498,7 @@ export const resolvers = {
         subject: input.subject ?? null,
         period: input.period ?? null,
         gradeLevel: input.gradeLevel ?? null,
-        joinCode: undefined, // will be set by schema pre-validate if not provided
+        joinCode: undefined,
         schoolName: input.schoolName ?? null,
         district: input.district ?? null,
         payPeriodDefault: input.payPeriodDefault ?? null,
@@ -443,7 +506,7 @@ export const resolvers = {
         slug: input.slug ?? null,
         teacherIds: input.teacherIds?.map(
           (id: string) => new Types.ObjectId(id)
-        ) ?? [new Types.ObjectId(ctx.userId)],
+        ) ?? [new Types.ObjectId(ctx.userId!)],
         storeSettings: input.storeSettings ?? undefined,
         isArchived: false,
       });
@@ -460,7 +523,7 @@ export const resolvers = {
         }
       }
 
-      // Students: create (User role=STUDENT) if needed, add membership + account (+ optional starting balance)
+      // Students: create if needed, then add to membership.classIds and ensure account (+ optional starting balance)
       if (Array.isArray(input.students) && input.students.length) {
         for (const s of input.students) {
           let userId: Types.ObjectId | null = null;
@@ -473,10 +536,13 @@ export const resolvers = {
           if (!userId) continue;
 
           await Membership.updateOne(
-            { userId, classId: cls._id, role: "STUDENT" },
-            { $setOnInsert: { status: "ACTIVE" } },
+            { userId, role: "STUDENT" },
+            {
+              $setOnInsert: { status: "ACTIVE" },
+              $addToSet: { classIds: cls._id },
+            },
             { upsert: true }
-          );
+          ).exec();
 
           const account = await Account.findOne({
             studentId: userId,
@@ -484,6 +550,7 @@ export const resolvers = {
           })
             .lean()
             .exec();
+
           let acctId: Types.ObjectId;
           if (account) {
             acctId = account._id;
@@ -496,7 +563,6 @@ export const resolvers = {
             acctId = created._id;
           }
 
-          // Seed starting balance, if defined and > 0
           if ((cls.startingBalance ?? 0) > 0) {
             await Transaction.create({
               accountId: acctId,
@@ -505,7 +571,7 @@ export const resolvers = {
               type: "DEPOSIT",
               amount: cls.startingBalance!,
               memo: "Starting balance",
-              createdByUserId: new Types.ObjectId(ctx.userId),
+              createdByUserId: new Types.ObjectId(ctx.userId!),
             });
           }
         }
@@ -550,8 +616,8 @@ export const resolvers = {
     },
 
     // NEW: updateClass
-    async updateClass(_: any, { id, input }: any, ctx: any) {
-      requireAuth(ctx);
+    async updateClass(_: any, { id, input }: any, ctx: Ctx) {
+      requireAuthLocal(ctx);
       const klass = await ClassModel.findById(id).lean<IClass | null>().exec();
       if (!klass) throw new GraphQLError("Class not found");
       await requireClassTeacher(ctx, id);
@@ -599,8 +665,8 @@ export const resolvers = {
     },
 
     // NEW: rotateJoinCode
-    async rotateJoinCode(_: any, { id }: any, ctx: any) {
-      requireAuth(ctx);
+    async rotateJoinCode(_: any, { id }: any, ctx: Ctx) {
+      requireAuthLocal(ctx);
       await requireClassTeacher(ctx, id);
       const next = genJoinCode();
       const updated = await ClassModel.findByIdAndUpdate(
@@ -615,8 +681,8 @@ export const resolvers = {
     },
 
     // NEW: deleteClass (soft by default, hard optional)
-    async deleteClass(_: any, { id, hard = false }: any, ctx: any) {
-      requireAuth(ctx);
+    async deleteClass(_: any, { id, hard = false }: any, ctx: Ctx) {
+      requireAuthLocal(ctx);
       await requireClassTeacher(ctx, id);
 
       if (!hard) {
@@ -626,10 +692,18 @@ export const resolvers = {
         return true;
       }
 
-      // HARD DELETE (remove dependents)
-      // Note: if you prefer, wrap in a transaction with Mongo sessions.
+      // Update memberships (pull this class from arrays) and remove empties
+      await Membership.updateMany(
+        { classIds: toId(id) },
+        { $pull: { classIds: toId(id) } }
+      ).exec();
+      // Remove memberships with no classes left
+      await Membership.deleteMany({
+        $expr: { $eq: [{ $size: { $ifNull: ["$classIds", []] } }, 0] },
+      }).exec();
+
+      // HARD DELETE dependents
       await Promise.all([
-        Membership.deleteMany({ classId: id }).exec(),
         Account.deleteMany({ classId: id }).exec(),
         Transaction.deleteMany({ classId: id }).exec(),
         StoreItem.deleteMany({ classId: id }).exec(),
@@ -646,7 +720,8 @@ export const resolvers = {
 
     async addReasons(
       _: any,
-      { classId, labels }: { classId: string; labels: string[] }
+      { classId, labels }: { classId: string; labels: string[] },
+      ctx: Ctx
     ) {
       await requireClassTeacher(ctx, classId);
       if (!labels?.length)
@@ -654,9 +729,7 @@ export const resolvers = {
       try {
         await ClassReason.insertMany(
           labels.map((label) => ({ classId: toId(classId), label })),
-          {
-            ordered: false,
-          }
+          { ordered: false }
         );
       } catch {
         /* swallow dups */
@@ -667,7 +740,7 @@ export const resolvers = {
     async setReasons(
       _: any,
       { classId, labels }: { classId: string; labels: string[] },
-      ctx: Ctx & { role?: string | null }
+      ctx: Ctx
     ) {
       await requireClassTeacher(ctx, classId);
 
@@ -690,9 +763,9 @@ export const resolvers = {
       if (!reason) throw new GraphQLError("Reason not allowed for this class");
 
       const isMember = await Membership.findOne({
-        classId: input.classId,
-        userId: input.studentId,
+        userId: toId(input.studentId),
         role: "STUDENT",
+        classIds: toId(input.classId),
       })
         .lean()
         .exec();
@@ -740,10 +813,10 @@ export const resolvers = {
         accountId: acct._id,
         classId: klass._id,
         classroomId: klass.classroomId,
-        type: mapPayToTxType(), // PAYROLL
+        type: mapPayToTxType(),
         amount: req.amount,
         memo: `One-time payment: ${req.reason}`,
-        createdByUserId: ctx.userId ? toId(ctx.userId) : req.studentId, // use approver if available
+        createdByUserId: ctx.userId ? toId(ctx.userId) : req.studentId,
       });
 
       const updated = await PayRequest.findByIdAndUpdate(
@@ -830,8 +903,6 @@ export const resolvers = {
       try {
         const { sub, role } = verifyRefreshToken(cookie);
         const accessToken = signAccessToken(sub, role as any);
-        // optional: roll refresh cookie lifetime
-        // setRefreshCookie(ctx.res, cookie);
         return accessToken;
       } catch {
         throw new GraphQLError("Invalid refresh token");
@@ -848,8 +919,6 @@ export const resolvers = {
   // ----------------------
   // Field Resolvers
   // ----------------------
-
-  // id mappers for simple types (keep once)
   Classroom: { id: pickId },
   User: { id: pickId },
   Membership: { id: pickId },
@@ -863,11 +932,9 @@ export const resolvers = {
   Payslip: { id: pickId },
   ClassReason: { id: pickId },
 
-  // Merge Class into a single resolver entry
   Class: {
     id: pickId,
 
-    // Resolve defaultCurrency for compatibility by looking up the Classroom
     defaultCurrency: async (p: IClass) => {
       const classroom = await Classroom.findById(p.classroomId)
         .lean<IClassroom | null>()
@@ -875,10 +942,9 @@ export const resolvers = {
       return classroom?.settings?.currency ?? "CE$";
     },
 
-    // ✅ Provide a real implementation (no placeholder)
     students: async (p: IClass) => {
       const memberships = await Membership.find({
-        classId: p._id,
+        classIds: p._id,
         role: "STUDENT",
       })
         .lean<IMembership[]>()
@@ -901,8 +967,6 @@ export const resolvers = {
 
         let balance = 0;
         if (acct) {
-          // reuse your helper if you prefer:
-          // balance = await computeAccountBalance(acct._id);
           const res = await Transaction.aggregate<{
             _id: Types.ObjectId;
             balance: number;
@@ -969,10 +1033,9 @@ export const resolvers = {
   PayRequest: {
     id: pickId,
     class: (p: any) => ClassModel.findById(p.classId).lean().exec(),
-    student: (p: any) => User.findById(p.studentId).lean().exec(), // a User with role=STUDENT
+    student: (p: any) => User.findById(p.studentId).lean().exec(),
   },
 
-  // Student DTO resolvers (compat)
   Student: {
     class: (p: StudentDTO) => ClassModel.findById(p.classId).lean().exec(),
     txns: async (p: StudentDTO) => {

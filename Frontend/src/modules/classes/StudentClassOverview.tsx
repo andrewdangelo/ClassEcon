@@ -1,188 +1,172 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { useClassContext } from "@/context/ClassContext";
-import { getStudentById, getTransactionsByStudentClass } from "@/data/mock";
-import { formatCurrency, formatDate } from "@/lib/format";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { Link, useParams } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+// src/modules/classes/StudentOverview.tsx
 import * as React from "react";
+import { gql } from "@apollo/client";
+import {useQuery } from "@apollo/client/react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
-/** Build a running balance series from transactions */
-function buildBalanceSeries(
-  startBalance: number,
-  txns: { date: string; amount: number }[]
-) {
-  let running = startBalance;
-  // Start from earliest → compute balance after each txn
-  const sorted = [...txns].sort((a, b) => a.date.localeCompare(b.date));
-  const series = sorted.map((t) => {
-    running += t.amount;
-    return { date: t.date, balance: running };
+const ACCOUNT_QUERY = gql`
+  query StudentOverview_Account($studentId: ID!, $classId: ID!) {
+    account(studentId: $studentId, classId: $classId) {
+      id
+      balance
+      classId
+    }
+    class(id: $classId) {
+      id
+      defaultCurrency
+    }
+  }
+`;
+
+const TXNS_BY_ACCOUNT = gql`
+  query StudentOverview_Txns($accountId: ID!) {
+    transactionsByAccount(accountId: $accountId) {
+      id
+      type
+      amount
+      memo
+      createdAt
+    }
+  }
+`;
+
+const STORE_ITEMS_BY_CLASS = gql`
+  query StudentOverview_Store($classId: ID!) {
+    storeItemsByClass(classId: $classId) {
+      id
+      title
+      price
+      active
+      stock
+    }
+  }
+`;
+
+type Props = {
+  klass: { id: string; defaultCurrency?: string | null };
+  studentId: string;
+};
+
+export default function StudentOverview({ klass, studentId }: Props) {
+  // 1) Load account + currency
+  const {
+    data: acctData,
+    loading: acctLoading,
+    error: acctError,
+  } = useQuery(ACCOUNT_QUERY, {
+    variables: { studentId, classId: klass.id },
+    fetchPolicy: "cache-first",
   });
-  // If no txns, keep a flat point at start
-  if (series.length === 0)
-    return [
-      { date: new Date().toISOString().slice(0, 10), balance: startBalance },
-    ];
-  return series;
-}
 
-export function StudentClassOverview({ classId }: { classId: string }) {
-  const { currentStudentId } = useClassContext();
-  const { classId: cid } = useParams<{ classId: string }>();
+  const account = acctData?.account || null;
+  const currency = acctData?.class?.defaultCurrency ?? "CE$";
 
-  const student = currentStudentId ? getStudentById(currentStudentId) : null;
-  if (!student || student.classId !== classId) {
+  // 2) Load transactions when account id is known
+  const {
+    data: txData,
+    loading: txLoading,
+    error: txError,
+  } = useQuery(TXNS_BY_ACCOUNT, {
+    variables: { accountId: account?.id ?? "" },
+    skip: !account?.id,
+    fetchPolicy: "cache-first",
+  });
+
+  // 3) Store items (browse)
+  const { data: storeData } = useQuery(STORE_ITEMS_BY_CLASS, {
+    variables: { classId: klass.id },
+    fetchPolicy: "cache-first",
+  });
+
+  if (acctLoading) {
     return (
-      <div>This demo assumes the current student belongs to this class.</div>
+      <Card>
+        <CardContent className="p-6">Loading…</CardContent>
+      </Card>
+    );
+  }
+  if (acctError) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-red-600">
+          {acctError.message}
+        </CardContent>
+      </Card>
+    );
+  }
+  if (!account) {
+    return (
+      <Card>
+        <CardContent className="p-6">No account found.</CardContent>
+      </Card>
     );
   }
 
-  const txns = getTransactionsByStudentClass(student.id, classId);
-  const chartData = buildBalanceSeries(
-    0,
-    txns.map((t) => ({ date: t.date, amount: t.amount }))
-  );
+  const txns = txData?.transactionsByAccount ?? [];
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold">
-        My Class Overview — {student.name}
-      </h2>
-
-      {cid && (
-        <div className="flex justify-end">
-          <Link to={`/classes/${cid}/request-payment`}>
-            <Button variant="secondary">Request One-time Payment</Button>
-          </Link>
-        </div>
-      )}
-
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Current Balance</CardTitle>
-            <CardDescription>Latest available</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {formatCurrency(student.balance)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Transactions</CardTitle>
-            <CardDescription>Count in this class</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{txns.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Last Activity</CardTitle>
-            <CardDescription>Most recent</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {txns.length ? formatDate(txns[txns.length - 1].date) : "—"}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
+    <div className="grid gap-6 md:grid-cols-2">
       <Card>
         <CardHeader>
-          <CardTitle>Balance Over Time</CardTitle>
-          <CardDescription>Cumulative after each transaction</CardDescription>
+          <CardTitle>My Balance</CardTitle>
         </CardHeader>
-        <CardContent className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="bal" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopOpacity={0.35} />
-                  <stop offset="95%" stopOpacity={0.05} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Area
-                type="monotone"
-                dataKey="balance"
-                strokeWidth={2}
-                fillOpacity={1}
-                fill="url(#bal)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+        <CardContent className="p-6">
+          <div className="text-3xl font-semibold tabular-nums">
+            {currency} {account.balance}
+          </div>
+          {txLoading && (
+            <div className="mt-2 text-sm text-muted-foreground">
+              Loading transactions…
+            </div>
+          )}
+          {txError && (
+            <div className="mt-2 text-sm text-red-600">{txError.message}</div>
+          )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
-          <CardDescription>Latest 10</CardDescription>
+          <CardTitle>Recent Activity</CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="border-b text-left">
-              <tr>
-                <th className="py-2 pr-4">Date</th>
-                <th className="py-2 pr-4">Type</th>
-                <th className="py-2 pr-4">Description</th>
-                <th className="py-2 text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {txns
-                .slice(-10)
-                .reverse()
-                .map((t) => (
-                  <tr key={t.id} className="border-b last:border-0">
-                    <td className="py-2 pr-4">{formatDate(t.date)}</td>
-                    <td className="py-2 pr-4">{t.type}</td>
-                    <td className="py-2 pr-4">{t.desc}</td>
-                    <td className="py-2 text-right">
-                      <span
-                        className={
-                          t.amount < 0 ? "text-destructive" : "text-emerald-600"
-                        }
-                      >
-                        {t.amount < 0 ? "−" : "+"}
-                        {formatCurrency(Math.abs(t.amount))}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              {txns.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="py-4 text-muted-foreground">
-                    No transactions yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+        <CardContent className="p-0">
+          <ul className="divide-y">
+            {txns.slice(0, 8).map((t: any) => (
+              <li
+                key={t.id}
+                className="flex items-center justify-between px-4 py-3"
+              >
+                <div className="text-sm">
+                  <div className="font-medium">{t.type}</div>
+                  <div className="text-xs text-muted-foreground">{t.memo}</div>
+                </div>
+                <div className="text-sm tabular-nums">{t.amount}</div>
+              </li>
+            ))}
+            {!txns.length && (
+              <li className="px-4 py-4 text-sm text-muted-foreground">
+                No transactions yet.
+              </li>
+            )}
+          </ul>
+        </CardContent>
+      </Card>
+
+      <Card className="md:col-span-2">
+        <CardHeader>
+          <CardTitle>Class Store</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 p-4">
+            {(storeData?.storeItemsByClass ?? []).map((i: any) => (
+              <li key={i.id} className="border rounded-lg p-4">
+                <div className="font-medium">{i.title}</div>
+                <div className="text-sm text-muted-foreground">
+                  Price: {i.price} • {i.active ? "Available" : "Inactive"}
+                </div>
+              </li>
+            ))}
+          </ul>
         </CardContent>
       </Card>
     </div>

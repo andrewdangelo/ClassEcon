@@ -58,6 +58,7 @@ const router = createBrowserRouter([
       { path: "classes", element: <Classes /> },
       { path: "classes/new", element: <ClassCreate /> },
       { path: "classes/:classId", element: <ClassOverview /> },
+      { path: "c/:slug", element: <ClassOverview /> },
       { path: "students", element: <Students /> },
       { path: "store", element: <Store /> },
       { path: "dev/graphql-test", element: <GraphQLTest /> },

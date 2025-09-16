@@ -34,20 +34,58 @@ export const GET_CLASS_BY_ID = gql`
       teacherIds
       defaultCurrency
       isArchived
-      students { id name classId balance }
-      storeItems { id title price description imageUrl stock perStudentLimit active sort }
+      students {
+        id
+        name
+        classId
+        balance
+      }
+      storeItems {
+        id
+        title
+        price
+        description
+        imageUrl
+        stock
+        perStudentLimit
+        active
+        sort
+      }
       jobs {
         id
         title
         description
         period
-        salary { amount unit }
-        capacity { current max }
+        salary {
+          amount
+          unit
+        }
+        capacity {
+          current
+          max
+        }
         active
       }
-      transactions { id type amount memo createdAt }
-      payRequests { id amount reason justification status teacherComment createdAt }
-      reasons { id label }
+      transactions {
+        id
+        type
+        amount
+        memo
+        createdAt
+      }
+      payRequests {
+        id
+        amount
+        reason
+        justification
+        status
+        teacherComment
+        createdAt
+      }
+      reasons {
+        id
+        label
+      }
       createdAt
       updatedAt
     }
@@ -63,6 +101,27 @@ export const GET_CLASS_BY_SLUG = gql`
       period
       gradeLevel
       joinCode
+      defaultCurrency
+      isArchived
+    }
+  }
+`;
+
+export const GET_CLASSES_BY_USER = gql`
+  query ClassesByUser(
+    $userId: ID!
+    $role: Role
+    $includeArchived: Boolean = false
+  ) {
+    classesByUser(
+      userId: $userId
+      role: $role
+      includeArchived: $includeArchived
+    ) {
+      id
+      name
+      subject
+      period
       defaultCurrency
       isArchived
     }
