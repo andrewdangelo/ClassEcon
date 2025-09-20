@@ -1,7 +1,10 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
+import { useQuery } from "@apollo/client/react";
+import { ME } from "@/graphql/queries/me";
+import { MeQuery } from "@/graphql/__generated__/graphql";
 import { ClassSwitcher } from "./ClassSwitcher";
-import { useClassContext, Role } from "@/context/ClassContext";
+import { useClassContext } from "@/context/ClassContext";
 import { cn } from "@/lib/utils";
 import {
   BookOpen,
@@ -11,7 +14,7 @@ import {
   Inbox,
 } from "lucide-react";
 
-type NavItem = { to: string; label: string; icon: any; roles: Role[] };
+type NavItem = { to: string; label: string; icon: any; roles: string[] };
 
 const NAV_ITEMS: NavItem[] = [
   {
@@ -33,7 +36,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: ShoppingBag,
     roles: ["TEACHER", "STUDENT"],
   },
-  { to: "/requests", label: "Requests", icon: Inbox, roles: ["TEACHER"] }, // <-- NEW
+  { to: "/requests", label: "Requests", icon: Inbox, roles: ["TEACHER"] },
 ];
 
 export function Sidebar({
@@ -43,7 +46,15 @@ export function Sidebar({
   open: boolean;
   onClose: () => void;
 }) {
-  const { role } = useClassContext();
+  const { role: contextRole } = useClassContext();
+  const { data, loading, error } = useQuery<MeQuery>(ME, {
+    fetchPolicy: "cache-and-network",
+  });
+
+  const user = data?.me;
+  const role = user?.role || contextRole;
+  const username = user?.name || "—";
+
   const compact = role === "STUDENT"; // auto-compact for students
   const visible = NAV_ITEMS.filter((n) => n.roles.includes(role));
 
@@ -63,13 +74,18 @@ export function Sidebar({
           compact ? "px-1" : "px-2"
         )}
       >
-        <div className="text-xs text-muted-foreground">Signed in as</div>
+        <div className="flex flex-col">
+          <span className="text-xs text-muted-foreground">Signed in as</span>
+          <span className="text-sm font-medium truncate">
+            {loading ? "…" : error ? "Error" : username}
+          </span>
+        </div>
         <span className="rounded-md border px-2 py-1 text-xs uppercase">
-          {role.toLowerCase()}
+          {role?.toLowerCase() || "—"}
         </span>
       </div>
 
-      <ClassSwitcher className={cn("mb-3", compact && "hidden md:block")} />
+      <ClassSwitcher className={cn("mb-3", compact && "hidden md:block")} meId={user?.id} />
 
       <nav className="space-y-1">
         {visible.map((n) => {
@@ -91,7 +107,6 @@ export function Sidebar({
               onClick={onClose}
             >
               <Icon className="h-4 w-4" />
-              {/* Hide label on md+ for compact student view */}
               <span className={cn("truncate", compact && "hidden md:inline")}>
                 {n.label}
               </span>

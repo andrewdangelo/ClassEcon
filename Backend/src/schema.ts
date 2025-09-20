@@ -396,6 +396,10 @@ export const typeDefs = [
       myClasses(role: Role, includeArchived: Boolean = false): [Class!]!
     }
 
+    extend type Query {
+      studentsByTeacher: [Student!]!
+    }
+
     # --------- Mutations ----------
     input SignUpInput {
       name: String!
