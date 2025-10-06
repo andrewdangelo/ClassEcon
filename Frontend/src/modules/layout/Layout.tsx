@@ -1,25 +1,43 @@
 import React from "react";
-import { Outlet, NavLink } from "react-router-dom";
+import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
+import { Menu, LogOut } from "lucide-react";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { useClassContext } from "@/context/ClassContext";
 import { cn } from "@/lib/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { LoginSignupCard } from "@/components/auth/LoginSignupCard";
+import { useMutation } from "@apollo/client/react";
+import { useAppDispatch } from "@/redux/store/store";
+import { clearAuth } from "@/redux/authSlice";
+import { LOGOUT } from "@/graphql/mutations/auth";
 
 export function Layout() {
   const [open, setOpen] = React.useState(false);
-  const [authOpen, setAuthOpen] = React.useState(false);
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
 
-  const { role, setRole, currentStudentId, setCurrentStudentId } =
-    useClassContext();
+  const { role } = useClassContext();
   const compact = role === "STUDENT";
+
+  const [logout] = useMutation(LOGOUT, {
+    onCompleted: () => {
+      dispatch(clearAuth());
+      navigate("/auth", { replace: true });
+    },
+    onError: (err) => {
+      console.error("Logout error:", err);
+      // Still clear local auth state even if server logout fails
+      dispatch(clearAuth());
+      navigate("/auth", { replace: true });
+    },
+  });
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      // Error handling is in the onError callback
+    }
+  };
 
   return (
     <div className={cn("min-h-screen", compact ? "md:pl-56" : "md:pl-72")}>
@@ -86,35 +104,17 @@ export function Layout() {
             </NavLink>
           </nav>
 
-          {/* Right side: sign in + temporary role toggle */}
+          {/* Right side: logout button */}
           <div className="flex items-center gap-2">
-            <Button variant="secondary" onClick={() => setAuthOpen(true)}>
-              Sign in
-            </Button>
-            {/* Temporary role toggle for testing */}
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value as "TEACHER" | "STUDENT")}
-              className="rounded-md border px-2 py-1 text-sm"
-              aria-label="Switch role"
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleLogout}
+              className="flex items-center gap-2"
             >
-              <option value="TEACHER">Teacher</option>
-              <option value="STUDENT">Student</option>
-            </select>
-            {role === "STUDENT" && (
-              <select
-                value={currentStudentId ?? ""}
-                onChange={(e) => setCurrentStudentId(e.target.value)}
-                className="rounded-md border px-2 py-1 text-sm"
-                aria-label="Pick demo student"
-              >
-                <option value="s1">Ava M.</option>
-                <option value="s2">Liam K.</option>
-                <option value="s3">Noah S.</option>
-                <option value="s4">Emma R.</option>
-                <option value="s5">Olivia C.</option>
-              </select>
-            )}
+              <LogOut className="h-4 w-4" />
+              Logout
+            </Button>
           </div>
         </div>
       </header>
@@ -123,16 +123,6 @@ export function Layout() {
       <main className="container py-6">
         <Outlet />
       </main>
-
-      {/* Auth dialog */}
-      <Dialog open={authOpen} onOpenChange={setAuthOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Welcome back</DialogTitle>
-          </DialogHeader>
-          <LoginSignupCard defaultMode="login" />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
