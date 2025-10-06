@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { ClassesByUserQuery, MeQuery } from "@/graphql/__generated__/graphql";
 
 export default function Classes() {
   // 1) Get current user
@@ -17,20 +18,22 @@ export default function Classes() {
     data: meData,
     loading: meLoading,
     error: meError,
-  } = useQuery(ME, {
+  } = useQuery<MeQuery>(ME, {
     fetchPolicy: "cache-first",
   });
 
-  const userId = meData?.me?.id as string | undefined;
+  const userId = meData?.me?.id;
+
+  console.log(userId)
 
   // 2) Get classes for that userId
-  const { data, loading, error, refetch } = useQuery(GET_CLASSES_BY_USER, {
+  const { data, loading, error, refetch } = useQuery<ClassesByUserQuery>(GET_CLASSES_BY_USER, {
     variables: {
       userId: userId!, // required by schema
       // role: "TEACHER",        // optional: uncomment to filter by role
       includeArchived: false, // set true to include archived classes
     },
-    skip: !userId, // wait until we know the userId
+    skip: !userId,
     fetchPolicy: "cache-and-network",
   });
 
@@ -66,6 +69,7 @@ export default function Classes() {
   }
 
   const classes = data?.classesByUser ?? [];
+  console.log(data)
   if (classes.length === 0) {
     return (
       <div className="p-6 text-sm text-muted-foreground">

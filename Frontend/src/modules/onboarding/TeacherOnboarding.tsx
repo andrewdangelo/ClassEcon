@@ -1,8 +1,10 @@
 // src/modules/onboarding/TeacherOnboarding.tsx
 import * as React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { gql } from "@apollo/client";
 import { useMutation } from "@apollo/client/react";
+import type { CreateClassMutation, CreateClassMutationVariables } from "@/graphql/__generated__/graphql";
+import { CREATE_CLASS } from "@/graphql/mutations/createClass";
+import { gql } from "@apollo/client";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,14 +18,9 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 
-const CREATE_CLASS = gql`
-  mutation CreateClass($input: CreateClassInput!) {
-    createClass(input: $input) {
-      id
-      name
-      slug # ✅ need this to route by slug
-      joinCode
-    }
+const CLASSES_FOR_GUARD = gql`
+  query RequireClass_Classes {
+    classes { id teacherIds }
   }
 `;
 
@@ -33,17 +30,6 @@ type OnboardingPrefill = {
   name?: string;
   email?: string;
 };
-
-// simple slugify (strip accents, non-word chars, compress dashes)
-function slugify(s: string) {
-  return s
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 64); // cap length
-}
 
 export default function TeacherOnboarding() {
   const navigate = useNavigate();
@@ -76,13 +62,18 @@ export default function TeacherOnboarding() {
 
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
-  const [createClass, { loading }] = useMutation(CREATE_CLASS, {
+  const [createClass, { loading }] = useMutation<CreateClassMutation, CreateClassMutationVariables>(CREATE_CLASS, {
+    refetchQueries: [{ query: CLASSES_FOR_GUARD }],
+    awaitRefetchQueries: true,
     onCompleted: (data) => {
       sessionStorage.removeItem("onboardingPrefill");
-      const slug = data?.createClass?.slug;
-      // ✅ go to slug route inside the app shell
-      if (slug) navigate(`/c/${slug}`, { replace: true });
-      else navigate(`/classes/${data?.createClass?.id}`, { replace: true });
+      const newClassId = data?.createClass?.id;
+      // Redirect to dashboard root so user sees full app shell
+      if (newClassId) {
+        navigate(`/`, { replace: true, state: { newClassId } });
+      } else {
+        navigate(`/`, { replace: true });
+      }
     },
     onError: (err) => {
       setErrorMsg(err.message || "Something went wrong creating the class.");
@@ -109,12 +100,8 @@ export default function TeacherOnboarding() {
         ? undefined
         : Number(form.startingBalance);
 
-    // ✅ generate a slug from the name
-    const candidateSlug = slugify(form.name.trim());
-
     const input: any = {
       name: form.name.trim(),
-      slug: candidateSlug || undefined, // let backend omit if empty
       subject: form.subject.trim(),
       period: form.period.trim(),
       gradeLevel: Number.isFinite(gradeLevelNum) ? gradeLevelNum : undefined,
