@@ -4,6 +4,7 @@ import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./index.css";
 import { Layout } from "./modules/layout/Layout";
+import { RoleBasedLayout } from "./modules/layout/RoleBasedLayout";
 import Dashboard from "./modules/dashboard/Dashboard";
 import Classes from "./modules/classes/Classes";
 import Students from "./modules/students/Students";
@@ -49,7 +50,7 @@ const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <RequireClassGuard>
-          <Layout />
+          <RoleBasedLayout />
         </RequireClassGuard>
       </ProtectedRoute>
     ),
