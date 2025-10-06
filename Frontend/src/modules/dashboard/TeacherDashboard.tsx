@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useQuery } from "@apollo/client/react";
 import { GET_CLASSES_BY_USER } from "@/graphql/queries/classes";
 import { useAppSelector } from "@/redux/store/store";
@@ -12,6 +13,7 @@ import { selectUser } from "@/redux/authSlice";
 import { ClassesByUserQuery } from "@/graphql/__generated__/graphql";
 import * as React from "react";
 import { useToast } from "@/components/ui/toast";
+import { useNavigate } from "react-router-dom";
 import { 
   DollarSign, 
   Users, 
@@ -21,13 +23,18 @@ import {
   TrendingUp,
   AlertCircle,
   CheckCircle,
-  BookOpen
+  BookOpen,
+  Copy,
+  Settings,
+  ExternalLink,
+  Share2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function TeacherDashboard() {
   const { push } = useToast();
   const user = useAppSelector(selectUser);
+  const navigate = useNavigate();
 
   // Fetch all teacher's classes
   const { data: classesData, loading, error } = useQuery<ClassesByUserQuery>(GET_CLASSES_BY_USER, {
@@ -49,6 +56,30 @@ export default function TeacherDashboard() {
       });
     }
   }, [error, push]);
+
+  const copyToClipboard = async (text: string, description: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      push({
+        title: "Copied!",
+        description: `${description} copied to clipboard`,
+      });
+    } catch (err) {
+      push({
+        title: "Failed to copy",
+        description: "Could not copy to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleViewDetails = (classId: string) => {
+    navigate(`/classes/${classId}`);
+  };
+
+  const handleManageClass = (classId: string) => {
+    navigate(`/classes/${classId}/manage`);
+  };
 
   const classes = classesData?.classesByUser || [];
   const totalClasses = classes.length;
@@ -176,7 +207,7 @@ export default function TeacherDashboard() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {classes.map((cls: any) => (
-              <Card key={cls.id} className={cn("cursor-pointer hover:shadow-md transition-shadow", cls.isArchived && "opacity-60")}>
+              <Card key={cls.id} className={cn("hover:shadow-md transition-shadow", cls.isArchived && "opacity-60")}>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <span>{cls.name}</span>
@@ -191,19 +222,66 @@ export default function TeacherDashboard() {
                     }
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                  {/* Join Code Section */}
+                  {!cls.isArchived && cls.joinCode && (
+                    <div className="bg-muted/50 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Join Code</p>
+                          <p className="font-mono text-sm font-medium">{cls.joinCode}</p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyToClipboard(cls.joinCode, "Join code")}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyToClipboard(
+                          `Join my class "${cls.name}" with code: ${cls.joinCode}`,
+                          "Invitation message"
+                        )}
+                        className="h-7 text-xs mt-2 w-full"
+                      >
+                        <Share2 className="h-3 w-3 mr-1" />
+                        Share Invitation
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Class Info */}
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Currency:</span>
                     <span className="font-medium">{cls.defaultCurrency || "CE$"}</span>
                   </div>
+
+                  {/* Action Buttons */}
                   {!cls.isArchived && (
-                    <div className="mt-3 flex gap-2">
-                      <button className="flex-1 px-3 py-1 bg-secondary text-secondary-foreground rounded text-xs hover:bg-secondary/80 transition-colors">
-                        View Details
-                      </button>
-                      <button className="flex-1 px-3 py-1 bg-primary text-primary-foreground rounded text-xs hover:bg-primary/90 transition-colors">
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewDetails(cls.id)}
+                        className="flex-1"
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        View
+                      </Button>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleManageClass(cls.id)}
+                        className="flex-1"
+                      >
+                        <Settings className="h-3 w-3 mr-1" />
                         Manage
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </CardContent>

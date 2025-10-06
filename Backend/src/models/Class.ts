@@ -7,6 +7,7 @@ export interface IClass {
   _id: Types.ObjectId;
   classroomId: Types.ObjectId; // ref Classroom
   name: string;
+  description?: string | null;
   subject?: string | null;
   period?: string | null;
   gradeLevel?: number | null;
@@ -21,11 +22,13 @@ export interface IClass {
   // Economy defaults
   payPeriodDefault?: PayPeriod | null;
   startingBalance?: number | null; // applied to new students on join
+  defaultCurrency?: string | null;
 
   // Ownership & config
   slug?: string | null; // unique (only when non-empty)
   teacherIds: Types.ObjectId[]; // ref User[]
   storeSettings?: Record<string, unknown> | null;
+  status?: string | null;
 
   // Lifecycle
   isArchived: boolean;
@@ -51,6 +54,7 @@ const ClassSchema = new Schema<IClass>(
       required: true,
     },
     name: { type: String, required: true, trim: true },
+    description: { type: String, trim: true },
     subject: { type: String, trim: true },
     period: { type: String, trim: true },
     gradeLevel: { type: Number, min: 0, max: 12 },
@@ -66,6 +70,7 @@ const ClassSchema = new Schema<IClass>(
       enum: ["WEEKLY", "BIWEEKLY", "MONTHLY", "SEMESTER"],
     },
     startingBalance: { type: Number, min: 0 },
+    defaultCurrency: { type: String, trim: true, default: "CE$" },
 
     // IMPORTANT: do NOT set unique here; we enforce uniqueness via a partial index below.
     // Also normalize empty strings to "unset" so they don't hit the unique index.
@@ -81,6 +86,7 @@ const ClassSchema = new Schema<IClass>(
 
     teacherIds: [{ type: Schema.Types.ObjectId, ref: "User", index: true }],
     storeSettings: { type: Schema.Types.Mixed },
+    status: { type: String, trim: true, default: "ACTIVE" },
 
     isArchived: { type: Boolean, default: false, index: true },
   },

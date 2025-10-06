@@ -1,12 +1,4 @@
 // Fake async API wrapping the mock data with latency and occasional errors.
-import {
-  getStudentsByClass,
-  getStoreItemsByClass,
-  getTotalBalanceForClass,
-  type Student,
-  type StoreItem,
-} from "@/data/mock";
-
 import { http } from "./http";
 import { selectAccessToken } from "../redux/authSlice";
 import { store } from "../redux/store/store";
@@ -21,9 +13,7 @@ let getStudentsByClass: any, getStoreItemsByClass: any, getTotalBalanceForClass:
 // Toggle mock via env (default: real backend)
 if (USE_MOCK) {
   const m = await import("@/data/mock");
-  getStudentsByClass = m.getStudentsByClass;
-  getStoreItemsByClass = m.getStoreItemsByClass;
-  getTotalBalanceForClass = m.getTotalBalanceForClass;
+  ({ getStudentsByClass, getStoreItemsByClass, getTotalBalanceForClass } = m);
 }
 
 function delay(ms: number) {
@@ -70,6 +60,10 @@ export type StoreItem = {
   name: string;
   price: number;
   stock: number;
+  description?: string;
+  imageUrl?: string;
+  perStudentLimit?: number;
+  active?: boolean;
 };
 
 export async function apiFetchStudentsByClass(
@@ -110,9 +104,24 @@ export async function apiFetchStoreItemsByClass(
       title: string;
       price: number;
       stock: number | null;
+      description?: string;
+      imageUrl?: string;
+      perStudentLimit?: number;
+      active?: boolean;
     }>;
   }>(
-    `query($classId: ID!) { storeItemsByClass(classId: $classId) { id title price stock } }`,
+    `query($classId: ID!) { 
+      storeItemsByClass(classId: $classId) { 
+        id 
+        title 
+        price 
+        stock 
+        description
+        imageUrl
+        perStudentLimit
+        active
+      } 
+    }`,
     { classId }
   );
   return data.storeItemsByClass.map((it) => ({
@@ -120,6 +129,10 @@ export async function apiFetchStoreItemsByClass(
     name: it.title,
     price: it.price,
     stock: it.stock ?? 0,
+    description: it.description,
+    imageUrl: it.imageUrl,
+    perStudentLimit: it.perStudentLimit,
+    active: it.active,
   }));
 }
 

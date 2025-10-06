@@ -97,6 +97,7 @@ export const typeDefs = [
       classroomId: ID!
       slug: String
       name: String!
+      description: String
       subject: String
       period: String
       gradeLevel: Int
@@ -107,6 +108,7 @@ export const typeDefs = [
       startingBalance: Int
       teacherIds: [ID!]!
       defaultCurrency: String
+      status: String
       students: [Student!]!
       storeItems: [StoreItem!]!
       jobs: [Job!]!
@@ -301,6 +303,7 @@ export const typeDefs = [
       ownerId: ID
       slug: String
       name: String!
+      description: String
       subject: String
       period: String
       gradeLevel: Int
@@ -310,6 +313,7 @@ export const typeDefs = [
       startingBalance: Int
       defaultCurrency: String = "CE$" # still stored at Classroom.settings
       teacherIds: [ID!]
+      storeSettings: JSON
       reasons: [String!]
       students: [StudentInput!]
       jobs: [JobInput!]
@@ -319,6 +323,7 @@ export const typeDefs = [
     input UpdateClassInput {
       slug: String
       name: String
+      description: String
       subject: String
       period: String
       gradeLevel: Int
@@ -326,8 +331,10 @@ export const typeDefs = [
       district: String
       payPeriodDefault: PayPeriod
       startingBalance: Int
+      defaultCurrency: String
       teacherIds: [ID!]
       storeSettings: JSON
+      status: String
       isArchived: Boolean
     }
 
@@ -362,6 +369,39 @@ export const typeDefs = [
       perStudentLimit: Int
       active: Boolean = true
       sort: Int = 0
+    }
+
+    input CreateStoreItemInput {
+      classId: ID!
+      title: String!
+      price: Int!
+      description: String
+      imageUrl: String
+      stock: Int
+      perStudentLimit: Int
+      active: Boolean = true
+      sort: Int = 0
+    }
+
+    input UpdateStoreItemInput {
+      title: String
+      price: Int
+      description: String
+      imageUrl: String
+      stock: Int
+      perStudentLimit: Int
+      active: Boolean
+      sort: Int
+    }
+
+    input MakePurchaseInput {
+      classId: ID!
+      items: [PurchaseItemInput!]!
+    }
+
+    input PurchaseItemInput {
+      storeItemId: ID!
+      quantity: Int!
     }
 
     # --------- Queries ----------
@@ -406,6 +446,7 @@ export const typeDefs = [
       email: String!
       password: String!
       role: Role!
+      joinCode: String
     }
 
     input CreatePayRequestInput {
@@ -440,6 +481,14 @@ export const typeDefs = [
       submitPayRequest(id: ID!): PayRequest!
       rebukePayRequest(id: ID!, comment: String!): PayRequest!
       denyPayRequest(id: ID!, comment: String): PayRequest!
+
+      # Store item management
+      createStoreItem(input: CreateStoreItemInput!): StoreItem!
+      updateStoreItem(id: ID!, input: UpdateStoreItemInput!): StoreItem!
+      deleteStoreItem(id: ID!): Boolean!
+
+      # Purchase
+      makePurchase(input: MakePurchaseInput!): [Purchase!]!
     }
   `,
 ];

@@ -14,6 +14,7 @@ import {
   IClass,
   JobApplication,
   Payslip,
+  Purchase,
 } from "../models";
 import {
   requireAuth,
@@ -32,6 +33,7 @@ import {
   clearRefreshCookie,
   verifyRefreshToken,
 } from "../auth";
+import { TransactionType } from "../utils/enums";
 import { Types } from "mongoose";
 
 export const Mutation = {
@@ -71,6 +73,7 @@ export const Mutation = {
     const cls = await ClassModel.create({
       classroomId,
       name: input.name,
+      description: input.description ?? null,
       subject: input.subject ?? null,
       period: input.period ?? null,
       gradeLevel: input.gradeLevel ?? null,
@@ -79,11 +82,13 @@ export const Mutation = {
       district: input.district ?? null,
       payPeriodDefault: input.payPeriodDefault ?? null,
       startingBalance: input.startingBalance ?? null,
+      defaultCurrency: input.defaultCurrency ?? "CE$",
       slug: input.slug ?? null,
       teacherIds: input.teacherIds?.map(
         (id: string) => new Types.ObjectId(id)
       ) ?? [new Types.ObjectId(ctx.userId!)],
       storeSettings: input.storeSettings ?? undefined,
+      status: "ACTIVE",
       isArchived: false,
     });
 
@@ -219,6 +224,7 @@ export const Mutation = {
     const update: any = {};
     for (const k of [
       "name",
+      "description",
       "subject",
       "period",
       "gradeLevel",
@@ -226,8 +232,10 @@ export const Mutation = {
       "district",
       "payPeriodDefault",
       "startingBalance",
+      "defaultCurrency",
       "slug",
       "storeSettings",
+      "status",
       "isArchived",
     ]) {
       if (k in input) update[k] = input[k];
@@ -294,16 +302,29 @@ export const Mutation = {
     // If this is a student, create their account with starting balance
     if (role === "STUDENT") {
       const existingAccount = await Account.findOne({
-        userId,
+        studentId: userId,
         classId: cls._id,
       }).lean().exec();
 
       if (!existingAccount) {
-        await Account.create({
-          userId,
+        const createdAccount = await Account.create({
+          studentId: userId,
           classId: cls._id,
-          balance: cls.startingBalance || 0,
+          classroomId: cls.classroomId,
         });
+
+        // Add starting balance if specified
+        if ((cls.startingBalance ?? 0) > 0) {
+          await Transaction.create({
+            accountId: createdAccount._id,
+            classId: cls._id,
+            classroomId: cls.classroomId,
+            type: "DEPOSIT",
+            amount: cls.startingBalance!,
+            memo: "Starting balance",
+            createdByUserId: userId,
+          });
+        }
       }
     }
 
@@ -448,7 +469,7 @@ export const Mutation = {
       .exec(),
 
   async signUp(_: any, { input }: any, ctx: any) {
-    const { name, email, password, role } = input;
+    const { name, email, password, role, joinCode } = input;
     const existing = await User.findOne({ email: email.toLowerCase() })
       .lean()
       .exec();
@@ -465,6 +486,59 @@ export const Mutation = {
     const accessToken = signAccessToken(user._id.toString(), role);
     const refreshToken = signRefreshToken(user._id.toString(), role);
     setRefreshCookie(ctx.res, refreshToken);
+
+    // If joinCode is provided, join the class
+    if (joinCode && joinCode.trim()) {
+      try {
+        // Find the class by join code
+        const cls = await ClassModel.findOne({ joinCode: joinCode.trim() }).lean().exec();
+        if (cls) {
+          // Create or update membership
+          await Membership.updateOne(
+            { userId: user._id, role },
+            {
+              $setOnInsert: { status: "ACTIVE" },
+              $addToSet: { classIds: cls._id },
+            },
+            { upsert: true }
+          ).exec();
+
+          // If this is a student, create their account with starting balance
+          if (role === "STUDENT") {
+            const existingAccount = await Account.findOne({
+              studentId: user._id,
+              classId: cls._id,
+            }).lean().exec();
+
+            if (!existingAccount) {
+              const createdAccount = await Account.create({
+                studentId: user._id,
+                classId: cls._id,
+                classroomId: cls.classroomId,
+              });
+
+              // Add starting balance if specified
+              if ((cls.startingBalance ?? 0) > 0) {
+                await Transaction.create({
+                  accountId: createdAccount._id,
+                  classId: cls._id,
+                  classroomId: cls.classroomId,
+                  type: "DEPOSIT",
+                  amount: cls.startingBalance!,
+                  memo: "Starting balance",
+                  createdByUserId: user._id,
+                });
+              }
+            }
+          }
+        }
+        // If joinCode is invalid, we'll silently ignore it during signup
+        // The user can join a class later
+      } catch (error) {
+        console.error("Error joining class during signup:", error);
+        // Don't fail the signup if joining the class fails
+      }
+    }
 
     return { user: user.toObject(), accessToken };
   },
@@ -495,11 +569,192 @@ export const Mutation = {
     clearRefreshCookie(ctx.res);
     return true;
   },
+
+  // Store item management
+  async createStoreItem(_: any, { input }: any, ctx: Ctx) {
+    requireAuth(ctx);
+    await requireClassTeacher(ctx, input.classId);
+
+    const storeItem = await StoreItem.create({
+      classId: toId(input.classId),
+      title: input.title,
+      price: input.price,
+      description: input.description,
+      imageUrl: input.imageUrl,
+      stock: input.stock,
+      perStudentLimit: input.perStudentLimit,
+      active: input.active ?? true,
+      sort: input.sort ?? 0,
+    });
+
+    return storeItem.toObject();
+  },
+
+  async updateStoreItem(_: any, { id, input }: any, ctx: Ctx) {
+    requireAuth(ctx);
+    
+    const storeItem = await StoreItem.findById(id).exec();
+    if (!storeItem) {
+      throw new GraphQLError("Store item not found");
+    }
+
+    await requireClassTeacher(ctx, storeItem.classId.toString());
+
+    const updated = await StoreItem.findByIdAndUpdate(
+      id,
+      { $set: input },
+      { new: true }
+    ).exec();
+
+    if (!updated) {
+      throw new GraphQLError("Failed to update store item");
+    }
+
+    return updated.toObject();
+  },
+
+  async deleteStoreItem(_: any, { id }: any, ctx: Ctx) {
+    requireAuth(ctx);
+    
+    const storeItem = await StoreItem.findById(id).exec();
+    if (!storeItem) {
+      throw new GraphQLError("Store item not found");
+    }
+
+    await requireClassTeacher(ctx, storeItem.classId.toString());
+
+    await StoreItem.findByIdAndDelete(id).exec();
+    return true;
+  },
+
+  // Purchase
+  async makePurchase(_: any, { input }: any, ctx: Ctx) {
+    requireAuth(ctx);
+    
+    const { classId, items } = input;
+    const userId = ctx.userId!;
+
+    // Get student's account for this class
+    const account = await Account.findOne({
+      studentId: toId(userId),
+      classId: toId(classId),
+    }).exec();
+
+    if (!account) {
+      throw new GraphQLError("Account not found for this class");
+    }
+
+    // Calculate current balance
+    const balanceResult = await Transaction.aggregate([
+      { $match: { accountId: account._id } },
+      { $group: { _id: "$accountId", balance: { $sum: "$amount" } } },
+    ]).exec();
+    const currentBalance = balanceResult[0]?.balance || 0;
+
+    // Validate items and calculate total
+    let totalCost = 0;
+    const purchaseItems = [];
+
+    for (const item of items) {
+      const storeItem = await StoreItem.findById(item.storeItemId).exec();
+      if (!storeItem) {
+        throw new GraphQLError(`Store item ${item.storeItemId} not found`);
+      }
+
+      if (!storeItem.active) {
+        throw new GraphQLError(`Store item ${storeItem.title} is not available`);
+      }
+
+      if (storeItem.classId.toString() !== classId) {
+        throw new GraphQLError(`Store item ${storeItem.title} does not belong to this class`);
+      }
+
+      // Check stock
+      if (storeItem.stock != null && storeItem.stock < item.quantity) {
+        throw new GraphQLError(`Insufficient stock for ${storeItem.title}. Available: ${storeItem.stock}`);
+      }
+
+      const itemTotal = storeItem.price * item.quantity;
+      totalCost += itemTotal;
+
+      purchaseItems.push({
+        storeItem,
+        quantity: item.quantity,
+        unitPrice: storeItem.price,
+        total: itemTotal,
+      });
+    }
+
+    // Check if student has sufficient balance
+    if (currentBalance < totalCost) {
+      throw new GraphQLError(`Insufficient balance. Required: CE$ ${totalCost}, Available: CE$ ${currentBalance}`);
+    }
+
+    // Create purchases and update stock
+    const purchases = [];
+    for (const item of purchaseItems) {
+      const purchase = await Purchase.create({
+        studentId: toId(userId),
+        classId: toId(classId),
+        accountId: account._id,
+        storeItemId: item.storeItem._id,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        total: item.total,
+      });
+
+      purchases.push(purchase);
+
+      // Update stock if limited
+      if (item.storeItem.stock != null) {
+        await StoreItem.findByIdAndUpdate(
+          item.storeItem._id,
+          { $inc: { stock: -item.quantity } }
+        ).exec();
+      }
+    }
+
+    // Create withdrawal transaction
+    await Transaction.create({
+      accountId: account._id,
+      classId: toId(classId),
+      classroomId: account.classroomId,
+      type: "PURCHASE",
+      amount: -totalCost,
+      memo: `Store purchase (${purchases.length} items)`,
+      createdByUserId: toId(userId),
+    });
+
+    return purchases.map(p => p.toObject());
+  },
 };
-function getOrCreateAccount(arg0: string, arg1: string) {
-  throw new Error("Function not implemented.");
+async function getOrCreateAccount(studentId: string, classId: string) {
+  // Check if account already exists
+  const existingAccount = await Account.findOne({
+    studentId,
+    classId,
+  }).exec();
+
+  if (existingAccount) {
+    return existingAccount;
+  }
+
+  // Get class to find classroom ID
+  const cls = await ClassModel.findById(classId).exec();
+  if (!cls) {
+    throw new GraphQLError("Class not found");
+  }
+
+  // Create new account
+  const newAccount = await Account.create({
+    studentId,
+    classId,
+    classroomId: cls.classroomId,
+  });
+
+  return newAccount;
 }
 
-function mapPayToTxType(): any | import("../utils/enums").TransactionType {
-  throw new Error("Function not implemented.");
+function mapPayToTxType(): TransactionType {
+  return "PAYROLL";
 }

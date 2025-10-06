@@ -10,6 +10,7 @@ import { z } from "zod";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CREATE_CLASS } from "@/graphql/mutations/createClass";
+import { ArrowLeft } from "lucide-react";
 
 const jobPeriods = ["WEEKLY", "MONTHLY", "SEMESTER"] as const;
 const currencyRegex = /^[A-Z$€£¥]{1,4}$/;
@@ -106,11 +107,11 @@ export default function ClassCreate() {
   // ---- submit handler (final confirm) ----
   const onSubmit = async (data: FormValues) => {
     try {
-      // Map UI fields (period/subject) → resolver input (term/room)
+      // Map UI fields to backend CreateClassInput fields
       const input = {
         name: data.name.trim(),
-        term: data.period || undefined, // backend expects `term`
-        room: data.subject || undefined, // backend expects `room`
+        period: data.period || undefined, // backend expects `period`
+        subject: data.subject || undefined, // backend expects `subject`
         defaultCurrency: data.defaultCurrency || "CE$",
         storeSettings: {
           allowNegative: data.allowNegative,
@@ -178,12 +179,31 @@ export default function ClassCreate() {
   // =========================
   if (mode === "edit") {
     return (
-      <form className="grid gap-6" onSubmit={(e) => e.preventDefault()}>
-        {/* Basics */}
-        <Card>
-          <CardHeader>
-            <CardTitle>New Class</CardTitle>
-          </CardHeader>
+      <div className="space-y-6 max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/classes")}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Classes
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Create New Class</h1>
+            <p className="text-muted-foreground">
+              Set up your classroom economy with students, jobs, and store items
+            </p>
+          </div>
+        </div>
+
+        <form className="grid gap-6" onSubmit={(e) => e.preventDefault()}>
+          {/* Basics */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Class Information</CardTitle>
+            </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium">
@@ -434,6 +454,7 @@ export default function ClassCreate() {
           </Button>
         </div>
       </form>
+      </div>
     );
   }
 

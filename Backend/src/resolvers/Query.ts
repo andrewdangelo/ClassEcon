@@ -56,19 +56,33 @@ export const Query = {
 
   account: async (_: any, { studentId, classId }: any, ctx: any) => {
     await assertSelfOrTeacherForStudent(ctx, studentId);
-    const acct =
-      (await Account.findOne({
+    
+    let acct = await Account.findOne({
+      studentId: toId(studentId),
+      classId: toId(classId),
+    }).lean();
+
+    if (!acct) {
+      // Get class to find classroom ID
+      const cls = await ClassModel.findById(classId).lean();
+      if (!cls) {
+        throw new Error("Class not found");
+      }
+
+      // Create account with required classroomId
+      const newAccount = await Account.create({
         studentId: toId(studentId),
         classId: toId(classId),
-      }).lean()) ??
-      (await Account.create({
-        studentId: toId(studentId),
-        classId: toId(classId),
-      }).then((a) => a.toObject()));
+        classroomId: cls.classroomId,
+      });
+      acct = newAccount.toObject();
+    }
+
     const balance = await Transaction.aggregate([
       { $match: { accountId: acct._id } },
       { $group: { _id: "$accountId", balance: { $sum: "$amount" } } },
     ]).exec();
+    
     return {
       ...acct,
       id: acct._id.toString(),

@@ -1,7 +1,7 @@
 import React from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, LogOut, BookOpen, GraduationCap, ShoppingBag } from "lucide-react";
+import { Menu, LogOut, BookOpen, GraduationCap, ShoppingBag, ShoppingCart } from "lucide-react";
 import { ClassSwitcher } from "@/components/sidebar/ClassSwitcher";
 import { useQuery, useMutation } from "@apollo/client/react";
 import { ME } from "@/graphql/queries/me";
@@ -10,11 +10,13 @@ import { LOGOUT } from "@/graphql/mutations/auth";
 import { useAppDispatch, useAppSelector } from "@/redux/store/store";
 import { clearAuth, selectUser } from "@/redux/authSlice";
 import { cn } from "@/lib/utils";
+import { useCart } from "@/context/CartContext";
 
 const STUDENT_NAV_ITEMS = [
   { to: "/", label: "Dashboard", icon: BookOpen },
   { to: "/classes", label: "My Classes", icon: GraduationCap },
   { to: "/store", label: "Store", icon: ShoppingBag },
+  { to: "/cart", label: "Cart", icon: ShoppingCart },
 ];
 
 export function StudentLayout() {
@@ -22,6 +24,7 @@ export function StudentLayout() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const user = useAppSelector(selectUser);
+  const { totalCount } = useCart();
 
   const { data: meData, loading } = useQuery<MeQuery>(ME, {
     fetchPolicy: "cache-and-network",
@@ -81,13 +84,14 @@ export function StudentLayout() {
         <nav className="space-y-1">
           {STUDENT_NAV_ITEMS.map((item) => {
             const Icon = item.icon;
+            const isCart = item.to === "/cart";
             return (
               <NavLink
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors",
+                    "flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors relative",
                     isActive
                       ? "bg-accent text-accent-foreground"
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
@@ -98,6 +102,11 @@ export function StudentLayout() {
               >
                 <Icon className="h-4 w-4" />
                 <span className="truncate hidden md:inline">{item.label}</span>
+                {isCart && totalCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full text-xs px-1.5 py-0.5 min-w-[18px] h-4 flex items-center justify-center">
+                    {totalCount}
+                  </span>
+                )}
               </NavLink>
             );
           })}
@@ -158,8 +167,24 @@ export function StudentLayout() {
             ))}
           </nav>
 
-          {/* Right side: logout */}
+          {/* Right side: cart + logout */}
           <div className="flex items-center gap-2">
+            {/* Cart icon with badge */}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigate('/cart')}
+              className="relative flex items-center gap-2"
+            >
+              <ShoppingCart className="h-4 w-4" />
+              {totalCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full text-xs px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center">
+                  {totalCount}
+                </span>
+              )}
+              <span className="hidden sm:inline">Cart</span>
+            </Button>
+            
             <Button 
               variant="outline" 
               size="sm" 

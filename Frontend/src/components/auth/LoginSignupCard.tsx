@@ -36,7 +36,9 @@ type SignupForm = {
   name: string;
   email: string;
   password: string;
+  confirmPassword: string;
   role: (typeof roles)[number];
+  joinCode?: string;
 };
 
 type LoginPayload = {
@@ -65,7 +67,12 @@ export const LoginSignupCard: React.FC = () => {
     handleSubmit: handleSignupSubmit,
     formState: { errors: signupErrors, isSubmitting: isSigningUp },
     reset: resetSignup,
+    watch: watchSignup,
   } = useForm<SignupForm>({ defaultValues: { role: "STUDENT" } });
+
+  // Watch the role and password fields
+  const watchedRole = watchSignup("role");
+  const watchedPassword = watchSignup("password");
 
   const [doLogin, { error: loginError }] = useMutation<
     { login: LoginPayload },
@@ -74,7 +81,7 @@ export const LoginSignupCard: React.FC = () => {
 
   const [doSignup, { error: signupError }] = useMutation<
     { signUp: SignupPayload },
-    { input: { name: string; email: string; password: string; role: string } }
+    { input: { name: string; email: string; password: string; role: string; joinCode?: string } }
   >(SIGN_UP);
 
   const onLogin = async (data: LoginForm) => {
@@ -96,6 +103,13 @@ export const LoginSignupCard: React.FC = () => {
   };
 
   const onSignup = async (data: SignupForm) => {
+    // Validate password confirmation
+    if (data.password !== data.confirmPassword) {
+      // You might want to add this as a form error instead
+      alert("Passwords do not match");
+      return;
+    }
+
     const res = await doSignup({
       variables: {
         input: {
@@ -103,6 +117,7 @@ export const LoginSignupCard: React.FC = () => {
           email: data.email,
           password: data.password,
           role: data.role,
+          ...(data.joinCode && data.joinCode.trim() ? { joinCode: data.joinCode.trim() } : {}),
         },
       },
     });
@@ -132,6 +147,9 @@ export const LoginSignupCard: React.FC = () => {
         );
         // navigate to onboarding:
         navigate("/onboarding", { replace: true, state: onboardState });
+      } else {
+        // For students, navigate to main app
+        navigate("/");
       }
       resetSignup();
     }
@@ -240,12 +258,29 @@ export const LoginSignupCard: React.FC = () => {
                     type="password"
                     autoComplete="new-password"
                     {...registerSignup("password", {
-                      required: true,
-                      minLength: 6,
+                      required: "Password is required",
+                      minLength: { value: 6, message: "Min 6 characters" },
                     })}
                   />
                   {signupErrors.password && (
-                    <p className="text-sm text-red-500">Min 6 characters</p>
+                    <p className="text-sm text-red-500">{signupErrors.password.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-confirm-password">Confirm Password</Label>
+                  <Input
+                    id="signup-confirm-password"
+                    type="password"
+                    autoComplete="new-password"
+                    {...registerSignup("confirmPassword", {
+                      required: "Please confirm your password",
+                      validate: (value) => 
+                        value === watchedPassword || "Passwords do not match"
+                    })}
+                  />
+                  {signupErrors.confirmPassword && (
+                    <p className="text-sm text-red-500">{signupErrors.confirmPassword.message}</p>
                   )}
                 </div>
 
@@ -263,6 +298,26 @@ export const LoginSignupCard: React.FC = () => {
                     ))}
                   </select>
                 </div>
+
+                {/* Show join code field only for students */}
+                {watchedRole === "STUDENT" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-join-code">
+                      Class Join Code <span className="text-muted-foreground">(optional)</span>
+                    </Label>
+                    <Input
+                      id="signup-join-code"
+                      placeholder="Enter class code (e.g., ABC123)"
+                      {...registerSignup("joinCode")}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Get this code from your teacher to join a class immediately
+                    </p>
+                    {signupErrors.joinCode && (
+                      <p className="text-sm text-red-500">{signupErrors.joinCode.message}</p>
+                    )}
+                  </div>
+                )}
 
                 {signupError?.message && (
                   <p className="text-sm text-red-600">{signupError.message}</p>

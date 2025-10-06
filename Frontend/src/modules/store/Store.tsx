@@ -6,12 +6,15 @@ import { apiFetchStoreItemsByClass } from "@/api/client"
 import { useToast } from "@/components/ui/toast"
 import { useCart } from "@/context/CartContext"
 import { useClassContext } from "@/context/ClassContext"
+import { useNavigate } from "react-router-dom"
+import { Settings } from "lucide-react"
 
 export default function Store() {
   const { currentClassId, current } = useCurrentClass()
   const { push } = useToast()
   const { addItem } = useCart()
   const { role } = useClassContext()
+  const navigate = useNavigate()
   const isTeacher = role === "TEACHER"
 
   const query = useApi(
@@ -40,9 +43,13 @@ export default function Store() {
         </h2>
 
         {isTeacher ? (
-          <Button variant="secondary">Manage Items</Button>
+          <Button variant="secondary" onClick={() => navigate('/store/manage')}>
+            <Settings className="w-4 h-4 mr-2" />
+            Manage Items
+          </Button>
         ) : (
           <Button variant="secondary" disabled title="Teachers only">
+            <Settings className="w-4 h-4 mr-2" />
             Manage Items
           </Button>
         )}
@@ -56,7 +63,11 @@ export default function Store() {
             <Card key={it.id}>
               <CardHeader><CardTitle>{it.name}</CardTitle></CardHeader>
               <CardContent>
-                Price: CE$ {it.price} • Stock: {it.stock}
+                <div className="space-y-1 text-sm">
+                  <div>Price: CE$ {it.price}</div>
+                  <div>Stock: {it.stock ?? "Unlimited"}</div>
+                  {it.description && <div className="text-muted-foreground">{it.description}</div>}
+                </div>
               </CardContent>
               <CardFooter>
                 <Button onClick={() => handleAdd(it.id, it.name, it.price)} disabled={it.stock <= 0}>
