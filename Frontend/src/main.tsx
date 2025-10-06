@@ -29,6 +29,7 @@ import { LoginSignupCard } from "@/components/auth/LoginSignupCard";
 import TeacherOnboarding from "./modules/onboarding/TeacherOnboarding";
 import { RequireClassGuard } from "@/components/auth/RequireClassGuard";
 import { RequireTeacher } from "@/components/auth/RequireTeacher";
+import RequestsPage from "./modules/requests/RequestsPage";
 
 const client = createApolloClient();
 
@@ -65,6 +66,7 @@ const router = createBrowserRouter([
       { path: "classes/:classId", element: <ClassOverview /> },
       { path: "classes/:classId/manage", element: <ClassManage /> },
       { path: "students", element: <Students /> },
+      { path: "requests", element: <RequestsPage /> },
       { path: "store", element: <Store /> },
       { path: "cart", element: <Cart /> },
       { 
@@ -84,7 +86,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <Provider store={store}>
       <ApolloProvider client={client}>
-        <ClassProvider initialRole="TEACHER">
+        <ClassProvider>
           <CartProvider>
             <ToastProvider>
               <RouterProvider router={router} />

@@ -14,10 +14,11 @@ export const CREATE_PAY_REQUEST = gql`
 `
 
 export const APPROVE_PAY_REQUEST = gql`
-  mutation ApprovePayRequest($id: ID!, $comment: String) {
-    approvePayRequest(id: $id, comment: $comment) {
+  mutation ApprovePayRequest($id: ID!, $amount: Int!, $comment: String) {
+    approvePayRequest(id: $id, amount: $amount, comment: $comment) {
       id
       status
+      amount
       teacherComment
     }
   }
@@ -48,6 +49,20 @@ export const DENY_PAY_REQUEST = gql`
       id
       status
       teacherComment
+    }
+  }
+`
+
+export const ADD_PAY_REQUEST_COMMENT = gql`
+  mutation AddPayRequestComment($payRequestId: ID!, $content: String!) {
+    addPayRequestComment(payRequestId: $payRequestId, content: $content) {
+      id
+      content
+      user {
+        id
+        name
+      }
+      createdAt
     }
   }
 `

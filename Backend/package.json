@@ -23,9 +23,12 @@
     "express": "4",
     "graphql": "^16.11.0",
     "graphql-scalars": "^1.24.2",
+    "graphql-subscriptions": "^3.0.0",
     "graphql-tag": "^2.12.6",
+    "graphql-ws": "^6.0.6",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.18.0"
+    "mongoose": "^8.18.0",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@swc/core": "^1.13.5",

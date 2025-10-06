@@ -109,6 +109,8 @@ export const typeDefs = [
       teacherIds: [ID!]!
       defaultCurrency: String
       status: String
+  # Arbitrary JSON configuration for store / economy policies (e.g. allowNegative, requireFineReason, perItemPurchaseLimit)
+  storeSettings: JSON
       students: [Student!]!
       storeItems: [StoreItem!]!
       jobs: [Job!]!
@@ -272,6 +274,17 @@ export const typeDefs = [
       updatedAt: DateTime!
       class: Class!
       student: User!
+      comments: [PayRequestComment!]!
+    }
+
+    type PayRequestComment {
+      id: ID!
+      payRequestId: ID!
+      userId: ID!
+      content: String!
+      createdAt: DateTime!
+      updatedAt: DateTime!
+      user: User!
     }
 
     # Compatibility DTO for Student (User+Membership+Account+Balance)
@@ -418,6 +431,8 @@ export const typeDefs = [
       storeItemsByClass(classId: ID!): [StoreItem!]!
       payRequestsByClass(classId: ID!, status: PayRequestStatus): [PayRequest!]!
       payRequestsByStudent(classId: ID!, studentId: ID!): [PayRequest!]!
+      payRequest(id: ID!): PayRequest
+      payRequestComments(payRequestId: ID!): [PayRequestComment!]!
       reasonsByClass(classId: ID!): [ClassReason!]!
       students(
         filter: StudentsFilter
@@ -477,10 +492,13 @@ export const typeDefs = [
 
       # Pay request lifecycle
       createPayRequest(input: CreatePayRequestInput!): PayRequest!
-      approvePayRequest(id: ID!, comment: String): PayRequest!
+      approvePayRequest(id: ID!, amount: Int!, comment: String): PayRequest!
       submitPayRequest(id: ID!): PayRequest!
       rebukePayRequest(id: ID!, comment: String!): PayRequest!
       denyPayRequest(id: ID!, comment: String): PayRequest!
+
+      # Pay request comments
+      addPayRequestComment(payRequestId: ID!, content: String!): PayRequestComment!
 
       # Store item management
       createStoreItem(input: CreateStoreItemInput!): StoreItem!
@@ -489,6 +507,14 @@ export const typeDefs = [
 
       # Purchase
       makePurchase(input: MakePurchaseInput!): [Purchase!]!
+    }
+
+    type Subscription {
+      # Real-time updates for pay requests
+      payRequestUpdated(classId: ID!): PayRequest!
+      payRequestCreated(classId: ID!): PayRequest!
+      payRequestStatusChanged(classId: ID!): PayRequest!
+      payRequestCommentAdded(payRequestId: ID!): PayRequestComment!
     }
   `,
 ];

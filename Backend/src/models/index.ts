@@ -12,3 +12,4 @@ export * from "./Employment";
 export * from "./Payslip";
 export * from "./ClassReason";
 export * from "./PayRequest";
+export * from "./PayRequestComment";

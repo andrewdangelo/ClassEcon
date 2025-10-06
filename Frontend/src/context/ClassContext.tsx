@@ -44,7 +44,7 @@ export function useClassContext() {
 /** Real provider that fetches classes from GraphQL API */
 export function ClassProvider({
   children,
-  initialRole = "TEACHER",
+  initialRole = "STUDENT",
 }: {
   children: React.ReactNode;
   initialRole?: Role;
@@ -61,7 +61,7 @@ export function ClassProvider({
   const { data: classesData, loading, error } = useQuery<ClassesByUserQuery>(GET_CLASSES_BY_USER, {
     variables: { 
       userId: user?.id || "",
-      role: user?.role || role,
+      role: user?.role as Role || role,
       includeArchived: false 
     },
     skip: !user?.id,

@@ -1,3 +1,4 @@
+import { GraphQLError } from "graphql";
 import {
   User,
   Classroom,
@@ -11,6 +12,7 @@ import {
   IClass,
   IMembership,
   IUser,
+  PayRequestComment,
 } from "../models";
 import { Role } from "../utils/enums";
 import {
@@ -113,9 +115,122 @@ export const Query = {
       .exec();
   },
 
+  payRequest: async (_: any, { id }: any, ctx: any) => {
+    const payRequest = await PayRequest.findById(id).lean().exec();
+    if (!payRequest) return null;
+
+    // Check if user has access to this request
+    const userId = ctx.userId;
+    const isStudent = payRequest.studentId.toString() === userId;
+    let isTeacher = false;
+    
+    if (!isStudent && userId) {
+      const membership = await Membership.findOne({
+        userId: toId(userId),
+        role: "TEACHER",
+        classIds: payRequest.classId,
+      }).lean().exec();
+      isTeacher = !!membership;
+    }
+
+    if (!isStudent && !isTeacher) {
+      throw new GraphQLError("Access denied");
+    }
+
+    return payRequest;
+  },
+
+  payRequestComments: async (_: any, { payRequestId }: any, ctx: any) => {
+    const payRequest = await PayRequest.findById(payRequestId).lean().exec();
+    if (!payRequest) {
+      throw new GraphQLError("Pay request not found");
+    }
+
+    // Check access (same logic as payRequest query)
+    const userId = ctx.userId;
+    const isStudent = payRequest.studentId.toString() === userId;
+    let isTeacher = false;
+    
+    if (!isStudent && userId) {
+      const membership = await Membership.findOne({
+        userId: toId(userId),
+        role: "TEACHER",
+        classIds: payRequest.classId,
+      }).lean().exec();
+      isTeacher = !!membership;
+    }
+
+    if (!isStudent && !isTeacher) {
+      throw new GraphQLError("Access denied");
+    }
+
+    return PayRequestComment.find({ payRequestId })
+      .sort({ createdAt: 1 })
+      .lean()
+      .exec();
+  },
+
   reasonsByClass: async (_: any, { classId }: any, ctx: any) => {
     await requireClassTeacher(ctx, classId);
     return ClassReason.find({ classId }).sort({ label: 1 }).lean().exec();
+  },
+
+  studentsByClass: async (_: any, { classId }: any, ctx: any) => {
+    // Allow both teachers and students to access this - students need it for dashboard
+    requireAuth(ctx);
+    
+    // Find student memberships for this class
+    const memberships = await Membership.find({
+      classIds: toId(classId),
+      role: "STUDENT",
+    }).lean();
+    
+    if (!memberships.length) return [];
+
+    const userIds = memberships.map((m) => m.userId);
+    const users = await User.find({ _id: { $in: userIds } }).lean();
+
+    // Build Student DTOs with account balances
+    const results: any[] = [];
+    for (const user of users) {
+      // Get account for this student in this class
+      let account = await Account.findOne({
+        studentId: user._id,
+        classId: toId(classId),
+      }).lean();
+
+      // Create account if it doesn't exist
+      if (!account) {
+        const cls = await ClassModel.findById(classId).lean();
+        if (cls) {
+          const newAccount = await Account.create({
+            studentId: user._id,
+            classId: toId(classId),
+            classroomId: cls.classroomId,
+          });
+          account = newAccount.toObject();
+        }
+      }
+
+      // Calculate balance from transactions
+      let balance = 0;
+      if (account) {
+        const balanceResult = await Transaction.aggregate([
+          { $match: { accountId: account._id } },
+          { $group: { _id: "$accountId", balance: { $sum: "$amount" } } },
+        ]).exec();
+        balance = balanceResult[0]?.balance ?? 0;
+      }
+
+      results.push({
+        id: user._id.toString(),
+        name: user.name,
+        classId: classId,
+        balance: balance,
+      });
+    }
+
+    return results;
   },
 
   transactionsByAccount: async (_: any, { accountId }: any, ctx: any) => {

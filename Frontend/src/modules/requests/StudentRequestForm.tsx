@@ -4,7 +4,7 @@ import { REASONS_BY_CLASS } from "@/graphql/queries/reasons";
 import { PAY_REQUESTS_BY_STUDENT } from "@/graphql/queries/requests";
 import { CREATE_PAY_REQUEST } from "@/graphql/mutations/payRequests";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import { Label } from "@/components/ui/Label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/components/ui/toast";
 
 export default function StudentRequestForm({
   classId,
@@ -24,6 +24,7 @@ export default function StudentRequestForm({
   classId: string;
   studentId: string;
 }) {
+  const { push: toast } = useToast();
   const { data: reasonsData, loading: reasonsLoading } = useQuery(
     REASONS_BY_CLASS,
     { variables: { classId } }

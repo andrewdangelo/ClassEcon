@@ -36,7 +36,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: ShoppingBag,
     roles: ["TEACHER", "STUDENT"],
   },
-  { to: "/requests", label: "Requests", icon: Inbox, roles: ["TEACHER"] },
+  { to: "/requests", label: "Requests", icon: Inbox, roles: ["TEACHER", "STUDENT"] },
 ];
 
 export function Sidebar({
@@ -52,8 +52,26 @@ export function Sidebar({
   });
 
   const user = data?.me;
-  const role = user?.role || contextRole;
+  const role = user?.role || contextRole || "STUDENT"; // Default to STUDENT if both are undefined
   const username = user?.name || "—";
+
+  // Debug: log the current role
+  console.log("Sidebar role detection:", { 
+    userRole: user?.role, 
+    contextRole, 
+    finalRole: role,
+    loading,
+    error: error?.message
+  });
+
+  // Debug: Check NAV_ITEMS filtering
+  console.log("NAV_ITEMS filtering:", {
+    role,
+    NAV_ITEMS,
+    visible: NAV_ITEMS.filter((n) => n.roles.includes(role)),
+    requestsItem: NAV_ITEMS.find(n => n.to === "/requests"),
+    includesStudent: NAV_ITEMS.find(n => n.to === "/requests")?.roles.includes("STUDENT")
+  });
 
   const compact = role === "STUDENT"; // auto-compact for students
   const visible = NAV_ITEMS.filter((n) => n.roles.includes(role));

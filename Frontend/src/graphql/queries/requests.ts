@@ -11,6 +11,15 @@ export const PAY_REQUESTS_BY_STUDENT = gql`
       status
       teacherComment
       createdAt
+      comments {
+        id
+        content
+        user {
+          id
+          name
+        }
+        createdAt
+      }
     }
   }
 `;
@@ -29,6 +38,15 @@ export const PAY_REQUESTS_BY_CLASS = gql`
       status
       teacherComment
       createdAt
+      comments {
+        id
+        content
+        user {
+          id
+          name
+        }
+        createdAt
+      }
     }
   }
 `;

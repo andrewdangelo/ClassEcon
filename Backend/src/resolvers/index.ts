@@ -1,6 +1,7 @@
 import { scalars } from "./scalars";
 import { Query } from "./Query";
 import { Mutation } from "./Mutation";
+import { Subscription } from "./Subscription";
 import { Class } from "./Class";
 import { PayRequest } from "./PayRequest";
 import { Student } from "./Student";
@@ -10,6 +11,7 @@ export const resolvers = {
   ...scalars,
   Query,
   Mutation,
+  Subscription,
   Class,
   PayRequest,
   Student,
@@ -26,4 +28,8 @@ export const resolvers = {
   Employment: { id: pickId },
   Payslip: { id: pickId },
   ClassReason: { id: pickId },
+  PayRequestComment: { 
+    id: pickId,
+    user: (parent: any) => ({ _id: parent.userId }),
+  },
 };

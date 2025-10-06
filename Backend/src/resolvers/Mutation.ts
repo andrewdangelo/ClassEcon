@@ -15,6 +15,7 @@ import {
   JobApplication,
   Payslip,
   Purchase,
+  PayRequestComment,
 } from "../models";
 import {
   requireAuth,
@@ -35,6 +36,7 @@ import {
 } from "../auth";
 import { TransactionType } from "../utils/enums";
 import { Types } from "mongoose";
+import { pubsub, PAY_REQUEST_EVENTS } from "../pubsub";
 
 export const Mutation = {
   async createClass(_: any, { input }: any, ctx: Ctx) {
@@ -368,7 +370,9 @@ export const Mutation = {
     return true;
   },
 
-  async createPayRequest(_: any, { input }: any) {
+  async createPayRequest(_: any, { input }: any, ctx: Ctx) {
+    requireAuth(ctx);
+    
     const reason = await ClassReason.findOne({
       classId: input.classId,
       label: input.reason,
@@ -386,7 +390,7 @@ export const Mutation = {
       .exec();
     if (!isMember) throw new GraphQLError("Student not found in this class");
 
-    return PayRequest.create({
+    const created = await PayRequest.create({
       classId: toId(input.classId),
       studentId: toId(input.studentId),
       amount: input.amount,
@@ -394,19 +398,71 @@ export const Mutation = {
       justification: input.justification,
       status: "SUBMITTED",
     });
+
+    const result = created.toObject();
+
+    // Publish subscription event
+    pubsub.publish(PAY_REQUEST_EVENTS.PAY_REQUEST_CREATED, {
+      payRequestCreated: result,
+    });
+
+    return result;
   },
 
-  approvePayRequest: (
+  async approvePayRequest(
     _: any,
-    { id, comment }: { id: string; comment?: string }
-  ) =>
-    PayRequest.findByIdAndUpdate(
+    { id, amount, comment }: { id: string; amount: number; comment?: string },
+    ctx: Ctx
+  ) {
+    requireAuth(ctx);
+    
+    const req = await PayRequest.findById(id).exec();
+    if (!req) throw new GraphQLError("Request not found");
+    
+    await requireClassTeacher(ctx, req.classId.toString());
+
+    // Get student's account
+    const account = await Account.findOne({
+      studentId: req.studentId,
+      classId: req.classId,
+    }).exec();
+
+    if (!account) {
+      throw new GraphQLError("Student account not found");
+    }
+
+    // Create transaction for approved amount
+    await Transaction.create({
+      accountId: account._id,
+      classId: req.classId,
+      classroomId: account.classroomId,
+      type: "PAYROLL",
+      amount: amount,
+      memo: `Approved request: ${req.reason}`,
+      createdByUserId: toId(ctx.userId!),
+    });
+
+    const updated = await PayRequest.findByIdAndUpdate(
       id,
-      { $set: { status: "APPROVED", teacherComment: comment ?? null } },
+      { 
+        $set: { 
+          status: "APPROVED", 
+          teacherComment: comment ?? null,
+          amount: amount // Update the amount to approved amount
+        } 
+      },
       { new: true }
-    )
-      .lean()
-      .exec(),
+    ).exec();
+
+    if (!updated) throw new GraphQLError("Failed to approve request");
+
+    // Publish subscription event
+    pubsub.publish(PAY_REQUEST_EVENTS.PAY_REQUEST_STATUS_CHANGED, {
+      payRequestStatusChanged: updated.toObject(),
+    });
+
+    return updated.toObject();
+  },
 
   async submitPayRequest(_: any, { id }: { id: string }, ctx: Ctx) {
     const req = await PayRequest.findById(id).lean().exec();
@@ -447,26 +503,61 @@ export const Mutation = {
 
   async rebukePayRequest(
     _: any,
-    { id, comment }: { id: string; comment: string }
+    { id, comment }: { id: string; comment: string },
+    ctx: Ctx
   ) {
+    requireAuth(ctx);
+    
     if (!comment?.trim()) throw new GraphQLError("Comment required for rebuke");
-    return PayRequest.findByIdAndUpdate(
+    
+    const req = await PayRequest.findById(id).exec();
+    if (!req) throw new GraphQLError("Request not found");
+    
+    await requireClassTeacher(ctx, req.classId.toString());
+
+    const updated = await PayRequest.findByIdAndUpdate(
       id,
       { $set: { status: "REBUKED", teacherComment: comment } },
       { new: true }
-    )
-      .lean()
-      .exec();
+    ).exec();
+
+    if (!updated) throw new GraphQLError("Failed to rebuke request");
+
+    // Publish subscription event
+    pubsub.publish(PAY_REQUEST_EVENTS.PAY_REQUEST_STATUS_CHANGED, {
+      payRequestStatusChanged: updated.toObject(),
+    });
+
+    return updated.toObject();
   },
 
-  denyPayRequest: (_: any, { id, comment }: { id: string; comment?: string }) =>
-    PayRequest.findByIdAndUpdate(
+  async denyPayRequest(
+    _: any, 
+    { id, comment }: { id: string; comment?: string },
+    ctx: Ctx
+  ) {
+    requireAuth(ctx);
+    
+    const req = await PayRequest.findById(id).exec();
+    if (!req) throw new GraphQLError("Request not found");
+    
+    await requireClassTeacher(ctx, req.classId.toString());
+
+    const updated = await PayRequest.findByIdAndUpdate(
       id,
       { $set: { status: "DENIED", teacherComment: comment ?? null } },
       { new: true }
-    )
-      .lean()
-      .exec(),
+    ).exec();
+
+    if (!updated) throw new GraphQLError("Failed to deny request");
+
+    // Publish subscription event
+    pubsub.publish(PAY_REQUEST_EVENTS.PAY_REQUEST_STATUS_CHANGED, {
+      payRequestStatusChanged: updated.toObject(),
+    });
+
+    return updated.toObject();
+  },
 
   async signUp(_: any, { input }: any, ctx: any) {
     const { name, email, password, role, joinCode } = input;
@@ -726,6 +817,89 @@ export const Mutation = {
     });
 
     return purchases.map(p => p.toObject());
+  },
+
+  // Pay request comments
+  async addPayRequestComment(_: any, { payRequestId, content }: any, ctx: Ctx) {
+    requireAuth(ctx);
+    
+    const payRequest = await PayRequest.findById(payRequestId).exec();
+    if (!payRequest) {
+      throw new GraphQLError("Pay request not found");
+    }
+
+    // Check if user is either the student who made the request or a teacher of the class
+    const userId = ctx.userId!;
+    const isStudent = payRequest.studentId.toString() === userId;
+    let isTeacher = false;
+    
+    if (!isStudent) {
+      // Check if user is a teacher for this class
+      const membership = await Membership.findOne({
+        userId: toId(userId),
+        role: "TEACHER",
+        classIds: payRequest.classId,
+      }).exec();
+      isTeacher = !!membership;
+    }
+
+    if (!isStudent && !isTeacher) {
+      throw new GraphQLError("You can only comment on your own requests or requests from your classes");
+    }
+
+    const comment = await PayRequestComment.create({
+      payRequestId: toId(payRequestId),
+      userId: toId(userId),
+      content: content.trim(),
+    });
+
+    const result = comment.toObject();
+
+    // Publish subscription event
+    pubsub.publish(PAY_REQUEST_EVENTS.PAY_REQUEST_COMMENT_ADDED, {
+      payRequestCommentAdded: result,
+    });
+
+    return result;
+  },
+
+  // Reason management
+  async addReasons(_: any, { classId, labels }: any, ctx: Ctx) {
+    requireAuth(ctx);
+    await requireClassTeacher(ctx, classId);
+
+    const docs = labels.map((label: string) => ({ 
+      classId: toId(classId), 
+      label: label.trim() 
+    }));
+
+    try {
+      await ClassReason.insertMany(docs, { ordered: false });
+    } catch {
+      // ignore duplicate key errors
+    }
+
+    return ClassReason.find({ classId }).sort({ label: 1 }).lean().exec();
+  },
+
+  async setReasons(_: any, { classId, labels }: any, ctx: Ctx) {
+    requireAuth(ctx);
+    await requireClassTeacher(ctx, classId);
+
+    // Delete all existing reasons for this class
+    await ClassReason.deleteMany({ classId }).exec();
+
+    // Add new reasons if any provided
+    if (labels && labels.length > 0) {
+      const docs = labels.map((label: string) => ({ 
+        classId: toId(classId), 
+        label: label.trim() 
+      }));
+
+      await ClassReason.insertMany(docs, { ordered: false });
+    }
+
+    return ClassReason.find({ classId }).sort({ label: 1 }).lean().exec();
   },
 };
 async function getOrCreateAccount(studentId: string, classId: string) {
