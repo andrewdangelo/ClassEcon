@@ -428,6 +428,7 @@ export const typeDefs = [
       updateClass(id: ID!, input: UpdateClassInput!): Class!
       rotateJoinCode(id: ID!): Class!
       deleteClass(id: ID!, hard: Boolean = false): Boolean!
+      joinClass(joinCode: String!): Class!
 
       # Reason management
       addReasons(classId: ID!, labels: [String!]!): [ClassReason!]!

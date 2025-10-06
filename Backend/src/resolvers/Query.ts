@@ -125,6 +125,14 @@ export const Query = {
     ctx: Ctx
   ) => {
     //TEMP DEBUG
+    console.log("DEBUG classesByUser:", { 
+      userId, 
+      role, 
+      includeArchived,
+      contextUserId: ctx.userId,
+      contextRole: ctx.role 
+    });
+
     /* requireAuthLocal(ctx);
         if (ctx.userId !== userId && ctx.role !== "TEACHER") {
           throw new GraphQLError("Forbidden");
@@ -139,6 +147,8 @@ export const Query = {
       .lean<IMembership[]>()
       .exec();
 
+    console.log("DEBUG found memberships:", memberships);
+
     const classIdObjs = Array.from(
       new Set(
         memberships.flatMap((m) =>
@@ -147,14 +157,20 @@ export const Query = {
       )
     ).map((s) => new Types.ObjectId(s));
 
+    console.log("DEBUG classIdObjs:", classIdObjs);
+
     if (!classIdObjs.length) return [];
 
-    return ClassModel.find({
+    const classes = await ClassModel.find({
       _id: { $in: classIdObjs },
       ...(includeArchived ? {} : { isArchived: false }),
     })
-      .lean<IClass[]>()
+      .lean()
       .exec();
+
+    console.log("DEBUG found classes:", classes);
+
+    return classes;
   },
 
   myClasses: async (

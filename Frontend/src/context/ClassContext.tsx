@@ -1,13 +1,22 @@
-import React, { createContext, useContext, useMemo, useState } from "react";
+import React, { createContext, useContext, useMemo, useState, useEffect } from "react";
+import { useQuery } from "@apollo/client/react";
+import { GET_CLASSES_BY_USER } from "@/graphql/queries/classes";
+import { useAppSelector } from "@/redux/store/store";
+import { selectUser } from "@/redux/authSlice";
+import { ClassesByUserQuery } from "@/graphql/__generated__/graphql";
 
 export type Role = "TEACHER" | "STUDENT";
 
 export type ClassSummary = {
   id: string;
   name: string;
+  subject?: string;
+  period?: string;
+  defaultCurrency?: string;
+  isArchived?: boolean;
+  // Legacy fields for backwards compatibility
   term?: string;
   room?: string;
-  defaultCurrency?: string;
 };
 
 type ClassContextState = {
@@ -19,6 +28,8 @@ type ClassContextState = {
   currentStudentId: string | null;
   setCurrentStudentId: (id: string) => void;
   addClass: (c: ClassSummary) => string; // returns final id (unique)
+  loading: boolean;
+  error?: any;
 };
 
 const ClassContext = createContext<ClassContextState | null>(null);
@@ -30,61 +41,66 @@ export function useClassContext() {
   return ctx;
 }
 
-/** Temporary mock provider — replace with real auth/API later. */
+/** Real provider that fetches classes from GraphQL API */
 export function ClassProvider({
   children,
   initialRole = "TEACHER",
-  initialClasses = [
-    {
-      id: "algebra-i",
-      name: "Algebra I",
-      term: "Fall",
-      room: "201",
-      defaultCurrency: "CE$",
-    },
-    {
-      id: "history-7",
-      name: "History 7",
-      term: "Fall",
-      room: "105",
-      defaultCurrency: "CE$",
-    },
-    {
-      id: "science-6",
-      name: "Science 6",
-      term: "Fall",
-      room: "Lab A",
-      defaultCurrency: "CE$",
-    },
-  ],
-  initialStudentId = "s1",
 }: {
   children: React.ReactNode;
   initialRole?: Role;
-  initialClasses?: ClassSummary[];
-  initialStudentId?: string;
+  // Remove initialClasses and initialStudentId as we'll fetch real data
 }) {
   const [role, setRole] = useState<Role>(initialRole);
-  const [classes, setClasses] = useState<ClassSummary[]>(initialClasses);
-  const [currentClassId, setCurrentClassId] = useState<string | null>(
-    initialClasses[0]?.id ?? null
-  );
-  const [currentStudentId, setCurrentStudentId] = useState<string | null>(
-    initialStudentId
-  );
+  const [currentClassId, setCurrentClassId] = useState<string | null>(null);
+  const [currentStudentId, setCurrentStudentId] = useState<string | null>(null);
+
+  // Get current user from Redux
+  const user = useAppSelector(selectUser);
+
+  // Fetch user's classes from GraphQL
+  const { data: classesData, loading, error } = useQuery<ClassesByUserQuery>(GET_CLASSES_BY_USER, {
+    variables: { 
+      userId: user?.id || "",
+      role: user?.role || role,
+      includeArchived: false 
+    },
+    skip: !user?.id,
+    fetchPolicy: "cache-and-network",
+  });
+
+  // Transform GraphQL data to ClassSummary format
+  const classes: ClassSummary[] = useMemo(() => {
+    if (!classesData?.classesByUser) return [];
+    
+    return classesData.classesByUser.map(cls => ({
+      id: cls.id,
+      name: cls.name,
+      subject: cls.subject || undefined,
+      period: cls.period || undefined,
+      defaultCurrency: cls.defaultCurrency || "CE$",
+      isArchived: cls.isArchived || false,
+    }));
+  }, [classesData]);
+
+  // Set the first class as current when classes load
+  useEffect(() => {
+    if (classes.length > 0 && !currentClassId) {
+      setCurrentClassId(classes[0].id);
+    }
+  }, [classes, currentClassId]);
+
+  // Update role when user data changes
+  useEffect(() => {
+    if (user?.role && user.role !== role) {
+      setRole(user.role as Role);
+    }
+  }, [user?.role, role]);
 
   const addClass = (c: ClassSummary) => {
-    // ensure unique id
-    let base = c.id;
-    let id = base;
-    let i = 2;
-    const ids = new Set(classes.map((x) => x.id));
-    while (ids.has(id)) {
-      id = `${base}-${i++}`;
-    }
-    const finalClass = { ...c, id };
-    setClasses((prev) => [...prev, finalClass]);
-    return id;
+    // This would typically involve a GraphQL mutation to create a class
+    // For now, we'll keep the local logic but note it should be replaced
+    console.warn("addClass called - this should create a class via GraphQL mutation");
+    return c.id;
   };
 
   const value = useMemo(
@@ -97,8 +113,10 @@ export function ClassProvider({
       currentStudentId,
       setCurrentStudentId,
       addClass,
+      loading,
+      error,
     }),
-    [role, classes, currentClassId, currentStudentId]
+    [role, classes, currentClassId, currentStudentId, loading, error]
   );
 
   return (

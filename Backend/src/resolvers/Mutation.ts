@@ -263,6 +263,53 @@ export const Mutation = {
     return updated;
   },
 
+  async joinClass(_: any, { joinCode }: { joinCode: string }, ctx: Ctx) {
+    requireAuth(ctx);
+    
+    // Find the class by join code
+    const cls = await ClassModel.findOne({ joinCode }).lean().exec();
+    if (!cls) {
+      throw new GraphQLError("Invalid join code");
+    }
+
+    const userId = new Types.ObjectId(ctx.userId!);
+    const user = await User.findById(userId).lean().exec();
+    if (!user) {
+      throw new GraphQLError("User not found");
+    }
+
+    // Determine role - for now, assume students join classes, teachers are added differently
+    const role = user.role === "TEACHER" ? "TEACHER" : "STUDENT";
+
+    // Create or update membership
+    await Membership.updateOne(
+      { userId, role },
+      {
+        $setOnInsert: { status: "ACTIVE" },
+        $addToSet: { classIds: cls._id },
+      },
+      { upsert: true }
+    ).exec();
+
+    // If this is a student, create their account with starting balance
+    if (role === "STUDENT") {
+      const existingAccount = await Account.findOne({
+        userId,
+        classId: cls._id,
+      }).lean().exec();
+
+      if (!existingAccount) {
+        await Account.create({
+          userId,
+          classId: cls._id,
+          balance: cls.startingBalance || 0,
+        });
+      }
+    }
+
+    return cls;
+  },
+
   async deleteClass(_: any, { id, hard = false }: any, ctx: Ctx) {
     requireAuth(ctx);
     await requireClassTeacher(ctx, id);
