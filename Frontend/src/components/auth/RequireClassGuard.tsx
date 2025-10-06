@@ -13,6 +13,8 @@ const ME_QUERY = gql`
   }
 `;
 
+interface MeQueryResp { me?: { id: string; role: string } }
+
 const CLASSES_FOR_GUARD = gql`
   query RequireClass_Classes {
     classes {
@@ -21,6 +23,8 @@ const CLASSES_FOR_GUARD = gql`
     }
   }
 `;
+
+interface ClassesQueryResp { classes: { id: string; teacherIds: string[] }[] }
 
 /**
  * Ensures:
@@ -32,12 +36,12 @@ export const RequireClassGuard: React.FC<React.PropsWithChildren> = ({
   children,
 }) => {
   const location = useLocation();
-  const { data: meData, loading: meLoading } = useQuery(ME_QUERY);
+  const { data: meData, loading: meLoading } = useQuery<MeQueryResp>(ME_QUERY);
   const role = meData?.me?.role;
   const userId = meData?.me?.id;
 
   // Only relevant for teachers
-  const { data: classesData, loading: classesLoading } = useQuery(
+  const { data: classesData, loading: classesLoading } = useQuery<ClassesQueryResp>(
     CLASSES_FOR_GUARD,
     {
       skip: !userId || role !== "TEACHER",
@@ -47,6 +51,7 @@ export const RequireClassGuard: React.FC<React.PropsWithChildren> = ({
 
   const pathname = location.pathname;
   const isOnboarding = pathname === "/onboarding";
+  const newClassIdFromNav = (location.state as any)?.newClassId;
 
   if (meLoading || (role === "TEACHER" && classesLoading)) {
     return null; // or a spinner
@@ -59,15 +64,21 @@ export const RequireClassGuard: React.FC<React.PropsWithChildren> = ({
 
   // Teacher: do I have at least one class I teach?
   const myClassExists = !!classesData?.classes?.some(
-    (c: { teacherIds: string[] }) => c?.teacherIds?.includes?.(userId)
+    (c) => c?.teacherIds?.includes?.(userId || "")
   );
 
+  // Teacher without classes: only allow onboarding; redirect any other protected route to onboarding
   if (!myClassExists && !isOnboarding) {
-    return <Navigate to="/onboarding" replace />;
+    // If we just created a class and are redirecting, allow children while cache catches up
+    if (newClassIdFromNav) {
+      return <>{children}</>;
+    }
+    return <Navigate to="/onboarding" replace state={location.state} />;
   }
 
+  // Teacher with classes: block returning to onboarding; send to dashboard root
   if (myClassExists && isOnboarding) {
-    return <Navigate to="/classes" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

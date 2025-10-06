@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useMutation } from "@apollo/client/react";
 import type { CreateClassMutation, CreateClassMutationVariables } from "@/graphql/__generated__/graphql";
 import { CREATE_CLASS } from "@/graphql/mutations/createClass";
+import { gql } from "@apollo/client";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,12 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+
+const CLASSES_FOR_GUARD = gql`
+  query RequireClass_Classes {
+    classes { id teacherIds }
+  }
+`;
 
 type OnboardingPrefill = {
   fromSignup?: boolean;
@@ -56,12 +63,16 @@ export default function TeacherOnboarding() {
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
   const [createClass, { loading }] = useMutation<CreateClassMutation, CreateClassMutationVariables>(CREATE_CLASS, {
+    refetchQueries: [{ query: CLASSES_FOR_GUARD }],
+    awaitRefetchQueries: true,
     onCompleted: (data) => {
       sessionStorage.removeItem("onboardingPrefill");
       const newClassId = data?.createClass?.id;
-      console.log("Created class with ID:", newClassId);
+      // Redirect to dashboard root so user sees full app shell
       if (newClassId) {
-        navigate(`/classes/${newClassId}`, { replace: true });
+        navigate(`/`, { replace: true, state: { newClassId } });
+      } else {
+        navigate(`/`, { replace: true });
       }
     },
     onError: (err) => {
