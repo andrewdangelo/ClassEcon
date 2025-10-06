@@ -83,9 +83,15 @@ export const LoginSignupCard: React.FC = () => {
     });
     const payload = res.data?.login;
     if (payload?.accessToken && payload?.user) {
-      dispatch(setCredentials(payload));
-      // Optional: navigate after login if you want
-      // navigate("/");
+      dispatch(setCredentials({
+        accessToken: payload.accessToken,
+        user: {
+          ...payload.user,
+          role: payload.user.role as "TEACHER" | "STUDENT" | "PARENT"
+        }
+      }));
+      // Navigate to root after successful login
+      navigate("/");
     }
   };
 
@@ -103,7 +109,13 @@ export const LoginSignupCard: React.FC = () => {
 
     const payload = res.data?.signUp;
     if (payload?.accessToken && payload?.user) {
-      dispatch(setCredentials(payload));
+      dispatch(setCredentials({
+        accessToken: payload.accessToken,
+        user: {
+          ...payload.user,
+          role: payload.user.role as "TEACHER" | "STUDENT" | "PARENT"
+        }
+      }));
       // preserve info for onboarding
       const isTeacher = (payload.user.role ?? data.role) === "TEACHER";
       if (isTeacher) {
