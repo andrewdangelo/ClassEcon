@@ -15,12 +15,15 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { useClassContext } from "@/context/ClassContext";
+import { CLASSES_FOR_GUARD } from "@/components/auth/RequireClassGuard";
 
 const CREATE_CLASS = gql`
   mutation CreateClass($input: CreateClassInput!) {
     createClass(input: $input) {
       id
       name
+      defaultCurrency
       slug # ✅ need this to route by slug
       joinCode
     }
@@ -48,6 +51,7 @@ function slugify(s: string) {
 export default function TeacherOnboarding() {
   const navigate = useNavigate();
   const location = useLocation() as { state?: OnboardingPrefill };
+  const { addClass, setCurrentClassId } = useClassContext();
 
   const [prefill, setPrefill] = React.useState<OnboardingPrefill | null>(null);
   React.useEffect(() => {
@@ -77,12 +81,21 @@ export default function TeacherOnboarding() {
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
   const [createClass, { loading }] = useMutation(CREATE_CLASS, {
+    refetchQueries: [{ query: CLASSES_FOR_GUARD }],
+    awaitRefetchQueries: true,
     onCompleted: (data) => {
       sessionStorage.removeItem("onboardingPrefill");
-      const slug = data?.createClass?.slug;
-      // ✅ go to slug route inside the app shell
-      if (slug) navigate(`/c/${slug}`, { replace: true });
-      else navigate(`/classes/${data?.createClass?.id}`, { replace: true });
+      const newClass = data?.createClass;
+      if (newClass?.id && newClass?.name) {
+        const finalId = addClass({
+          id: newClass.id,
+          name: newClass.name,
+          defaultCurrency: newClass?.defaultCurrency ?? undefined,
+        });
+        setCurrentClassId(finalId);
+      }
+
+      navigate(`/`, { replace: true });
     },
     onError: (err) => {
       setErrorMsg(err.message || "Something went wrong creating the class.");

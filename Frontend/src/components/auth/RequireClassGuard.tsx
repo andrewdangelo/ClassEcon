@@ -4,7 +4,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { gql } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
 
-const ME_QUERY = gql`
+export const ME_QUERY = gql`
   query RequireClass_Me {
     me {
       id
@@ -13,7 +13,7 @@ const ME_QUERY = gql`
   }
 `;
 
-const CLASSES_FOR_GUARD = gql`
+export const CLASSES_FOR_GUARD = gql`
   query RequireClass_Classes {
     classes {
       id

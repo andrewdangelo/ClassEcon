@@ -4,7 +4,7 @@ import { useMutation } from "@apollo/client/react";
 import { LOGIN, SIGN_UP } from "../../graphql/operations";
 import { useAppDispatch } from "../../redux/store/store";
 import { setCredentials } from "../../redux/authSlice";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import {
   Card,
@@ -51,6 +51,10 @@ type SignupPayload = {
 export const LoginSignupCard: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation() as { state?: { from?: string } };
+  const requestedPath = location.state?.from && location.state.from !== "/auth"
+    ? location.state.from
+    : "/";
 
   // --- Login form ---
   const {
@@ -84,8 +88,7 @@ export const LoginSignupCard: React.FC = () => {
     const payload = res.data?.login;
     if (payload?.accessToken && payload?.user) {
       dispatch(setCredentials(payload));
-      // Optional: navigate after login if you want
-      // navigate("/");
+      navigate(requestedPath, { replace: true });
     }
   };
 
@@ -120,6 +123,8 @@ export const LoginSignupCard: React.FC = () => {
         );
         // navigate to onboarding:
         navigate("/onboarding", { replace: true, state: onboardState });
+      } else {
+        navigate(requestedPath, { replace: true });
       }
       resetSignup();
     }

@@ -1,17 +1,25 @@
 import React from "react";
+import { Navigate, useLocation } from "react-router-dom";
+
 import { useAppSelector } from "../../redux/store/store";
 import { selectAccessToken } from "../../redux/authSlice";
-import { LoginSignupCard } from "./LoginSignupCard";
 
 export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const token = useAppSelector(selectAccessToken);
+  const location = useLocation();
+  const from = `${location.pathname}${location.search}${location.hash}`;
+
   if (!token) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center p-4">
-        <LoginSignupCard />
-      </div>
+      <Navigate
+        to="/auth"
+        replace
+        state={{
+          from: from || undefined,
+        }}
+      />
     );
   }
   return <>{children}</>;
