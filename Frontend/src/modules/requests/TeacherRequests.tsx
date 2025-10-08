@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useSubscription } from "@apollo/client/react";
 import { PAY_REQUESTS_BY_CLASS } from "@/graphql/queries/requests";
+import { PayRequestsByClassQuery } from "@/graphql/__generated__/graphql";
 import {
   APPROVE_PAY_REQUEST,
   SUBMIT_PAY_REQUEST,
@@ -34,12 +35,12 @@ type Status =
 export default function TeacherRequests({ classId }: { classId: string }) {
   const { push: toast } = useToast();
   const [filterStatus, setFilterStatus] = useState<Status>(undefined);
-  const [comment, setComment] = useState<string>("");
   const [approvalAmounts, setApprovalAmounts] = useState<{ [key: string]: string }>({});
   const [showComments, setShowComments] = useState<{ [key: string]: boolean }>({});
   const [newComments, setNewComments] = useState<{ [key: string]: string }>({});
+  const [actionComments, setActionComments] = useState<{ [key: string]: string }>({});
 
-  const { data, loading, error, refetch } = useQuery(PAY_REQUESTS_BY_CLASS, {
+  const { data, loading, error, refetch } = useQuery<PayRequestsByClassQuery>(PAY_REQUESTS_BY_CLASS, {
     variables: { classId, status: filterStatus },
     fetchPolicy: "cache-and-network",
   });
@@ -80,6 +81,7 @@ export default function TeacherRequests({ classId }: { classId: string }) {
   const [rebuke] = useMutation(REBUKE_PAY_REQUEST, {
     onCompleted: () => {
       toast({ title: "Rebuked" });
+      setActionComments({});
       refetch();
     },
     onError: (e) => toast({ title: e.message, variant: "destructive" }),
@@ -88,6 +90,7 @@ export default function TeacherRequests({ classId }: { classId: string }) {
   const [deny] = useMutation(DENY_PAY_REQUEST, {
     onCompleted: () => {
       toast({ title: "Denied" });
+      setActionComments({});
       refetch();
     },
     onError: (e) => toast({ title: e.message, variant: "destructive" }),
@@ -104,6 +107,7 @@ export default function TeacherRequests({ classId }: { classId: string }) {
 
   const handleApprove = (requestId: string, originalAmount: number) => {
     const amount = parseInt(approvalAmounts[requestId]) || originalAmount;
+    const comment = actionComments[requestId];
     approve({
       variables: { 
         id: requestId, 
@@ -111,6 +115,24 @@ export default function TeacherRequests({ classId }: { classId: string }) {
         comment: comment || null 
       },
     });
+  };
+
+  const handleRebuke = (requestId: string) => {
+    const comment = actionComments[requestId]?.trim();
+    if (!comment) {
+      toast({ title: "Comment required for rebuke", variant: "destructive" });
+      return;
+    }
+    rebuke({ variables: { id: requestId, comment } });
+  };
+
+  const handleDeny = (requestId: string) => {
+    const comment = actionComments[requestId]?.trim();
+    if (!comment) {
+      toast({ title: "Comment required for denial", variant: "destructive" });
+      return;
+    }
+    deny({ variables: { id: requestId, comment } });
   };
 
   const handleAddComment = (payRequestId: string) => {
@@ -170,13 +192,6 @@ export default function TeacherRequests({ classId }: { classId: string }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="flex gap-2">
-          <Input
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            placeholder="Optional teacher comment…"
-          />
-        </div>
         <div className="space-y-4">
           {rows.length === 0 ? (
             <div className="text-center text-muted-foreground py-6">
@@ -233,6 +248,22 @@ export default function TeacherRequests({ classId }: { classId: string }) {
                     </div>
                   )}
 
+                  {/* Teacher Action Comment Input */}
+                  {request.status !== "PAID" && request.status !== "DENIED" && (
+                    <div className="space-y-2 bg-muted/50 p-3 rounded-lg">
+                      <div className="text-sm font-medium">Teacher Response:</div>
+                      <Textarea
+                        placeholder="Add a comment (required for rebuke/deny, optional for approve)..."
+                        value={actionComments[request.id] || ''}
+                        onChange={(e) => setActionComments(prev => ({
+                          ...prev,
+                          [request.id]: e.target.value
+                        }))}
+                        rows={2}
+                      />
+                    </div>
+                  )}
+
                   {/* Action Buttons */}
                   <div className="flex gap-2">
                     {request.status === "APPROVED" && (
@@ -249,27 +280,16 @@ export default function TeacherRequests({ classId }: { classId: string }) {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() =>
-                            rebuke({
-                              variables: {
-                                id: request.id,
-                                comment: comment || "Needs more detail",
-                              },
-                            })
-                          }
+                          onClick={() => handleRebuke(request.id)}
                         >
-                          Rebuke
+                          Rebuke (requires comment)
                         </Button>
                         <Button
                           size="sm"
                           variant="destructive"
-                          onClick={() =>
-                            deny({
-                              variables: { id: request.id, comment: comment || null },
-                            })
-                          }
+                          onClick={() => handleDeny(request.id)}
                         >
-                          Deny
+                          Deny (requires comment)
                         </Button>
                       </>
                     )}

@@ -44,7 +44,7 @@ export const REBUKE_PAY_REQUEST = gql`
 `
 
 export const DENY_PAY_REQUEST = gql`
-  mutation DenyPayRequest($id: ID!, $comment: String) {
+  mutation DenyPayRequest($id: ID!, $comment: String!) {
     denyPayRequest(id: $id, comment: $comment) {
       id
       status

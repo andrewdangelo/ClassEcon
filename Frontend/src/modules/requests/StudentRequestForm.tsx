@@ -110,7 +110,7 @@ export default function StudentRequestForm({
         </div>
 
         <div className="flex gap-2">
-          <Button disabled={loading}>
+          <Button onClick={submit} disabled={loading}>
             {loading ? "Submitting…" : "Submit request"}
           </Button>
           <Button

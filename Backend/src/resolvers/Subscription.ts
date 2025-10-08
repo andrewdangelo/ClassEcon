@@ -1,5 +1,6 @@
 import { withFilter } from 'graphql-subscriptions';
 import { pubsub, PAY_REQUEST_EVENTS } from '../pubsub';
+import { NOTIFICATION_EVENTS } from '../services/notifications';
 
 export const Subscription = {
   payRequestCreated: {
@@ -34,6 +35,15 @@ export const Subscription = {
       () => (pubsub as any).asyncIterator(PAY_REQUEST_EVENTS.PAY_REQUEST_COMMENT_ADDED),
       (payload: any, variables: any) => {
         return payload.payRequestCommentAdded.payRequestId === variables.payRequestId;
+      }
+    ),
+  },
+
+  notificationReceived: {
+    subscribe: withFilter(
+      () => (pubsub as any).asyncIterator(NOTIFICATION_EVENTS.NOTIFICATION_RECEIVED),
+      (payload: any, variables: any) => {
+        return payload.notificationReceived.userId.toString() === variables.userId;
       }
     ),
   },

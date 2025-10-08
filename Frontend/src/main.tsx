@@ -24,6 +24,7 @@ import { Provider } from "react-redux";
 import { store } from "@/redux/store/store";
 import GraphQLTest from "./modules/dev/GraphQLTest";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 import { LoginSignupCard } from "@/components/auth/LoginSignupCard";
 import TeacherOnboarding from "./modules/onboarding/TeacherOnboarding";
@@ -86,13 +87,15 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <Provider store={store}>
       <ApolloProvider client={client}>
-        <ClassProvider>
-          <CartProvider>
-            <ToastProvider>
-              <RouterProvider router={router} />
-            </ToastProvider>
-          </CartProvider>
-        </ClassProvider>
+        <ThemeProvider>
+          <ClassProvider>
+            <CartProvider>
+              <ToastProvider>
+                <RouterProvider router={router} />
+              </ToastProvider>
+            </CartProvider>
+          </ClassProvider>
+        </ThemeProvider>
       </ApolloProvider>
     </Provider>
   </React.StrictMode>

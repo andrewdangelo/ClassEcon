@@ -9,6 +9,7 @@ import { useMutation } from "@apollo/client/react";
 import { useAppDispatch } from "@/redux/store/store";
 import { clearAuth } from "@/redux/authSlice";
 import { LOGOUT } from "@/graphql/mutations/auth";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 export function Layout() {
   const [open, setOpen] = React.useState(false);
@@ -104,8 +105,9 @@ export function Layout() {
             </NavLink>
           </nav>
 
-          {/* Right side: logout button */}
+          {/* Right side: notifications and logout */}
           <div className="flex items-center gap-2">
+            <NotificationBell />
             <Button 
               variant="outline" 
               size="sm" 

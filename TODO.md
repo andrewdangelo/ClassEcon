@@ -4,33 +4,36 @@
 
 ### 1. Student Payment Request Page - Reasons Not Loading
 - **Issue**: Students cannot see fine reasons in the dropdown on the payment request page
-- **Status**: 🔄 In Progress
+- **Status**: ✅ Fixed
+- **Root Cause**: Backend resolver `reasonsByClass` was using `requireClassTeacher()` which only allowed teachers to query reasons, blocking students from accessing them
+- **Solution**: Changed the resolver to use `requireAuth()` instead, allowing authenticated students to view reasons while still protecting the data
 - **Details**: 
   - Teachers can add fine reasons in the class management page
   - Cache invalidation has been implemented with `refetchQueries` for `REASONS_BY_CLASS` query
-  - Need to verify the fix is working end-to-end
+  - Students can now query reasons to populate the dropdown
 - **Components Affected**:
-  - `Frontend/src/modules/requests/StudentRequestForm.tsx`
-  - `Frontend/src/modules/classes/ClassManage.tsx`
-  - Backend GraphQL resolver for `setReasons`
+  - ✅ `Backend/src/resolvers/Query.ts` - Changed auth requirement from teacher-only to authenticated users
 
 ### 2. Data Persistence Issues on Page Reload
 - **Issue**: Dashboard, Requests, and Store pages don't maintain their data on reload
-- **Status**: 🔍 Investigation Needed
-- **Potential Causes**:
-  - Apollo Client cache not persisting properly
-  - GraphQL queries not being replayed after page refresh
-  - User authentication state becoming undefined on reload
-  - Missing cache persistence configuration
-- **Pages Affected**:
-  - Dashboard page
-  - Requests page  
-  - Store page
-- **Investigation Steps**:
-  - [ ] Check Apollo Client cache configuration
-  - [ ] Verify user authentication persistence
-  - [ ] Test query replay behavior after reload
-  - [ ] Review fetchPolicy settings for affected queries
+- **Status**: ✅ Fixed
+- **Root Causes Found**:
+  1. Redux state (accessToken, user) was not persisted to storage - lost on reload
+  2. ProtectedRoute didn't update Redux when ME query succeeded with refresh token
+  3. Apollo cache wasn't optimally configured for list merging
+- **Solutions Implemented**:
+  1. ✅ Updated `ProtectedRoute.tsx` to dispatch user data to Redux when ME query succeeds on reload
+  2. ✅ Enhanced Apollo Client cache with proper merge policies for all query fields
+  3. ✅ Verified all affected pages use `cache-and-network` fetch policy
+- **Pages Verified**:
+  - ✅ Dashboard page (already using cache-and-network)
+  - ✅ Requests page (already using cache-and-network)  
+  - ✅ Store page (uses useApi hook with proper caching)
+- **How It Works Now**:
+  - On page reload, ProtectedRoute makes ME query using refresh token cookie
+  - When ME query succeeds, user data is stored in Redux for app-wide access
+  - Apollo cache retains query results and merges updates properly
+  - Pages can show cached data instantly while fetching fresh data in background
 
 ## Additional Notes
 

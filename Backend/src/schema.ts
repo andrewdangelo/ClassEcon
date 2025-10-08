@@ -287,6 +287,19 @@ export const typeDefs = [
       user: User!
     }
 
+    type Notification {
+      id: ID!
+      userId: ID!
+      type: String!
+      title: String!
+      message: String!
+      relatedId: ID
+      relatedType: String
+      isRead: Boolean!
+      createdAt: DateTime!
+      updatedAt: DateTime!
+    }
+
     # Compatibility DTO for Student (User+Membership+Account+Balance)
     type Student {
       id: ID!
@@ -439,6 +452,10 @@ export const typeDefs = [
         limit: Int = 50
         offset: Int = 0
       ): StudentsResult!
+      
+      # Notifications
+      notifications(userId: ID, limit: Int = 50, unreadOnly: Boolean = false): [Notification!]!
+      unreadNotificationCount: Int!
     }
 
     extend type Query {
@@ -495,7 +512,7 @@ export const typeDefs = [
       approvePayRequest(id: ID!, amount: Int!, comment: String): PayRequest!
       submitPayRequest(id: ID!): PayRequest!
       rebukePayRequest(id: ID!, comment: String!): PayRequest!
-      denyPayRequest(id: ID!, comment: String): PayRequest!
+      denyPayRequest(id: ID!, comment: String!): PayRequest!
 
       # Pay request comments
       addPayRequestComment(payRequestId: ID!, content: String!): PayRequestComment!
@@ -507,6 +524,10 @@ export const typeDefs = [
 
       # Purchase
       makePurchase(input: MakePurchaseInput!): [Purchase!]!
+      
+      # Notifications
+      markNotificationAsRead(id: ID!): Notification!
+      markAllNotificationsAsRead: Boolean!
     }
 
     type Subscription {
@@ -515,6 +536,9 @@ export const typeDefs = [
       payRequestCreated(classId: ID!): PayRequest!
       payRequestStatusChanged(classId: ID!): PayRequest!
       payRequestCommentAdded(payRequestId: ID!): PayRequestComment!
+      
+      # Notifications
+      notificationReceived(userId: ID!): Notification!
     }
   `,
 ];

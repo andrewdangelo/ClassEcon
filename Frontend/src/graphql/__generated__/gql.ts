@@ -36,7 +36,7 @@ type Documents = {
     "\n  mutation ApprovePayRequest($id: ID!, $amount: Int!, $comment: String) {\n    approvePayRequest(id: $id, amount: $amount, comment: $comment) {\n      id\n      status\n      amount\n      teacherComment\n    }\n  }\n": typeof types.ApprovePayRequestDocument,
     "\n  mutation SubmitPayRequest($id: ID!) {\n    submitPayRequest(id: $id) {\n      id\n      status\n    }\n  }\n": typeof types.SubmitPayRequestDocument,
     "\n  mutation RebukePayRequest($id: ID!, $comment: String!) {\n    rebukePayRequest(id: $id, comment: $comment) {\n      id\n      status\n      teacherComment\n    }\n  }\n": typeof types.RebukePayRequestDocument,
-    "\n  mutation DenyPayRequest($id: ID!, $comment: String) {\n    denyPayRequest(id: $id, comment: $comment) {\n      id\n      status\n      teacherComment\n    }\n  }\n": typeof types.DenyPayRequestDocument,
+    "\n  mutation DenyPayRequest($id: ID!, $comment: String!) {\n    denyPayRequest(id: $id, comment: $comment) {\n      id\n      status\n      teacherComment\n    }\n  }\n": typeof types.DenyPayRequestDocument,
     "\n  mutation AddPayRequestComment($payRequestId: ID!, $content: String!) {\n    addPayRequestComment(payRequestId: $payRequestId, content: $content) {\n      id\n      content\n      user {\n        id\n        name\n      }\n      createdAt\n    }\n  }\n": typeof types.AddPayRequestCommentDocument,
     "\n  mutation CreateStoreItem($input: CreateStoreItemInput!) {\n    createStoreItem(input: $input) {\n      id\n      title\n      price\n      description\n      imageUrl\n      stock\n      perStudentLimit\n      active\n      sort\n    }\n  }\n": typeof types.CreateStoreItemDocument,
     "\n  mutation UpdateStoreItem($id: ID!, $input: UpdateStoreItemInput!) {\n    updateStoreItem(id: $id, input: $input) {\n      id\n      title\n      price\n      description\n      imageUrl\n      stock\n      perStudentLimit\n      active\n      sort\n    }\n  }\n": typeof types.UpdateStoreItemDocument,
@@ -49,6 +49,10 @@ type Documents = {
     "\n  query GetClassBySlug($slug: String!) {\n    class(slug: $slug) {\n      id\n      name\n      subject\n      period\n      gradeLevel\n      joinCode\n      defaultCurrency\n      isArchived\n    }\n  }\n": typeof types.GetClassBySlugDocument,
     "\n  query ClassesByUser(\n    $userId: ID!\n    $role: Role\n    $includeArchived: Boolean = false\n  ) {\n    classesByUser(\n      userId: $userId\n      role: $role\n      includeArchived: $includeArchived\n    ) {\n      id\n      name\n      subject\n      period\n      defaultCurrency\n      isArchived\n    }\n  }\n": typeof types.ClassesByUserDocument,
     "\n  query Me {\n    me {\n      id\n      name\n      email\n      role\n    }\n  }\n": typeof types.MeDocument,
+    "\n  query GetNotifications($userId: ID, $limit: Int, $unreadOnly: Boolean) {\n    notifications(userId: $userId, limit: $limit, unreadOnly: $unreadOnly) {\n      id\n      userId\n      type\n      title\n      message\n      relatedId\n      relatedType\n      isRead\n      createdAt\n      updatedAt\n    }\n  }\n": typeof types.GetNotificationsDocument,
+    "\n  query GetUnreadNotificationCount {\n    unreadNotificationCount\n  }\n": typeof types.GetUnreadNotificationCountDocument,
+    "\n  mutation MarkNotificationAsRead($id: ID!) {\n    markNotificationAsRead(id: $id) {\n      id\n      isRead\n    }\n  }\n": typeof types.MarkNotificationAsReadDocument,
+    "\n  mutation MarkAllNotificationsAsRead {\n    markAllNotificationsAsRead\n  }\n": typeof types.MarkAllNotificationsAsReadDocument,
     "\n  query ReasonsByClass($classId: ID!) {\n    reasonsByClass(classId: $classId) {\n      id\n      label\n    }\n  }\n": typeof types.ReasonsByClassDocument,
     "\n  mutation AddReasons($classId: ID!, $labels: [String!]!) {\n    addReasons(classId: $classId, labels: $labels) {\n      id\n      label\n    }\n  }\n": typeof types.AddReasonsDocument,
     "\n  mutation SetReasons($classId: ID!, $labels: [String!]!) {\n    setReasons(classId: $classId, labels: $labels) {\n      id\n      label\n    }\n  }\n": typeof types.SetReasonsDocument,
@@ -58,6 +62,7 @@ type Documents = {
     "\n  query StudentsByClass($classId: ID!) {\n    studentsByClass(classId: $classId) {\n      id\n      name\n      classId\n      balance\n    }\n  }\n": typeof types.StudentsByClassDocument,
     "\n  query StudentsDirectory(\n    $filter: StudentsFilter\n    $limit: Int = 50\n    $offset: Int = 0\n  ) {\n    students(filter: $filter, limit: $limit, offset: $offset) {\n      nodes {\n        id\n        name\n        email\n        role\n        status\n        createdAt\n        updatedAt\n      }\n      totalCount\n    }\n  }\n": typeof types.StudentsDirectoryDocument,
     "\n  query StudentsByTeacher {\n    studentsByTeacher {\n      id\n      name\n      balance\n      classId\n      class {\n        id\n        name\n        subject\n        period\n      }\n    }\n  }\n": typeof types.StudentsByTeacherDocument,
+    "\n  subscription NotificationReceived($userId: ID!) {\n    notificationReceived(userId: $userId) {\n      id\n      userId\n      type\n      title\n      message\n      relatedId\n      relatedType\n      isRead\n      createdAt\n      updatedAt\n    }\n  }\n": typeof types.NotificationReceivedDocument,
     "\n  subscription PayRequestCreated($classId: ID!) {\n    payRequestCreated(classId: $classId) {\n      id\n      student {\n        id\n        name\n      }\n      amount\n      reason\n      justification\n      status\n      createdAt\n    }\n  }\n": typeof types.PayRequestCreatedDocument,
     "\n  subscription PayRequestStatusChanged($classId: ID!) {\n    payRequestStatusChanged(classId: $classId) {\n      id\n      status\n      amount\n      teacherComment\n    }\n  }\n": typeof types.PayRequestStatusChangedDocument,
     "\n  subscription PayRequestCommentAdded($payRequestId: ID!) {\n    payRequestCommentAdded(payRequestId: $payRequestId) {\n      id\n      content\n      user {\n        id\n        name\n      }\n      createdAt\n    }\n  }\n": typeof types.PayRequestCommentAddedDocument,
@@ -85,7 +90,7 @@ const documents: Documents = {
     "\n  mutation ApprovePayRequest($id: ID!, $amount: Int!, $comment: String) {\n    approvePayRequest(id: $id, amount: $amount, comment: $comment) {\n      id\n      status\n      amount\n      teacherComment\n    }\n  }\n": types.ApprovePayRequestDocument,
     "\n  mutation SubmitPayRequest($id: ID!) {\n    submitPayRequest(id: $id) {\n      id\n      status\n    }\n  }\n": types.SubmitPayRequestDocument,
     "\n  mutation RebukePayRequest($id: ID!, $comment: String!) {\n    rebukePayRequest(id: $id, comment: $comment) {\n      id\n      status\n      teacherComment\n    }\n  }\n": types.RebukePayRequestDocument,
-    "\n  mutation DenyPayRequest($id: ID!, $comment: String) {\n    denyPayRequest(id: $id, comment: $comment) {\n      id\n      status\n      teacherComment\n    }\n  }\n": types.DenyPayRequestDocument,
+    "\n  mutation DenyPayRequest($id: ID!, $comment: String!) {\n    denyPayRequest(id: $id, comment: $comment) {\n      id\n      status\n      teacherComment\n    }\n  }\n": types.DenyPayRequestDocument,
     "\n  mutation AddPayRequestComment($payRequestId: ID!, $content: String!) {\n    addPayRequestComment(payRequestId: $payRequestId, content: $content) {\n      id\n      content\n      user {\n        id\n        name\n      }\n      createdAt\n    }\n  }\n": types.AddPayRequestCommentDocument,
     "\n  mutation CreateStoreItem($input: CreateStoreItemInput!) {\n    createStoreItem(input: $input) {\n      id\n      title\n      price\n      description\n      imageUrl\n      stock\n      perStudentLimit\n      active\n      sort\n    }\n  }\n": types.CreateStoreItemDocument,
     "\n  mutation UpdateStoreItem($id: ID!, $input: UpdateStoreItemInput!) {\n    updateStoreItem(id: $id, input: $input) {\n      id\n      title\n      price\n      description\n      imageUrl\n      stock\n      perStudentLimit\n      active\n      sort\n    }\n  }\n": types.UpdateStoreItemDocument,
@@ -98,6 +103,10 @@ const documents: Documents = {
     "\n  query GetClassBySlug($slug: String!) {\n    class(slug: $slug) {\n      id\n      name\n      subject\n      period\n      gradeLevel\n      joinCode\n      defaultCurrency\n      isArchived\n    }\n  }\n": types.GetClassBySlugDocument,
     "\n  query ClassesByUser(\n    $userId: ID!\n    $role: Role\n    $includeArchived: Boolean = false\n  ) {\n    classesByUser(\n      userId: $userId\n      role: $role\n      includeArchived: $includeArchived\n    ) {\n      id\n      name\n      subject\n      period\n      defaultCurrency\n      isArchived\n    }\n  }\n": types.ClassesByUserDocument,
     "\n  query Me {\n    me {\n      id\n      name\n      email\n      role\n    }\n  }\n": types.MeDocument,
+    "\n  query GetNotifications($userId: ID, $limit: Int, $unreadOnly: Boolean) {\n    notifications(userId: $userId, limit: $limit, unreadOnly: $unreadOnly) {\n      id\n      userId\n      type\n      title\n      message\n      relatedId\n      relatedType\n      isRead\n      createdAt\n      updatedAt\n    }\n  }\n": types.GetNotificationsDocument,
+    "\n  query GetUnreadNotificationCount {\n    unreadNotificationCount\n  }\n": types.GetUnreadNotificationCountDocument,
+    "\n  mutation MarkNotificationAsRead($id: ID!) {\n    markNotificationAsRead(id: $id) {\n      id\n      isRead\n    }\n  }\n": types.MarkNotificationAsReadDocument,
+    "\n  mutation MarkAllNotificationsAsRead {\n    markAllNotificationsAsRead\n  }\n": types.MarkAllNotificationsAsReadDocument,
     "\n  query ReasonsByClass($classId: ID!) {\n    reasonsByClass(classId: $classId) {\n      id\n      label\n    }\n  }\n": types.ReasonsByClassDocument,
     "\n  mutation AddReasons($classId: ID!, $labels: [String!]!) {\n    addReasons(classId: $classId, labels: $labels) {\n      id\n      label\n    }\n  }\n": types.AddReasonsDocument,
     "\n  mutation SetReasons($classId: ID!, $labels: [String!]!) {\n    setReasons(classId: $classId, labels: $labels) {\n      id\n      label\n    }\n  }\n": types.SetReasonsDocument,
@@ -107,6 +116,7 @@ const documents: Documents = {
     "\n  query StudentsByClass($classId: ID!) {\n    studentsByClass(classId: $classId) {\n      id\n      name\n      classId\n      balance\n    }\n  }\n": types.StudentsByClassDocument,
     "\n  query StudentsDirectory(\n    $filter: StudentsFilter\n    $limit: Int = 50\n    $offset: Int = 0\n  ) {\n    students(filter: $filter, limit: $limit, offset: $offset) {\n      nodes {\n        id\n        name\n        email\n        role\n        status\n        createdAt\n        updatedAt\n      }\n      totalCount\n    }\n  }\n": types.StudentsDirectoryDocument,
     "\n  query StudentsByTeacher {\n    studentsByTeacher {\n      id\n      name\n      balance\n      classId\n      class {\n        id\n        name\n        subject\n        period\n      }\n    }\n  }\n": types.StudentsByTeacherDocument,
+    "\n  subscription NotificationReceived($userId: ID!) {\n    notificationReceived(userId: $userId) {\n      id\n      userId\n      type\n      title\n      message\n      relatedId\n      relatedType\n      isRead\n      createdAt\n      updatedAt\n    }\n  }\n": types.NotificationReceivedDocument,
     "\n  subscription PayRequestCreated($classId: ID!) {\n    payRequestCreated(classId: $classId) {\n      id\n      student {\n        id\n        name\n      }\n      amount\n      reason\n      justification\n      status\n      createdAt\n    }\n  }\n": types.PayRequestCreatedDocument,
     "\n  subscription PayRequestStatusChanged($classId: ID!) {\n    payRequestStatusChanged(classId: $classId) {\n      id\n      status\n      amount\n      teacherComment\n    }\n  }\n": types.PayRequestStatusChangedDocument,
     "\n  subscription PayRequestCommentAdded($payRequestId: ID!) {\n    payRequestCommentAdded(payRequestId: $payRequestId) {\n      id\n      content\n      user {\n        id\n        name\n      }\n      createdAt\n    }\n  }\n": types.PayRequestCommentAddedDocument,
@@ -217,7 +227,7 @@ export function graphql(source: "\n  mutation RebukePayRequest($id: ID!, $commen
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  mutation DenyPayRequest($id: ID!, $comment: String) {\n    denyPayRequest(id: $id, comment: $comment) {\n      id\n      status\n      teacherComment\n    }\n  }\n"): (typeof documents)["\n  mutation DenyPayRequest($id: ID!, $comment: String) {\n    denyPayRequest(id: $id, comment: $comment) {\n      id\n      status\n      teacherComment\n    }\n  }\n"];
+export function graphql(source: "\n  mutation DenyPayRequest($id: ID!, $comment: String!) {\n    denyPayRequest(id: $id, comment: $comment) {\n      id\n      status\n      teacherComment\n    }\n  }\n"): (typeof documents)["\n  mutation DenyPayRequest($id: ID!, $comment: String!) {\n    denyPayRequest(id: $id, comment: $comment) {\n      id\n      status\n      teacherComment\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -269,6 +279,22 @@ export function graphql(source: "\n  query Me {\n    me {\n      id\n      name\
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
+export function graphql(source: "\n  query GetNotifications($userId: ID, $limit: Int, $unreadOnly: Boolean) {\n    notifications(userId: $userId, limit: $limit, unreadOnly: $unreadOnly) {\n      id\n      userId\n      type\n      title\n      message\n      relatedId\n      relatedType\n      isRead\n      createdAt\n      updatedAt\n    }\n  }\n"): (typeof documents)["\n  query GetNotifications($userId: ID, $limit: Int, $unreadOnly: Boolean) {\n    notifications(userId: $userId, limit: $limit, unreadOnly: $unreadOnly) {\n      id\n      userId\n      type\n      title\n      message\n      relatedId\n      relatedType\n      isRead\n      createdAt\n      updatedAt\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query GetUnreadNotificationCount {\n    unreadNotificationCount\n  }\n"): (typeof documents)["\n  query GetUnreadNotificationCount {\n    unreadNotificationCount\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation MarkNotificationAsRead($id: ID!) {\n    markNotificationAsRead(id: $id) {\n      id\n      isRead\n    }\n  }\n"): (typeof documents)["\n  mutation MarkNotificationAsRead($id: ID!) {\n    markNotificationAsRead(id: $id) {\n      id\n      isRead\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation MarkAllNotificationsAsRead {\n    markAllNotificationsAsRead\n  }\n"): (typeof documents)["\n  mutation MarkAllNotificationsAsRead {\n    markAllNotificationsAsRead\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
 export function graphql(source: "\n  query ReasonsByClass($classId: ID!) {\n    reasonsByClass(classId: $classId) {\n      id\n      label\n    }\n  }\n"): (typeof documents)["\n  query ReasonsByClass($classId: ID!) {\n    reasonsByClass(classId: $classId) {\n      id\n      label\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
@@ -302,6 +328,10 @@ export function graphql(source: "\n  query StudentsDirectory(\n    $filter: Stud
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  query StudentsByTeacher {\n    studentsByTeacher {\n      id\n      name\n      balance\n      classId\n      class {\n        id\n        name\n        subject\n        period\n      }\n    }\n  }\n"): (typeof documents)["\n  query StudentsByTeacher {\n    studentsByTeacher {\n      id\n      name\n      balance\n      classId\n      class {\n        id\n        name\n        subject\n        period\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  subscription NotificationReceived($userId: ID!) {\n    notificationReceived(userId: $userId) {\n      id\n      userId\n      type\n      title\n      message\n      relatedId\n      relatedType\n      isRead\n      createdAt\n      updatedAt\n    }\n  }\n"): (typeof documents)["\n  subscription NotificationReceived($userId: ID!) {\n    notificationReceived(userId: $userId) {\n      id\n      userId\n      type\n      title\n      message\n      relatedId\n      relatedType\n      isRead\n      createdAt\n      updatedAt\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

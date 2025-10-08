@@ -1,15 +1,16 @@
 import React from "react";
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { Outlet, NavLink } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, LogOut, BookOpen, GraduationCap, Users, ShoppingBag, Inbox } from "lucide-react";
+import { Menu, BookOpen, GraduationCap, Users, ShoppingBag, Inbox } from "lucide-react";
 import { ClassSwitcher } from "@/components/sidebar/ClassSwitcher";
-import { useQuery, useMutation } from "@apollo/client/react";
+import { useQuery } from "@apollo/client/react";
 import { ME } from "@/graphql/queries/me";
 import { MeQuery } from "@/graphql/__generated__/graphql";
-import { LOGOUT } from "@/graphql/mutations/auth";
-import { useAppDispatch, useAppSelector } from "@/redux/store/store";
-import { clearAuth, selectUser } from "@/redux/authSlice";
+import { useAppSelector } from "@/redux/store/store";
+import { selectUser } from "@/redux/authSlice";
 import { cn } from "@/lib/utils";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { ProfileMenu } from "@/components/profile/ProfileMenu";
 
 const TEACHER_NAV_ITEMS = [
   { to: "/", label: "Dashboard", icon: BookOpen },
@@ -21,33 +22,11 @@ const TEACHER_NAV_ITEMS = [
 
 export function TeacherLayout() {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
-  const navigate = useNavigate();
-  const dispatch = useAppDispatch();
   const user = useAppSelector(selectUser);
 
   const { data: meData, loading } = useQuery<MeQuery>(ME, {
     fetchPolicy: "cache-and-network",
   });
-
-  const [logout] = useMutation(LOGOUT, {
-    onCompleted: () => {
-      dispatch(clearAuth());
-      navigate("/auth", { replace: true });
-    },
-    onError: (err) => {
-      console.error("Logout error:", err);
-      dispatch(clearAuth());
-      navigate("/auth", { replace: true });
-    },
-  });
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      // Error handling is in the onError callback
-    }
-  };
 
   const displayUser = meData?.me || user;
   const username = displayUser?.name || "—";
@@ -159,17 +138,10 @@ export function TeacherLayout() {
             ))}
           </nav>
 
-          {/* Right side: logout */}
+          {/* Right side: notifications and profile */}
           <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleLogout}
-              className="flex items-center gap-2"
-            >
-              <LogOut className="h-4 w-4" />
-              Logout
-            </Button>
+            <NotificationBell />
+            <ProfileMenu />
           </div>
         </div>
       </header>

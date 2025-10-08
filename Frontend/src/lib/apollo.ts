@@ -118,6 +118,61 @@ const errorLink = onError(
 export function createApolloClient() {
   return new ApolloClient({
     link: from([errorLink, responseLink, authLink, httpLink]),
-    cache: new InMemoryCache(),
+    cache: new InMemoryCache({
+      typePolicies: {
+        Query: {
+          fields: {
+            // Ensure classes and user data are fetched from network first, then cached
+            me: {
+              merge: true,
+            },
+            classesByUser: {
+              merge(existing, incoming) {
+                return incoming;
+              },
+            },
+            myClasses: {
+              merge(existing, incoming) {
+                return incoming;
+              },
+            },
+            studentsByClass: {
+              merge(existing, incoming) {
+                return incoming;
+              },
+            },
+            payRequestsByClass: {
+              merge(existing, incoming) {
+                return incoming;
+              },
+            },
+            payRequestsByStudent: {
+              merge(existing, incoming) {
+                return incoming;
+              },
+            },
+            storeItemsByClass: {
+              merge(existing, incoming) {
+                return incoming;
+              },
+            },
+            reasonsByClass: {
+              merge(existing, incoming) {
+                return incoming;
+              },
+            },
+          },
+        },
+      },
+    }),
+    // Set default options for better UX on page reloads
+    defaultOptions: {
+      watchQuery: {
+        errorPolicy: 'all',
+      },
+      query: {
+        errorPolicy: 'all',
+      },
+    },
   });
 }

@@ -23,7 +23,7 @@ export default function Dashboard() {
   
   // Also check the ME query in case Redux state is stale
   const { data: meData, loading } = useQuery<MeQuery>(ME, {
-    fetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
   });
 
   // Determine the role from either the Redux store or the GraphQL query

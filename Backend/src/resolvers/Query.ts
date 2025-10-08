@@ -13,6 +13,7 @@ import {
   IMembership,
   IUser,
   PayRequestComment,
+  Notification,
 } from "../models";
 import { Role } from "../utils/enums";
 import {
@@ -171,7 +172,8 @@ export const Query = {
   },
 
   reasonsByClass: async (_: any, { classId }: any, ctx: any) => {
-    await requireClassTeacher(ctx, classId);
+    // Allow authenticated users (both students and teachers) to view reasons
+    requireAuth(ctx);
     return ClassReason.find({ classId }).sort({ label: 1 }).lean().exec();
   },
 
@@ -443,5 +445,40 @@ export const Query = {
     }
 
     return results;
+  },
+
+  // Notifications
+  notifications: async (
+    _: any,
+    { userId, limit = 50, unreadOnly = false }: { userId?: string; limit?: number; unreadOnly?: boolean },
+    ctx: Ctx
+  ) => {
+    requireAuth(ctx);
+    
+    // Users can only query their own notifications unless they're a teacher
+    const targetUserId = userId || ctx.userId!;
+    if (targetUserId !== ctx.userId && ctx.role !== "TEACHER") {
+      throw new GraphQLError("Unauthorized");
+    }
+
+    const query: any = { userId: toId(targetUserId) };
+    if (unreadOnly) {
+      query.isRead = false;
+    }
+
+    return Notification.find(query)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean()
+      .exec();
+  },
+
+  unreadNotificationCount: async (_: any, __: any, ctx: Ctx) => {
+    requireAuth(ctx);
+    
+    return Notification.countDocuments({
+      userId: toId(ctx.userId!),
+      isRead: false,
+    }).exec();
   },
 };

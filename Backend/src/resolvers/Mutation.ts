@@ -16,6 +16,7 @@ import {
   Payslip,
   Purchase,
   PayRequestComment,
+  Notification,
 } from "../models";
 import {
   requireAuth,
@@ -25,6 +26,7 @@ import {
   genJoinCode,
   Ctx,
 } from "./helpers";
+import { createPayRequestNotification } from "../services/notifications";
 import {
   hashPassword,
   verifyPassword,
@@ -390,6 +392,10 @@ export const Mutation = {
       .exec();
     if (!isMember) throw new GraphQLError("Student not found in this class");
 
+    // Get class to find teachers
+    const cls = await ClassModel.findById(input.classId).lean().exec();
+    if (!cls) throw new GraphQLError("Class not found");
+
     const created = await PayRequest.create({
       classId: toId(input.classId),
       studentId: toId(input.studentId),
@@ -405,6 +411,9 @@ export const Mutation = {
     pubsub.publish(PAY_REQUEST_EVENTS.PAY_REQUEST_CREATED, {
       payRequestCreated: result,
     });
+
+    // Send notifications to teachers
+    await createPayRequestNotification(result, cls.teacherIds || [], "submitted");
 
     return result;
   },
@@ -461,6 +470,9 @@ export const Mutation = {
       payRequestStatusChanged: updated.toObject(),
     });
 
+    // Notify student of approval
+    await createPayRequestNotification(updated.toObject(), [], "approved");
+
     return updated.toObject();
   },
 
@@ -498,6 +510,11 @@ export const Mutation = {
       .lean()
       .exec();
 
+    // Notify student that payment is complete
+    if (updated) {
+      await createPayRequestNotification(updated, [], "paid");
+    }
+
     return updated;
   },
 
@@ -528,15 +545,20 @@ export const Mutation = {
       payRequestStatusChanged: updated.toObject(),
     });
 
+    // Notify student that request needs revision
+    await createPayRequestNotification(updated.toObject(), [], "rebuked");
+
     return updated.toObject();
   },
 
   async denyPayRequest(
     _: any, 
-    { id, comment }: { id: string; comment?: string },
+    { id, comment }: { id: string; comment: string },
     ctx: Ctx
   ) {
     requireAuth(ctx);
+    
+    if (!comment?.trim()) throw new GraphQLError("Comment required for denial");
     
     const req = await PayRequest.findById(id).exec();
     if (!req) throw new GraphQLError("Request not found");
@@ -545,7 +567,7 @@ export const Mutation = {
 
     const updated = await PayRequest.findByIdAndUpdate(
       id,
-      { $set: { status: "DENIED", teacherComment: comment ?? null } },
+      { $set: { status: "DENIED", teacherComment: comment } },
       { new: true }
     ).exec();
 
@@ -555,6 +577,9 @@ export const Mutation = {
     pubsub.publish(PAY_REQUEST_EVENTS.PAY_REQUEST_STATUS_CHANGED, {
       payRequestStatusChanged: updated.toObject(),
     });
+
+    // Notify student of denial
+    await createPayRequestNotification(updated.toObject(), [], "denied");
 
     return updated.toObject();
   },
@@ -900,6 +925,35 @@ export const Mutation = {
     }
 
     return ClassReason.find({ classId }).sort({ label: 1 }).lean().exec();
+  },
+
+  // Notification management
+  async markNotificationAsRead(_: any, { id }: { id: string }, ctx: Ctx) {
+    requireAuth(ctx);
+    
+    const notification = await Notification.findById(id).exec();
+    if (!notification) throw new GraphQLError("Notification not found");
+    
+    // Ensure user can only mark their own notifications
+    if (notification.userId.toString() !== ctx.userId) {
+      throw new GraphQLError("Unauthorized");
+    }
+
+    notification.isRead = true;
+    await notification.save();
+
+    return notification.toObject();
+  },
+
+  async markAllNotificationsAsRead(_: any, __: any, ctx: Ctx) {
+    requireAuth(ctx);
+    
+    await Notification.updateMany(
+      { userId: toId(ctx.userId!), isRead: false },
+      { $set: { isRead: true } }
+    ).exec();
+
+    return true;
   },
 };
 async function getOrCreateAccount(studentId: string, classId: string) {
