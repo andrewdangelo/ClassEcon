@@ -70,7 +70,7 @@ export const typeDefs = [
     type User {
       id: ID!
       role: Role!
-      name: String!
+      name: String
       email: String
       status: UserStatus!
       createdAt: DateTime!

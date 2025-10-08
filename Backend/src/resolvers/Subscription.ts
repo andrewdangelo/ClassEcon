@@ -6,45 +6,50 @@ export const Subscription = {
   payRequestCreated: {
     subscribe: withFilter(
       () => (pubsub as any).asyncIterator(PAY_REQUEST_EVENTS.PAY_REQUEST_CREATED),
-      (payload: any, variables: any) => {
-        return payload.payRequestCreated.classId === variables.classId;
+      (payload, variables) => {
+        return !!(payload?.payRequestCreated?.classId === variables.classId);
       }
     ),
+    resolve: (payload: any) => payload.payRequestCreated,
   },
 
   payRequestUpdated: {
     subscribe: withFilter(
       () => (pubsub as any).asyncIterator(PAY_REQUEST_EVENTS.PAY_REQUEST_UPDATED),
-      (payload: any, variables: any) => {
-        return payload.payRequestUpdated.classId === variables.classId;
+      (payload, variables) => {
+        return !!(payload?.payRequestUpdated?.classId === variables.classId);
       }
     ),
+    resolve: (payload: any) => payload.payRequestUpdated,
   },
 
   payRequestStatusChanged: {
     subscribe: withFilter(
       () => (pubsub as any).asyncIterator(PAY_REQUEST_EVENTS.PAY_REQUEST_STATUS_CHANGED),
-      (payload: any, variables: any) => {
-        return payload.payRequestStatusChanged.classId === variables.classId;
+      (payload, variables) => {
+        return !!(payload?.payRequestStatusChanged?.classId === variables.classId);
       }
     ),
+    resolve: (payload: any) => payload.payRequestStatusChanged,
   },
 
   payRequestCommentAdded: {
     subscribe: withFilter(
       () => (pubsub as any).asyncIterator(PAY_REQUEST_EVENTS.PAY_REQUEST_COMMENT_ADDED),
-      (payload: any, variables: any) => {
-        return payload.payRequestCommentAdded.payRequestId === variables.payRequestId;
+      (payload, variables) => {
+        return !!(payload?.payRequestCommentAdded?.payRequestId === variables.payRequestId);
       }
     ),
+    resolve: (payload: any) => payload.payRequestCommentAdded,
   },
 
   notificationReceived: {
     subscribe: withFilter(
       () => (pubsub as any).asyncIterator(NOTIFICATION_EVENTS.NOTIFICATION_RECEIVED),
-      (payload: any, variables: any) => {
-        return payload.notificationReceived.userId.toString() === variables.userId;
+      (payload, variables) => {
+        return !!(payload?.notificationReceived?.userId?.toString() === variables.userId);
       }
     ),
+    resolve: (payload: any) => payload.notificationReceived,
   },
 };
