@@ -1,7 +1,7 @@
 import { gql } from "@apollo/client";
 
 export const CREATE_REDEMPTION_REQUEST = gql`
-  mutation CreateRedemptionRequest($purchaseId: ID!, $studentNote: String) {
+  mutation CreateRedemptionRequest($purchaseId: ID!, $studentNote: String!) {
     createRedemptionRequest(purchaseId: $purchaseId, studentNote: $studentNote) {
       id
       purchaseId

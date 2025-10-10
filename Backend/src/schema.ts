@@ -186,6 +186,7 @@ export const typeDefs = [
 
     type Purchase {
       id: ID!
+      itemId: String
       studentId: ID!
       classId: ID!
       accountId: ID!
@@ -197,6 +198,7 @@ export const typeDefs = [
       status: PurchaseStatus!
       redemptionDate: DateTime
       redemptionNote: String
+      hasPendingRedemption: Boolean!
       createdAt: DateTime!
       updatedAt: DateTime!
     }
@@ -517,6 +519,9 @@ export const typeDefs = [
       
       # Single redemption request
       redemptionRequest(id: ID!): RedemptionRequest
+      
+      # Redemption history for a student (all redemption attempts)
+      redemptionHistory(studentId: ID!, classId: ID!): [RedemptionRequest!]!
     }
 
     # --------- Mutations ----------
@@ -573,7 +578,7 @@ export const typeDefs = [
       makePurchase(input: MakePurchaseInput!): [Purchase!]!
       
       # Redemption system
-      createRedemptionRequest(purchaseId: ID!, studentNote: String): RedemptionRequest!
+      createRedemptionRequest(purchaseId: ID!, studentNote: String!): RedemptionRequest!
       approveRedemption(id: ID!, teacherComment: String!): RedemptionRequest!
       denyRedemption(id: ID!, teacherComment: String!): RedemptionRequest!
       

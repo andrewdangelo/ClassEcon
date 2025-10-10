@@ -1,7 +1,7 @@
 import React from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, BookOpen, GraduationCap, ShoppingBag, ShoppingCart, Inbox } from "lucide-react";
+import { Menu, BookOpen, GraduationCap, ShoppingBag, ShoppingCart, Inbox, Backpack } from "lucide-react";
 import { ClassSwitcher } from "@/components/sidebar/ClassSwitcher";
 import { useQuery } from "@apollo/client/react";
 import { ME } from "@/graphql/queries/me";
@@ -16,6 +16,7 @@ import { ProfileMenu } from "@/components/profile/ProfileMenu";
 const STUDENT_NAV_ITEMS = [
   { to: "/", label: "Dashboard", icon: BookOpen },
   { to: "/classes", label: "My Classes", icon: GraduationCap },
+  { to: "/backpack", label: "Backpack", icon: Backpack },
   { to: "/requests", label: "Requests", icon: Inbox },
   { to: "/store", label: "Store", icon: ShoppingBag },
   { to: "/cart", label: "Cart", icon: ShoppingCart },

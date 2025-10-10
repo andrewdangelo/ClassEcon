@@ -4,6 +4,7 @@ export const STUDENT_BACKPACK = gql`
   query StudentBackpack($studentId: ID!, $classId: ID!) {
     studentBackpack(studentId: $studentId, classId: $classId) {
       id
+      itemId
       studentId
       classId
       storeItemId
@@ -14,6 +15,7 @@ export const STUDENT_BACKPACK = gql`
       status
       redemptionDate
       redemptionNote
+      hasPendingRedemption
       storeItem {
         id
         title
@@ -29,6 +31,7 @@ export const PURCHASE_HISTORY = gql`
   query PurchaseHistory($studentId: ID!, $classId: ID!) {
     purchaseHistory(studentId: $studentId, classId: $classId) {
       id
+      itemId
       studentId
       classId
       storeItemId
@@ -65,6 +68,7 @@ export const REDEMPTION_REQUESTS = gql`
       createdAt
       purchase {
         id
+        itemId
         unitPrice
         total
         quantity
@@ -126,6 +130,44 @@ export const REDEMPTION_REQUEST = gql`
         id
         name
         email
+      }
+    }
+  }
+`;
+
+export const REDEMPTION_HISTORY = gql`
+  query RedemptionHistory($studentId: ID!, $classId: ID!) {
+    redemptionHistory(studentId: $studentId, classId: $classId) {
+      id
+      purchaseId
+      studentId
+      classId
+      status
+      studentNote
+      teacherComment
+      reviewedByUserId
+      reviewedAt
+      createdAt
+      purchase {
+        id
+        itemId
+        unitPrice
+        total
+        quantity
+        createdAt
+        status
+        redemptionDate
+        storeItem {
+          id
+          title
+          description
+          price
+          imageUrl
+        }
+      }
+      reviewedBy {
+        id
+        name
       }
     }
   }

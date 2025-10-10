@@ -567,4 +567,20 @@ export const Query = {
 
     return request;
   },
+
+  redemptionHistory: async (
+    _: any,
+    { studentId, classId }: { studentId: string; classId: string },
+    ctx: Ctx
+  ) => {
+    await assertSelfOrTeacherForStudent(ctx, studentId);
+    
+    return RedemptionRequest.find({
+      studentId: toId(studentId),
+      classId: toId(classId),
+    })
+      .sort({ createdAt: -1 })
+      .lean()
+      .exec();
+  },
 };

@@ -952,10 +952,15 @@ export const Mutation = {
   // Redemption system
   async createRedemptionRequest(
     _: any,
-    { purchaseId, studentNote }: { purchaseId: string; studentNote?: string },
+    { purchaseId, studentNote }: { purchaseId: string; studentNote: string },
     ctx: Ctx
   ) {
     requireAuth(ctx);
+    
+    // Validate studentNote is provided and not empty
+    if (!studentNote || !studentNote.trim()) {
+      throw new GraphQLError("Student note is required - please explain what you intend to use this item for");
+    }
     
     const purchase = await Purchase.findById(purchaseId).exec();
     if (!purchase) throw new GraphQLError("Purchase not found");
@@ -986,7 +991,7 @@ export const Mutation = {
       studentId: purchase.studentId,
       classId: purchase.classId,
       status: "pending",
-      studentNote: studentNote || null,
+      studentNote: studentNote.trim(),
     });
 
     // Get storeItem and teacher IDs for notifications

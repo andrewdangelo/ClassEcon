@@ -23,6 +23,17 @@ export function RedemptionRequestsPage() {
   const [actionDialog, setActionDialog] = useState<RedemptionAction | null>(null);
   const [teacherComment, setTeacherComment] = useState("");
 
+  // Fetch all requests for accurate counts
+  const { data: allData } = useQuery(REDEMPTION_REQUESTS, {
+    variables: {
+      classId: currentClassId,
+      status: undefined, // Get all statuses
+    },
+    skip: !currentClassId,
+    fetchPolicy: "cache-and-network",
+  });
+
+  // Fetch filtered requests for current tab
   const { data, loading, error, refetch } = useQuery(REDEMPTION_REQUESTS, {
     variables: {
       classId: currentClassId,
@@ -103,9 +114,12 @@ export function RedemptionRequestsPage() {
   }
 
   const requests = (data as any)?.redemptionRequests || [];
-  const pendingCount = requests.filter((r: any) => r.status === "PENDING").length;
-  const approvedCount = requests.filter((r: any) => r.status === "APPROVED").length;
-  const deniedCount = requests.filter((r: any) => r.status === "DENIED").length;
+  const allRequests = (allData as any)?.redemptionRequests || [];
+  
+  // Calculate counts from all requests, not just filtered ones
+  const pendingCount = allRequests.filter((r: any) => r.status === "PENDING").length;
+  const approvedCount = allRequests.filter((r: any) => r.status === "APPROVED").length;
+  const deniedCount = allRequests.filter((r: any) => r.status === "DENIED").length;
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -177,6 +191,9 @@ export function RedemptionRequestsPage() {
                         <CardDescription className="mt-1">
                           {request.student?.name}
                         </CardDescription>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Item ID: {request.purchase?.itemId || 'N/A'}
+                        </p>
                       </div>
                       <Badge variant={getStatusVariant(request.status)} className="flex items-center gap-1">
                         {getStatusIcon(request.status)}

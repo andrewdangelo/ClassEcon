@@ -33,6 +33,7 @@ import { RequireTeacher } from "@/components/auth/RequireTeacher";
 import RequestsPage from "./modules/requests/RequestsPage";
 import { RedemptionRequestsPage } from "./modules/requests/RedemptionRequestsPage";
 import StudentDetail from "./modules/students/StudentDetail";
+import BackpackPage from "./modules/students/BackpackPage";
 
 const client = createApolloClient();
 
@@ -77,6 +78,7 @@ const router = createBrowserRouter([
           </RequireTeacher>
         ) 
       },
+      { path: "backpack", element: <BackpackPage /> },
       { path: "requests", element: <RequestsPage /> },
       { 
         path: "redemptions", 
