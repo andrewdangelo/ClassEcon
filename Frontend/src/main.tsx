@@ -31,6 +31,8 @@ import TeacherOnboarding from "./modules/onboarding/TeacherOnboarding";
 import { RequireClassGuard } from "@/components/auth/RequireClassGuard";
 import { RequireTeacher } from "@/components/auth/RequireTeacher";
 import RequestsPage from "./modules/requests/RequestsPage";
+import { RedemptionRequestsPage } from "./modules/requests/RedemptionRequestsPage";
+import StudentDetail from "./modules/students/StudentDetail";
 
 const client = createApolloClient();
 
@@ -67,7 +69,23 @@ const router = createBrowserRouter([
       { path: "classes/:classId", element: <ClassOverview /> },
       { path: "classes/:classId/manage", element: <ClassManage /> },
       { path: "students", element: <Students /> },
+      { 
+        path: "students/:studentId", 
+        element: (
+          <RequireTeacher>
+            <StudentDetail />
+          </RequireTeacher>
+        ) 
+      },
       { path: "requests", element: <RequestsPage /> },
+      { 
+        path: "redemptions", 
+        element: (
+          <RequireTeacher>
+            <RedemptionRequestsPage />
+          </RequireTeacher>
+        ) 
+      },
       { path: "store", element: <Store /> },
       { path: "cart", element: <Cart /> },
       { 

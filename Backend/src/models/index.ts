@@ -14,3 +14,4 @@ export * from "./ClassReason";
 export * from "./PayRequest";
 export * from "./PayRequestComment";
 export * from "./Notification";
+export * from "./RedemptionRequest";

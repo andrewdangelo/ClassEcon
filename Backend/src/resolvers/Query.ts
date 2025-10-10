@@ -14,6 +14,8 @@ import {
   IUser,
   PayRequestComment,
   Notification,
+  Purchase,
+  RedemptionRequest,
 } from "../models";
 import { Role } from "../utils/enums";
 import {
@@ -466,11 +468,15 @@ export const Query = {
       query.isRead = false;
     }
 
-    return Notification.find(query)
+    console.log('Querying notifications:', { query, targetUserId, limit, unreadOnly });
+    const results = await Notification.find(query)
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean()
       .exec();
+    console.log('Notifications query returned:', results.length, 'notifications');
+    console.log('First notification sample:', results[0]);
+    return results;
   },
 
   unreadNotificationCount: async (_: any, __: any, ctx: Ctx) => {
@@ -480,5 +486,85 @@ export const Query = {
       userId: toId(ctx.userId!),
       isRead: false,
     }).exec();
+  },
+
+  // Redemption and Backpack queries
+  studentBackpack: async (
+    _: any,
+    { studentId, classId }: { studentId: string; classId: string },
+    ctx: Ctx
+  ) => {
+    await assertSelfOrTeacherForStudent(ctx, studentId);
+    
+    return Purchase.find({
+      studentId: toId(studentId),
+      classId: toId(classId),
+      status: "in-backpack", // Only show items still in backpack
+    })
+      .sort({ createdAt: -1 })
+      .lean()
+      .exec();
+  },
+
+  purchaseHistory: async (
+    _: any,
+    { studentId, classId }: { studentId: string; classId: string },
+    ctx: Ctx
+  ) => {
+    await assertSelfOrTeacherForStudent(ctx, studentId);
+    
+    return Purchase.find({
+      studentId: toId(studentId),
+      classId: toId(classId),
+    })
+      .sort({ createdAt: -1 })
+      .lean()
+      .exec();
+  },
+
+  redemptionRequests: async (
+    _: any,
+    { classId, status }: { classId: string; status?: string },
+    ctx: Ctx
+  ) => {
+    await requireClassTeacher(ctx, classId);
+    
+    const query: any = { classId: toId(classId) };
+    if (status) {
+      // Convert GraphQL enum (UPPERCASE) to database format (lowercase)
+      query.status = status.toLowerCase();
+    }
+
+    return RedemptionRequest.find(query)
+      .sort({ createdAt: -1 })
+      .lean()
+      .exec();
+  },
+
+  redemptionRequest: async (_: any, { id }: { id: string }, ctx: Ctx) => {
+    requireAuth(ctx);
+    
+    const request = await RedemptionRequest.findById(id).lean().exec();
+    if (!request) return null;
+
+    // Check if user has access to this request
+    const userId = ctx.userId;
+    const isStudent = request.studentId.toString() === userId;
+    let isTeacher = false;
+    
+    if (!isStudent && userId) {
+      const membership = await Membership.findOne({
+        userId: toId(userId),
+        role: "TEACHER",
+        classIds: request.classId,
+      }).lean().exec();
+      isTeacher = !!membership;
+    }
+
+    if (!isStudent && !isTeacher) {
+      throw new GraphQLError("Access denied");
+    }
+
+    return request;
   },
 };

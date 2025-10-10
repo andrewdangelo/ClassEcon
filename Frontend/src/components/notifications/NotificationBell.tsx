@@ -35,13 +35,13 @@ export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
 
   // Query for unread count
-  const { data: countData, refetch: refetchCount } = useQuery<GetUnreadNotificationCountQuery>(GET_UNREAD_COUNT, {
+  const { data: countData, refetch: refetchCount, error: countError } = useQuery<GetUnreadNotificationCountQuery>(GET_UNREAD_COUNT, {
     skip: !user?.id,
     fetchPolicy: "cache-and-network",
   });
 
   // Query for notifications
-  const { data: notificationsData, refetch: refetchNotifications } = useQuery<GetNotificationsQuery>(
+  const { data: notificationsData, refetch: refetchNotifications, loading: notificationsLoading, error: notificationsError } = useQuery<GetNotificationsQuery>(
     GET_NOTIFICATIONS,
     {
       variables: { limit: 20, unreadOnly: false },
@@ -58,24 +58,29 @@ export function NotificationBell() {
 
   // Mark notification as read mutation
   const [markAsRead] = useMutation(MARK_NOTIFICATION_READ, {
-    onCompleted: () => {
-      refetchCount();
-      refetchNotifications();
-    },
+    refetchQueries: [
+      { query: GET_NOTIFICATIONS, variables: { limit: 20, unreadOnly: false } },
+      { query: GET_UNREAD_COUNT },
+    ],
+    awaitRefetchQueries: true,
   });
 
   // Mark all as read mutation
   const [markAllAsRead] = useMutation(MARK_ALL_NOTIFICATIONS_READ, {
+    refetchQueries: [
+      { query: GET_NOTIFICATIONS, variables: { limit: 20, unreadOnly: false } },
+      { query: GET_UNREAD_COUNT },
+    ],
+    awaitRefetchQueries: true,
     onCompleted: () => {
       toast({ title: "All notifications marked as read" });
-      refetchCount();
-      refetchNotifications();
     },
   });
 
   // Handle new notification from subscription
   useEffect(() => {
     if (subscriptionData?.notificationReceived) {
+      // Refetch to update the UI with new notification
       refetchCount();
       refetchNotifications();
       // Show toast for new notification
@@ -90,6 +95,21 @@ export function NotificationBell() {
   const unreadCount = countData?.unreadNotificationCount || 0;
   const notifications: Notification[] =
     notificationsData?.notifications || [];
+
+  // Debug logging
+  useEffect(() => {
+    console.log('NotificationBell data:', {
+      user: user?.id,
+      unreadCount,
+      notificationsCount: notifications.length,
+      notifications,
+      countData,
+      notificationsData,
+      notificationsLoading,
+      notificationsError: notificationsError?.message,
+      countError: countError?.message,
+    });
+  }, [user, unreadCount, notifications, countData, notificationsData, notificationsLoading, notificationsError, countError]);
 
   const handleNotificationClick = async (notification: Notification) => {
     // Mark as read if unread

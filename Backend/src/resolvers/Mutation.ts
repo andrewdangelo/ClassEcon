@@ -17,6 +17,7 @@ import {
   Purchase,
   PayRequestComment,
   Notification,
+  RedemptionRequest,
 } from "../models";
 import {
   requireAuth,
@@ -26,7 +27,7 @@ import {
   genJoinCode,
   Ctx,
 } from "./helpers";
-import { createPayRequestNotification } from "../services/notifications";
+import { createPayRequestNotification, createRedemptionNotification } from "../services/notifications";
 import {
   hashPassword,
   verifyPassword,
@@ -430,7 +431,7 @@ export const Mutation = {
     
     await requireClassTeacher(ctx, req.classId.toString());
 
-    // Get student's account
+    // Get student's account to verify it exists
     const account = await Account.findOne({
       studentId: req.studentId,
       classId: req.classId,
@@ -440,16 +441,8 @@ export const Mutation = {
       throw new GraphQLError("Student account not found");
     }
 
-    // Create transaction for approved amount
-    await Transaction.create({
-      accountId: account._id,
-      classId: req.classId,
-      classroomId: account.classroomId,
-      type: "PAYROLL",
-      amount: amount,
-      memo: `Approved request: ${req.reason}`,
-      createdByUserId: toId(ctx.userId!),
-    });
+    // NOTE: Transaction is NOT created here - it's only created when actually paying in submitPayRequest
+    // This prevents double payment issue where approving AND paying both created transactions
 
     const updated = await PayRequest.findByIdAndUpdate(
       id,
@@ -954,6 +947,157 @@ export const Mutation = {
     ).exec();
 
     return true;
+  },
+
+  // Redemption system
+  async createRedemptionRequest(
+    _: any,
+    { purchaseId, studentNote }: { purchaseId: string; studentNote?: string },
+    ctx: Ctx
+  ) {
+    requireAuth(ctx);
+    
+    const purchase = await Purchase.findById(purchaseId).exec();
+    if (!purchase) throw new GraphQLError("Purchase not found");
+    
+    // Ensure the purchase belongs to the current user
+    if (purchase.studentId.toString() !== ctx.userId) {
+      throw new GraphQLError("Unauthorized - this purchase doesn't belong to you");
+    }
+
+    // Check if purchase is eligible for redemption
+    if (purchase.status !== "in-backpack") {
+      throw new GraphQLError(`Cannot redeem item with status: ${purchase.status}`);
+    }
+
+    // Check if there's already a pending redemption request
+    const existingRequest = await RedemptionRequest.findOne({
+      purchaseId: toId(purchaseId),
+      status: "pending",
+    }).exec();
+
+    if (existingRequest) {
+      throw new GraphQLError("A redemption request for this item is already pending");
+    }
+
+    // Create redemption request
+    const redemptionRequest = await RedemptionRequest.create({
+      purchaseId: toId(purchaseId),
+      studentId: purchase.studentId,
+      classId: purchase.classId,
+      status: "pending",
+      studentNote: studentNote || null,
+    });
+
+    // Get storeItem and teacher IDs for notifications
+    const storeItem = await StoreItem.findById(purchase.storeItemId).exec();
+    const teacherMemberships = await Membership.find({
+      classId: purchase.classId,
+      role: "teacher",
+    }).exec();
+    const teacherIds = teacherMemberships.map((m) => m.userId);
+
+    // Notify teachers
+    await createRedemptionNotification(
+      redemptionRequest,
+      purchase,
+      storeItem,
+      teacherIds,
+      "submitted"
+    );
+
+    return redemptionRequest.toObject();
+  },
+
+  async approveRedemption(
+    _: any,
+    { id, teacherComment }: { id: string; teacherComment: string },
+    ctx: Ctx
+  ) {
+    requireAuth(ctx);
+    
+    const request = await RedemptionRequest.findById(id).exec();
+    if (!request) throw new GraphQLError("Redemption request not found");
+    
+    await requireClassTeacher(ctx, request.classId.toString());
+
+    if (request.status !== "pending") {
+      throw new GraphQLError(`Cannot approve request with status: ${request.status}`);
+    }
+
+    // Update redemption request
+    request.status = "approved";
+    request.teacherComment = teacherComment;
+    request.reviewedByUserId = toId(ctx.userId!);
+    request.reviewedAt = new Date();
+    await request.save();
+
+    // Update the purchase to mark it as redeemed
+    const purchase = await Purchase.findByIdAndUpdate(
+      request.purchaseId,
+      {
+        $set: {
+          status: "redeemed",
+          redemptionDate: new Date(),
+          redemptionNote: teacherComment,
+        },
+      },
+      { new: true }
+    ).exec();
+
+    // Get storeItem for notification
+    const storeItem = await StoreItem.findById(purchase!.storeItemId).exec();
+
+    // Notify student
+    await createRedemptionNotification(
+      request,
+      purchase,
+      storeItem,
+      [],
+      "approved"
+    );
+
+    return request.toObject();
+  },
+
+  async denyRedemption(
+    _: any,
+    { id, teacherComment }: { id: string; teacherComment: string },
+    ctx: Ctx
+  ) {
+    requireAuth(ctx);
+    
+    const request = await RedemptionRequest.findById(id).exec();
+    if (!request) throw new GraphQLError("Redemption request not found");
+    
+    await requireClassTeacher(ctx, request.classId.toString());
+
+    if (request.status !== "pending") {
+      throw new GraphQLError(`Cannot deny request with status: ${request.status}`);
+    }
+
+    // Update redemption request
+    request.status = "denied";
+    request.teacherComment = teacherComment;
+    request.reviewedByUserId = toId(ctx.userId!);
+    request.reviewedAt = new Date();
+    await request.save();
+
+    // Get purchase and storeItem for notification
+    const purchase = await Purchase.findById(request.purchaseId).exec();
+    const storeItem = await StoreItem.findById(purchase!.storeItemId).exec();
+
+    // Notify student
+    await createRedemptionNotification(
+      request,
+      purchase,
+      storeItem,
+      [],
+      "denied"
+    );
+
+    // Purchase remains in backpack when denied
+    return request.toObject();
   },
 };
 async function getOrCreateAccount(studentId: string, classId: string) {

@@ -5,6 +5,7 @@ import { ME } from "@/graphql/queries/me";
 import { MeQuery } from "@/graphql/__generated__/graphql";
 import { ClassSwitcher } from "./ClassSwitcher";
 import { useClassContext } from "@/context/ClassContext";
+import { BackpackSidebar } from "@/components/backpack/BackpackSidebar";
 import { cn } from "@/lib/utils";
 import {
   BookOpen,
@@ -12,6 +13,7 @@ import {
   ShoppingBag,
   Users,
   Inbox,
+  Package,
 } from "lucide-react";
 
 type NavItem = { to: string; label: string; icon: any; roles: string[] };
@@ -37,6 +39,7 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["TEACHER", "STUDENT"],
   },
   { to: "/requests", label: "Requests", icon: Inbox, roles: ["TEACHER", "STUDENT"] },
+  { to: "/redemptions", label: "Redemptions", icon: Package, roles: ["TEACHER"] },
 ];
 
 export function Sidebar({
@@ -79,7 +82,7 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-40 border-r bg-background p-3 transition-transform duration-200 ease-out",
+        "fixed inset-y-0 left-0 z-40 border-r bg-background p-3 transition-transform duration-200 ease-out overflow-y-auto",
         compact ? "w-56" : "w-72",
         open ? "translate-x-0" : "-translate-x-full",
         "md:translate-x-0"
@@ -132,6 +135,12 @@ export function Sidebar({
           );
         })}
       </nav>
+
+      {role === "STUDENT" && (
+        <div className="mt-4 border-t pt-4">
+          <BackpackSidebar />
+        </div>
+      )}
     </aside>
   );
 }

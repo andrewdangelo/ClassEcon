@@ -9,6 +9,9 @@ export interface IPurchase {
   quantity: number;
   unitPrice: number; // snapshot at purchase time
   total: number; // quantity * unitPrice
+  status: "in-backpack" | "redeemed" | "expired"; // Tracks item lifecycle
+  redemptionDate?: Date | null;
+  redemptionNote?: string | null; // What the item was used for
   createdAt: Date;
   updatedAt: Date;
 }
@@ -26,6 +29,15 @@ const PurchaseSchema = new Schema<IPurchase>(
     quantity: { type: Number, required: true, min: 1 },
     unitPrice: { type: Number, required: true, min: 0 },
     total: { type: Number, required: true, min: 0 },
+    status: {
+      type: String,
+      enum: ["in-backpack", "redeemed", "expired"],
+      default: "in-backpack",
+      required: true,
+      index: true,
+    },
+    redemptionDate: { type: Date, default: null },
+    redemptionNote: { type: String, default: null },
   },
   { timestamps: true }
 );

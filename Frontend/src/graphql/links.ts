@@ -35,7 +35,7 @@ const authLink = new ApolloLink((operation, forward) => {
 })
 
 const errorLink = onError((errorResponse) => {
-  console.error('GraphQL Error:', errorResponse)
+  console.error('[GraphQL/Network Error]:', errorResponse);
 })
 
 // Split link to send subscriptions to WebSocket and queries/mutations to HTTP

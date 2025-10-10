@@ -119,3 +119,62 @@ export async function createPayRequestNotification(
 
   return Promise.all(notifications);
 }
+
+export async function createRedemptionNotification(
+  redemptionRequest: any,
+  purchase: any,
+  storeItem: any,
+  teacherIds: (Types.ObjectId | string)[],
+  type: "submitted" | "approved" | "denied"
+) {
+  const notifications = [];
+
+  switch (type) {
+    case "submitted":
+      // Notify all teachers of the class
+      for (const teacherId of teacherIds) {
+        notifications.push(
+          createNotification({
+            userId: teacherId,
+            type: "REDEMPTION_SUBMITTED",
+            title: "New Redemption Request",
+            message: `A student wants to redeem: ${storeItem.title}`,
+            relatedId: redemptionRequest._id || redemptionRequest.id,
+            relatedType: "RedemptionRequest",
+          })
+        );
+      }
+      break;
+
+    case "approved":
+      // Notify the student
+      notifications.push(
+        createNotification({
+          userId: redemptionRequest.studentId,
+          type: "REDEMPTION_APPROVED",
+          title: "Redemption Approved",
+          message: `Your redemption request for "${storeItem.title}" has been approved`,
+          relatedId: redemptionRequest._id || redemptionRequest.id,
+          relatedType: "RedemptionRequest",
+        })
+      );
+      break;
+
+    case "denied":
+      // Notify the student
+      notifications.push(
+        createNotification({
+          userId: redemptionRequest.studentId,
+          type: "REDEMPTION_DENIED",
+          title: "Redemption Denied",
+          message: `Your redemption request for "${storeItem.title}" has been denied`,
+          relatedId: redemptionRequest._id || redemptionRequest.id,
+          relatedType: "RedemptionRequest",
+        })
+      );
+      break;
+  }
+
+  return Promise.all(notifications);
+}
+

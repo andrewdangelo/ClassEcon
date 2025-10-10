@@ -47,9 +47,22 @@ export const Subscription = {
     subscribe: withFilter(
       () => (pubsub as any).asyncIterator(NOTIFICATION_EVENTS.NOTIFICATION_RECEIVED),
       (payload, variables) => {
-        return !!(payload?.notificationReceived?.userId?.toString() === variables.userId);
+        // Only pass through if payload has notification data
+        if (!payload?.notificationReceived) {
+          return false;
+        }
+        const matches = payload.notificationReceived.userId?.toString() === variables.userId;
+        console.log('Notification subscription filter:', { 
+          payloadUserId: payload.notificationReceived.userId?.toString(), 
+          variablesUserId: variables.userId,
+          matches 
+        });
+        return matches;
       }
     ),
-    resolve: (payload: any) => payload.notificationReceived,
+    resolve: (payload: any) => {
+      console.log('Notification subscription resolve:', payload?.notificationReceived || payload);
+      return payload.notificationReceived;
+    },
   },
 };

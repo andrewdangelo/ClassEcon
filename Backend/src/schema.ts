@@ -62,6 +62,18 @@ export const typeDefs = [
       DENIED
     }
 
+    enum PurchaseStatus {
+      IN_BACKPACK
+      REDEEMED
+      EXPIRED
+    }
+
+    enum RedemptionStatus {
+      PENDING
+      APPROVED
+      DENIED
+    }
+
     type AuthPayload {
       user: User!
       accessToken: String!
@@ -178,9 +190,30 @@ export const typeDefs = [
       classId: ID!
       accountId: ID!
       storeItemId: ID!
+      storeItem: StoreItem
       quantity: Int!
       unitPrice: Int!
       total: Int!
+      status: PurchaseStatus!
+      redemptionDate: DateTime
+      redemptionNote: String
+      createdAt: DateTime!
+      updatedAt: DateTime!
+    }
+
+    type RedemptionRequest {
+      id: ID!
+      purchaseId: ID!
+      purchase: Purchase
+      studentId: ID!
+      student: User
+      classId: ID!
+      status: RedemptionStatus!
+      studentNote: String
+      teacherComment: String
+      reviewedByUserId: ID
+      reviewedBy: User
+      reviewedAt: DateTime
       createdAt: DateTime!
       updatedAt: DateTime!
     }
@@ -472,6 +505,20 @@ export const typeDefs = [
       studentsByTeacher: [Student!]!
     }
 
+    extend type Query {
+      # Student's backpack - items they've purchased
+      studentBackpack(studentId: ID!, classId: ID!): [Purchase!]!
+      
+      # Purchase history for a student
+      purchaseHistory(studentId: ID!, classId: ID!): [Purchase!]!
+      
+      # Redemption requests (filtered by status and class)
+      redemptionRequests(classId: ID!, status: RedemptionStatus): [RedemptionRequest!]!
+      
+      # Single redemption request
+      redemptionRequest(id: ID!): RedemptionRequest
+    }
+
     # --------- Mutations ----------
     input SignUpInput {
       name: String!
@@ -524,6 +571,11 @@ export const typeDefs = [
 
       # Purchase
       makePurchase(input: MakePurchaseInput!): [Purchase!]!
+      
+      # Redemption system
+      createRedemptionRequest(purchaseId: ID!, studentNote: String): RedemptionRequest!
+      approveRedemption(id: ID!, teacherComment: String!): RedemptionRequest!
+      denyRedemption(id: ID!, teacherComment: String!): RedemptionRequest!
       
       # Notifications
       markNotificationAsRead(id: ID!): Notification!

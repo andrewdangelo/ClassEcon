@@ -41,7 +41,7 @@ const TransactionSchema = new Schema<ITransaction>(
       ],
       required: true,
     },
-    amount: { type: Number, required: true, min: 0 },
+    amount: { type: Number, required: true }, // Removed min: 0 to allow negative amounts for debits/purchases
     memo: String,
     createdByUserId: {
       type: Schema.Types.ObjectId,

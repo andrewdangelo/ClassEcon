@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@apollo/client/react";
 import { STUDENTS_BY_TEACHER } from "@/graphql/queries/studentsByTeacher";
 import { StudentsByTeacherQuery } from "@/graphql/__generated__/graphql";
@@ -16,6 +17,7 @@ import { useToast } from "@/components/ui/toast";
 
 export default function Students() {
   const { push } = useToast();
+  const navigate = useNavigate();
   const [q, setQ] = React.useState("");
 
   const { data, loading, error } = useQuery<StudentsByTeacherQuery>(
@@ -64,7 +66,11 @@ export default function Students() {
           </TableHeader>
           <TableBody>
             {filtered.map((s) => (
-              <TableRow key={s.id}>
+              <TableRow 
+                key={s.id}
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => navigate(`/students/${s.id}`)}
+              >
                 <TableCell>{s.name}</TableCell>
                 <TableCell>
                   {s.class?.name}
