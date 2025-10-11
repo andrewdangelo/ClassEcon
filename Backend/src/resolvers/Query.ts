@@ -16,6 +16,9 @@ import {
   Notification,
   Purchase,
   RedemptionRequest,
+  Job,
+  JobApplication,
+  Employment,
 } from "../models";
 import { Role } from "../utils/enums";
 import {
@@ -582,5 +585,229 @@ export const Query = {
       .sort({ createdAt: -1 })
       .lean()
       .exec();
+  },
+
+  // Job queries
+  jobs: async (
+    _: any,
+    { classId, activeOnly = true }: { classId: string; activeOnly?: boolean },
+    ctx: Ctx
+  ) => {
+    requireAuth(ctx);
+    
+    const query: any = { classId: toId(classId) };
+    if (activeOnly) {
+      query.active = true;
+    }
+    
+    return Job.find(query)
+      .sort({ createdAt: -1 })
+      .lean()
+      .exec();
+  },
+
+  job: async (_: any, { id }: { id: string }, ctx: Ctx) => {
+    requireAuth(ctx);
+    return Job.findById(id).lean().exec();
+  },
+
+  // Job application queries
+  jobApplications: async (
+    _: any,
+    { jobId, studentId, classId, status }: { 
+      jobId?: string; 
+      studentId?: string; 
+      classId?: string;
+      status?: string;
+    },
+    ctx: Ctx
+  ) => {
+    requireAuth(ctx);
+    
+    const query: any = {};
+    if (jobId) query.jobId = toId(jobId);
+    if (studentId) query.studentId = toId(studentId);
+    if (classId) query.classId = toId(classId);
+    if (status) query.status = status;
+    
+    // If querying by student, ensure it's them or a teacher
+    if (studentId) {
+      await assertSelfOrTeacherForStudent(ctx, studentId);
+    }
+    
+    return JobApplication.find(query)
+      .sort({ createdAt: -1 })
+      .lean()
+      .exec();
+  },
+
+  jobApplication: async (_: any, { id }: { id: string }, ctx: Ctx) => {
+    requireAuth(ctx);
+    
+    const application = await JobApplication.findById(id).lean().exec();
+    if (!application) return null;
+    
+    // Verify access (student who applied or teacher in class)
+    const userId = ctx.userId;
+    const isStudent = application.studentId.toString() === userId;
+    
+    if (!isStudent && userId) {
+      const membership = await Membership.findOne({
+        userId: toId(userId),
+        role: "TEACHER",
+        classIds: application.classId,
+      }).lean().exec();
+      
+      if (!membership) {
+        throw new GraphQLError("Access denied");
+      }
+    }
+    
+    return application;
+  },
+
+  // Employment queries
+  studentEmployments: async (
+    _: any,
+    { studentId, classId, status }: { 
+      studentId: string; 
+      classId: string;
+      status?: string;
+    },
+    ctx: Ctx
+  ) => {
+    await assertSelfOrTeacherForStudent(ctx, studentId);
+    
+    const query: any = {
+      studentId: toId(studentId),
+      classId: toId(classId),
+    };
+    if (status) query.status = status;
+    
+    return Employment.find(query)
+      .sort({ startedAt: -1 })
+      .lean()
+      .exec();
+  },
+
+  jobEmployments: async (
+    _: any,
+    { jobId, status }: { jobId: string; status?: string },
+    ctx: Ctx
+  ) => {
+    requireAuth(ctx);
+    
+    const job = await Job.findById(jobId).lean().exec();
+    if (!job) {
+      throw new GraphQLError("Job not found");
+    }
+    
+    // Verify teacher has access to this class
+    await requireClassTeacher(ctx, job.classId.toString());
+    
+    const query: any = { jobId: toId(jobId) };
+    if (status) query.status = status;
+    
+    return Employment.find(query)
+      .sort({ startedAt: -1 })
+      .lean()
+      .exec();
+  },
+
+  classStatistics: async (
+    _: any,
+    { classId }: { classId: string },
+    ctx: Ctx
+  ) => {
+    requireAuth(ctx);
+    await requireClassTeacher(ctx, classId);
+
+    const classIdObj = toId(classId);
+
+    // Get student count
+    const totalStudents = await Membership.countDocuments({
+      classIds: classIdObj,
+      role: "STUDENT",
+    });
+
+    // Get job stats
+    const totalJobs = await Job.countDocuments({ classId: classIdObj });
+    const activeJobs = await Job.countDocuments({ classId: classIdObj, active: true });
+
+    // Get employment stats
+    const totalEmployments = await Employment.countDocuments({ 
+      classId: classIdObj,
+      status: "ACTIVE" 
+    });
+
+    // Get application stats
+    const pendingApplications = await JobApplication.countDocuments({
+      classId: classIdObj,
+      status: "PENDING",
+    });
+
+    // Get transaction stats
+    const totalTransactions = await Transaction.countDocuments({ classId: classIdObj });
+
+    // Get pay request stats
+    const totalPayRequests = await PayRequest.countDocuments({ classId: classIdObj });
+    const pendingPayRequests = await PayRequest.countDocuments({
+      classId: classIdObj,
+      status: "SUBMITTED",
+    });
+
+    // Get balance stats - compute from transactions
+    const balanceAgg = await Transaction.aggregate([
+      { $match: { classId: classIdObj } },
+      {
+        $group: {
+          _id: "$userId",
+          balance: {
+            $sum: {
+              $switch: {
+                branches: [
+                  {
+                    case: {
+                      $in: [
+                        "$type",
+                        ["DEPOSIT", "REFUND", "PAYROLL", "TRANSFER_CREDIT", "INCOME"],
+                      ],
+                    },
+                    then: "$amount",
+                  },
+                  {
+                    case: {
+                      $in: [
+                        "$type",
+                        ["WITHDRAWAL", "PURCHASE", "FINE", "TRANSFER_DEBIT", "EXPENSE"],
+                      ],
+                    },
+                    then: { $multiply: [-1, "$amount"] },
+                  },
+                  { case: { $eq: ["$type", "ADJUSTMENT"] }, then: "$amount" },
+                ],
+                default: 0,
+              },
+            },
+          },
+        },
+      },
+    ]);
+    
+    const totalCirculation = balanceAgg.reduce((sum: number, item: any) => sum + (item.balance || 0), 0);
+    const averageBalance = totalStudents > 0 ? totalCirculation / totalStudents : 0;
+
+    return {
+      totalStudents,
+      totalJobs,
+      activeJobs,
+      totalEmployments,
+      pendingApplications,
+      totalTransactions,
+      totalPayRequests,
+      pendingPayRequests,
+      averageBalance: Math.round(averageBalance * 100) / 100,
+      totalCirculation: Math.round(totalCirculation * 100) / 100,
+    };
   },
 };

@@ -6,6 +6,7 @@ export interface IJob {
   classId: Types.ObjectId; // ref Class
   title: string;
   description?: string | null;
+  rolesResponsibilities?: string | null;
   salary: { amount: number; unit: JobSalaryUnit };
   period: PayPeriod; // WEEKLY|BIWEEKLY|MONTHLY|SEMESTER
   schedule?: {
@@ -24,6 +25,7 @@ const JobSchema = new Schema<IJob>(
     classId: { type: Schema.Types.ObjectId, ref: "Class", required: true },
     title: { type: String, required: true, trim: true },
     description: { type: String },
+    rolesResponsibilities: { type: String },
     salary: {
       amount: { type: Number, required: true, min: 0 },
       unit: { type: String, enum: ["FIXED", "HOURLY"], default: "FIXED" },

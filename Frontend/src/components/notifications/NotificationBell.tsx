@@ -17,6 +17,7 @@ import {
   GET_UNREAD_COUNT,
   MARK_NOTIFICATION_READ,
   MARK_ALL_NOTIFICATIONS_READ,
+  CLEAR_ALL_NOTIFICATIONS,
 } from "@/graphql/queries/notifications";
 import { NOTIFICATION_RECEIVED } from "@/graphql/subscriptions/notifications";
 import { useToast } from "@/components/ui/toast";
@@ -74,6 +75,18 @@ export function NotificationBell() {
     awaitRefetchQueries: true,
     onCompleted: () => {
       toast({ title: "All notifications marked as read" });
+    },
+  });
+
+  // Clear all notifications mutation
+  const [clearAllNotifications] = useMutation(CLEAR_ALL_NOTIFICATIONS, {
+    refetchQueries: [
+      { query: GET_NOTIFICATIONS, variables: { limit: 20, unreadOnly: false } },
+      { query: GET_UNREAD_COUNT },
+    ],
+    awaitRefetchQueries: true,
+    onCompleted: () => {
+      toast({ title: "All notifications cleared" });
     },
   });
 
@@ -160,7 +173,7 @@ export function NotificationBell() {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
+          <Bell className="h-6 w-6" />
           {unreadCount > 0 && (
             <Badge
               variant="destructive"
@@ -175,15 +188,31 @@ export function NotificationBell() {
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>Notifications</DialogTitle>
-            {unreadCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => markAllAsRead()}
-              >
-                Mark all read
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => markAllAsRead()}
+                >
+                  Mark all read
+                </Button>
+              )}
+              {notifications.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    if (confirm("Clear all notifications? This cannot be undone.")) {
+                      clearAllNotifications();
+                    }
+                  }}
+                  className="text-destructive hover:text-destructive"
+                >
+                  Clear all
+                </Button>
+              )}
+            </div>
           </div>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto space-y-2 pr-2">

@@ -8,6 +8,9 @@ jobId: Types.ObjectId; // ref Job
 classId: Types.ObjectId; // ref Class (denorm for queries)
 studentId: Types.ObjectId; // ref User
 status: JobApplicationStatus;
+applicationText?: string | null;
+qualifications?: string | null;
+availability?: string | null;
 createdAt: Date;
 decidedAt?: Date | null;
 updatedAt: Date;
@@ -20,6 +23,9 @@ jobId: { type: Schema.Types.ObjectId, ref: "Job", required: true },
 classId: { type: Schema.Types.ObjectId, ref: "Class", required: true },
 studentId: { type: Schema.Types.ObjectId, ref: "User", required: true },
 status: { type: String, enum: ["PENDING", "APPROVED", "REJECTED", "WITHDRAWN"], default: "PENDING" },
+applicationText: { type: String },
+qualifications: { type: String },
+availability: { type: String },
 decidedAt: { type: Date },
 },
 { timestamps: true }

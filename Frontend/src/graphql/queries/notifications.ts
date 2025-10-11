@@ -37,3 +37,10 @@ export const MARK_ALL_NOTIFICATIONS_READ = gql`
     markAllNotificationsAsRead
   }
 `;
+
+export const CLEAR_ALL_NOTIFICATIONS = gql`
+  mutation ClearAllNotifications {
+    clearAllNotifications
+  }
+`;
+

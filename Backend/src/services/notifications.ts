@@ -178,3 +178,83 @@ export async function createRedemptionNotification(
   return Promise.all(notifications);
 }
 
+export async function createJobPostedNotification(job: any) {
+  // Import here to avoid circular dependencies
+  const { Membership } = await import("../models");
+  
+  // Get all students in the class
+  const memberships = await Membership.find({
+    classIds: job.classId,
+    role: "STUDENT",
+  }).lean().exec();
+
+  const notifications = memberships.map((membership) =>
+    createNotification({
+      userId: membership.userId,
+      type: "JOB_POSTED",
+      title: "New Job Available",
+      message: `A new job has been posted: ${job.title}`,
+      relatedId: job._id || job.id,
+      relatedType: "Job",
+    })
+  );
+
+  return Promise.all(notifications);
+}
+
+export async function createJobApplicationNotification(
+  application: any,
+  job: any
+) {
+  // Import here to avoid circular dependencies
+  const { Membership } = await import("../models");
+  
+  // Get all teachers in the class
+  const memberships = await Membership.find({
+    classIds: application.classId,
+    role: "TEACHER",
+  }).lean().exec();
+
+  const notifications = memberships.map((membership) =>
+    createNotification({
+      userId: membership.userId,
+      type: "JOB_APPLICATION_RECEIVED",
+      title: "New Job Application",
+      message: `A student has applied for: ${job.title}`,
+      relatedId: application._id || application.id,
+      relatedType: "JobApplication",
+    })
+  );
+
+  return Promise.all(notifications);
+}
+
+export async function createJobApprovalNotification(
+  application: any,
+  job: any,
+  approved: boolean,
+  reason?: string
+) {
+  if (approved) {
+    return createNotification({
+      userId: application.studentId,
+      type: "JOB_APPLICATION_APPROVED",
+      title: "Application Approved!",
+      message: `Congratulations! You've been hired for: ${job.title}`,
+      relatedId: application._id || application.id,
+      relatedType: "JobApplication",
+    });
+  } else {
+    return createNotification({
+      userId: application.studentId,
+      type: "JOB_APPLICATION_REJECTED",
+      title: "Application Not Selected",
+      message: reason 
+        ? `Your application for "${job.title}" was not selected. Reason: ${reason}`
+        : `Your application for "${job.title}" was not selected.`,
+      relatedId: application._id || application.id,
+      relatedType: "JobApplication",
+    });
+  }
+}
+

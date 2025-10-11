@@ -6,7 +6,7 @@ import { Class } from "./Class";
 import { PayRequest } from "./PayRequest";
 import { Student } from "./Student";
 import { pickId } from "./helpers";
-import { StoreItem, Purchase, User, RedemptionRequest } from "../models";
+import { StoreItem, Purchase, User, RedemptionRequest, Job, JobApplication } from "../models";
 
 export const resolvers = {
   ...scalars,
@@ -118,7 +118,29 @@ export const resolvers = {
     },
   },
   Job: { id: pickId },
-  JobApplication: { id: pickId },
+  JobApplication: { 
+    id: pickId,
+    job: async (parent: any) => {
+      if (!parent.jobId) return null;
+      try {
+        const job = await Job.findById(parent.jobId).lean().exec();
+        return job;
+      } catch (error) {
+        console.error("Error fetching job for application:", error);
+        return null;
+      }
+    },
+    student: async (parent: any) => {
+      if (!parent.studentId) return null;
+      try {
+        const user = await User.findById(parent.studentId).lean().exec();
+        return user;
+      } catch (error) {
+        console.error("Error fetching student for application:", error);
+        return null;
+      }
+    },
+  },
   Employment: { id: pickId },
   Payslip: { id: pickId },
   ClassReason: { id: pickId },

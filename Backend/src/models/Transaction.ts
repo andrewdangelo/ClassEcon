@@ -38,6 +38,8 @@ const TransactionSchema = new Schema<ITransaction>(
         "REFUND",
         "PAYROLL",
         "FINE",
+        "INCOME",
+        "EXPENSE",
       ],
       required: true,
     },

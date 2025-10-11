@@ -34,6 +34,7 @@ import RequestsPage from "./modules/requests/RequestsPage";
 import { RedemptionRequestsPage } from "./modules/requests/RedemptionRequestsPage";
 import StudentDetail from "./modules/students/StudentDetail";
 import BackpackPage from "./modules/students/BackpackPage";
+import { JobsRouter } from "./modules/jobs/JobsRouter";
 
 const client = createApolloClient();
 
@@ -79,6 +80,7 @@ const router = createBrowserRouter([
         ) 
       },
       { path: "backpack", element: <BackpackPage /> },
+      { path: "jobs", element: <JobsRouter /> }, // Routes to management for teachers, board for students
       { path: "requests", element: <RequestsPage /> },
       { 
         path: "redemptions", 

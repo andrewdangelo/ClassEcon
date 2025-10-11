@@ -10,9 +10,13 @@ import { resolvers } from "../src/resolvers";
 import { connectMongo } from "./db/connection";
 import { verifyAccessToken, verifyRefreshToken, signAccessToken } from "./auth";
 import { env } from "./config";
+import { initSalaryCronJobs } from "./services/salary";
 
 async function main() {
   await connectMongo(env.DATABASE_URL);
+  
+  // Initialize salary payment cron jobs
+  initSalaryCronJobs();
 
   const server = new ApolloServer({ typeDefs, resolvers });
   await server.start();

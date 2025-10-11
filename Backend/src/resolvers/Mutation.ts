@@ -949,6 +949,14 @@ export const Mutation = {
     return true;
   },
 
+  async clearAllNotifications(_: any, __: any, ctx: Ctx) {
+    requireAuth(ctx);
+    
+    await Notification.deleteMany({ userId: toId(ctx.userId!) }).exec();
+
+    return true;
+  },
+
   // Redemption system
   async createRedemptionRequest(
     _: any,
@@ -1103,6 +1111,254 @@ export const Mutation = {
 
     // Purchase remains in backpack when denied
     return request.toObject();
+  },
+
+  // Job management mutations
+  async createJob(_: any, { input }: any, ctx: Ctx) {
+    requireAuth(ctx);
+    await requireClassTeacher(ctx, input.classId);
+
+    const job = await Job.create({
+      classId: toId(input.classId),
+      title: input.title,
+      description: input.description,
+      rolesResponsibilities: input.rolesResponsibilities,
+      salary: {
+        amount: input.salary,
+        unit: input.salaryUnit || "FIXED",
+      },
+      period: input.period,
+      capacity: {
+        current: 0,
+        max: input.maxCapacity || 1,
+      },
+      active: input.active !== false,
+    });
+
+    // Notify students about new job posting
+    const { createJobPostedNotification } = await import("../services/notifications");
+    await createJobPostedNotification(job);
+
+    return job.toObject();
+  },
+
+  async updateJob(_: any, { id, input }: any, ctx: Ctx) {
+    requireAuth(ctx);
+
+    const job = await Job.findById(id).exec();
+    if (!job) throw new GraphQLError("Job not found");
+
+    await requireClassTeacher(ctx, job.classId.toString());
+
+    // Update fields
+    if (input.title !== undefined) job.title = input.title;
+    if (input.description !== undefined) job.description = input.description;
+    if (input.rolesResponsibilities !== undefined) job.rolesResponsibilities = input.rolesResponsibilities;
+    if (input.salary !== undefined) job.salary.amount = input.salary;
+    if (input.salaryUnit !== undefined) job.salary.unit = input.salaryUnit;
+    if (input.period !== undefined) job.period = input.period;
+    if (input.maxCapacity !== undefined) job.capacity.max = input.maxCapacity;
+    if (input.active !== undefined) job.active = input.active;
+
+    await job.save();
+    return job.toObject();
+  },
+
+  async deleteJob(_: any, { id }: { id: string }, ctx: Ctx) {
+    requireAuth(ctx);
+
+    const job = await Job.findById(id).exec();
+    if (!job) throw new GraphQLError("Job not found");
+
+    await requireClassTeacher(ctx, job.classId.toString());
+
+    // Check if there are active employments
+    const activeEmployments = await Employment.countDocuments({
+      jobId: toId(id),
+      status: "ACTIVE",
+    }).exec();
+
+    if (activeEmployments > 0) {
+      throw new GraphQLError(
+        "Cannot delete job with active employments. End employments first."
+      );
+    }
+
+    await Job.findByIdAndDelete(id).exec();
+    return true;
+  },
+
+  // Job application mutations
+  async applyForJob(_: any, { input }: any, ctx: Ctx) {
+    requireAuth(ctx);
+    const userId = ctx.userId!;
+
+    const job = await Job.findById(input.jobId).exec();
+    if (!job) throw new GraphQLError("Job not found");
+
+    if (!job.active) {
+      throw new GraphQLError("This job is no longer accepting applications");
+    }
+
+    // Check if student is in the class
+    console.log("DEBUG applyForJob - checking membership:", {
+      userId: toId(userId),
+      role: "STUDENT",
+      jobClassId: job.classId,
+      jobClassIdType: typeof job.classId,
+    });
+    
+    const membership = await Membership.findOne({
+      userId: toId(userId),
+      role: "STUDENT",
+      classIds: job.classId,
+    }).lean().exec();
+
+    console.log("DEBUG applyForJob - membership result:", membership);
+
+    if (!membership) {
+      // Let's also check what memberships exist for this user
+      const allUserMemberships = await Membership.find({
+        userId: toId(userId),
+      }).lean().exec();
+      console.log("DEBUG applyForJob - all user memberships:", JSON.stringify(allUserMemberships, null, 2));
+      
+      throw new GraphQLError("You must be a student in this class to apply");
+    }
+
+    // Check if already applied
+    const existingApp = await JobApplication.findOne({
+      jobId: toId(input.jobId),
+      studentId: toId(userId),
+      status: { $in: ["PENDING", "APPROVED"] },
+    }).lean().exec();
+
+    if (existingApp) {
+      throw new GraphQLError("You have already applied for this job");
+    }
+
+    // Check if already employed in this job
+    const existingEmployment = await Employment.findOne({
+      jobId: toId(input.jobId),
+      studentId: toId(userId),
+      status: "ACTIVE",
+    }).lean().exec();
+
+    if (existingEmployment) {
+      throw new GraphQLError("You are already employed in this job");
+    }
+
+    const application = await JobApplication.create({
+      jobId: toId(input.jobId),
+      classId: job.classId,
+      studentId: toId(userId),
+      status: "PENDING",
+      applicationText: input.applicationText,
+      qualifications: input.qualifications,
+      availability: input.availability,
+    });
+
+    // Notify teachers
+    const { createJobApplicationNotification } = await import("../services/notifications");
+    await createJobApplicationNotification(application, job);
+
+    return application.toObject();
+  },
+
+  async approveJobApplication(_: any, { id }: { id: string }, ctx: Ctx) {
+    requireAuth(ctx);
+
+    const application = await JobApplication.findById(id).exec();
+    if (!application) throw new GraphQLError("Application not found");
+
+    await requireClassTeacher(ctx, application.classId.toString());
+
+    if (application.status !== "PENDING") {
+      throw new GraphQLError(`Cannot approve application with status: ${application.status}`);
+    }
+
+    const job = await Job.findById(application.jobId).exec();
+    if (!job) throw new GraphQLError("Job not found");
+
+    // Check capacity
+    if (job.capacity.current >= job.capacity.max) {
+      throw new GraphQLError("Job is at full capacity");
+    }
+
+    // Create employment
+    const employment = await Employment.create({
+      jobId: application.jobId,
+      classId: application.classId,
+      studentId: application.studentId,
+      status: "ACTIVE",
+      startedAt: new Date(),
+    });
+
+    // Update application
+    application.status = "APPROVED";
+    application.decidedAt = new Date();
+    await application.save();
+
+    // Update job capacity
+    job.capacity.current += 1;
+    await job.save();
+
+    // Notify student
+    const { createJobApprovalNotification } = await import("../services/notifications");
+    await createJobApprovalNotification(application, job, true);
+
+    return application.toObject();
+  },
+
+  async rejectJobApplication(
+    _: any,
+    { id, reason }: { id: string; reason?: string },
+    ctx: Ctx
+  ) {
+    requireAuth(ctx);
+
+    const application = await JobApplication.findById(id).exec();
+    if (!application) throw new GraphQLError("Application not found");
+
+    await requireClassTeacher(ctx, application.classId.toString());
+
+    if (application.status !== "PENDING") {
+      throw new GraphQLError(`Cannot reject application with status: ${application.status}`);
+    }
+
+    application.status = "REJECTED";
+    application.decidedAt = new Date();
+    await application.save();
+
+    // Notify student
+    const job = await Job.findById(application.jobId).exec();
+    if (job) {
+      const { createJobApprovalNotification } = await import("../services/notifications");
+      await createJobApprovalNotification(application, job, false, reason);
+    }
+
+    return application.toObject();
+  },
+
+  async withdrawJobApplication(_: any, { id }: { id: string }, ctx: Ctx) {
+    requireAuth(ctx);
+    const userId = ctx.userId!;
+
+    const application = await JobApplication.findById(id).exec();
+    if (!application) throw new GraphQLError("Application not found");
+
+    if (application.studentId.toString() !== userId) {
+      throw new GraphQLError("You can only withdraw your own applications");
+    }
+
+    if (application.status !== "PENDING") {
+      throw new GraphQLError("Can only withdraw pending applications");
+    }
+
+    application.status = "WITHDRAWN";
+    await application.save();
+
+    return application.toObject();
   },
 };
 async function getOrCreateAccount(studentId: string, classId: string) {

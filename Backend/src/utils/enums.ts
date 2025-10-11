@@ -9,7 +9,9 @@ export type TransactionType =
   | "PURCHASE"
   | "REFUND"
   | "PAYROLL"
-  | "FINE";
+  | "FINE"
+  | "INCOME"
+  | "EXPENSE";
 
 export type PayPeriod = "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "SEMESTER";
 export type JobSalaryUnit = "FIXED" | "HOURLY"; // (v1 use FIXED)

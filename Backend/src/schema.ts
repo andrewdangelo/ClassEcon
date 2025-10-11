@@ -28,6 +28,8 @@ export const typeDefs = [
       REFUND
       PAYROLL
       FINE
+      INCOME
+      EXPENSE
     }
 
     enum PayPeriod {
@@ -225,6 +227,7 @@ export const typeDefs = [
       classId: ID!
       title: String!
       description: String
+      rolesResponsibilities: String
       salary: JobSalary!
       period: PayPeriod!
       schedule: JobSchedule
@@ -253,9 +256,14 @@ export const typeDefs = [
     type JobApplication {
       id: ID!
       jobId: ID!
+      job: Job!
       classId: ID!
       studentId: ID!
+      student: User!
       status: JobApplicationStatus!
+      applicationText: String
+      qualifications: String
+      availability: String
       createdAt: DateTime!
       decidedAt: DateTime
       updatedAt: DateTime!
@@ -522,6 +530,34 @@ export const typeDefs = [
       
       # Redemption history for a student (all redemption attempts)
       redemptionHistory(studentId: ID!, classId: ID!): [RedemptionRequest!]!
+      
+      # Jobs
+      jobs(classId: ID!, activeOnly: Boolean = true): [Job!]!
+      job(id: ID!): Job
+      
+      # Job applications
+      jobApplications(jobId: ID, studentId: ID, classId: ID, status: JobApplicationStatus): [JobApplication!]!
+      jobApplication(id: ID!): JobApplication
+      
+      # Employments
+      studentEmployments(studentId: ID!, classId: ID!, status: EmploymentStatus): [Employment!]!
+      jobEmployments(jobId: ID!, status: EmploymentStatus): [Employment!]!
+      
+      # Class statistics (teacher only)
+      classStatistics(classId: ID!): ClassStatistics!
+    }
+    
+    type ClassStatistics {
+      totalStudents: Int!
+      totalJobs: Int!
+      activeJobs: Int!
+      totalEmployments: Int!
+      pendingApplications: Int!
+      totalTransactions: Int!
+      totalPayRequests: Int!
+      pendingPayRequests: Int!
+      averageBalance: Float!
+      totalCirculation: Float!
     }
 
     # --------- Mutations ----------
@@ -539,6 +575,36 @@ export const typeDefs = [
       amount: Int!
       reason: String!
       justification: String!
+    }
+
+    input CreateJobInput {
+      classId: ID!
+      title: String!
+      description: String
+      rolesResponsibilities: String
+      salary: Int!
+      salaryUnit: JobSalaryUnit = FIXED
+      period: PayPeriod!
+      maxCapacity: Int = 1
+      active: Boolean = true
+    }
+
+    input UpdateJobInput {
+      title: String
+      description: String
+      rolesResponsibilities: String
+      salary: Int
+      salaryUnit: JobSalaryUnit
+      period: PayPeriod
+      maxCapacity: Int
+      active: Boolean
+    }
+
+    input ApplyForJobInput {
+      jobId: ID!
+      applicationText: String!
+      qualifications: String
+      availability: String
     }
 
     type Mutation {
@@ -582,9 +648,21 @@ export const typeDefs = [
       approveRedemption(id: ID!, teacherComment: String!): RedemptionRequest!
       denyRedemption(id: ID!, teacherComment: String!): RedemptionRequest!
       
+      # Job management
+      createJob(input: CreateJobInput!): Job!
+      updateJob(id: ID!, input: UpdateJobInput!): Job!
+      deleteJob(id: ID!): Boolean!
+      
+      # Job applications
+      applyForJob(input: ApplyForJobInput!): JobApplication!
+      approveJobApplication(id: ID!): JobApplication!
+      rejectJobApplication(id: ID!, reason: String): JobApplication!
+      withdrawJobApplication(id: ID!): JobApplication!
+      
       # Notifications
       markNotificationAsRead(id: ID!): Notification!
       markAllNotificationsAsRead: Boolean!
+      clearAllNotifications: Boolean!
     }
 
     type Subscription {
