@@ -418,11 +418,13 @@ export const Query = {
 
     // Enrich into Student DTOs (like studentsByClass)
     const results: any[] = [];
+    const classIdsSet = new Set(classIds.map((id) => id.toString()));
     for (const u of users) {
       for (const cid of memberships
         .filter((m) => m.userId.toString() === u._id.toString())
         .map((m) => m.classIds)
-        .flat()) {
+        .flat()
+        .filter((id) => classIdsSet.has(id.toString()))) {
         const acct = await Account.findOne({
           studentId: u._id,
           classId: cid,

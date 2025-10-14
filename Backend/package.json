@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "seed": "tsx scripts/seed.ts",
+    "set-passwords": "tsx scripts/set-passwords.ts",
     "wipe": "ts-node --swc scripts/wipe.ts"
   },
   "keywords": [],
