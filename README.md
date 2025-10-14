@@ -98,6 +98,7 @@ cd Frontend && pnpm run dev
 
 ### 🎯 Features
 
+- **[Activity System](docs/features/ACTIVITY_SYSTEM_GUIDE.md)** - ⭐ NEW! Student transaction tracking with charts and filtering
 - **[Job System](docs/features/JOB_SYSTEM_SUMMARY.md)** - Job management overview
 - **[Job Quick Start](docs/features/JOB_SYSTEM_QUICK_START.md)** - Setup guide
 - **[Backpack Implementation](docs/features/BACKPACK_IMPLEMENTATION_GUIDE.md)** - Virtual inventory
@@ -122,6 +123,10 @@ cd Frontend && pnpm run dev
 - **[ItemId Compatibility](docs/fixes/ITEMID_COMPATIBILITY_FIX.md)**
 - **[Backpack Redemption UI Fixes](docs/fixes/BACKPACK_REDEMPTION_UI_FIXES.md)**
 - **[Theme Notification](docs/fixes/THEME_NOTIFICATION_SUMMARY.md)**
+
+### 📣 Marketing
+
+- **[Landing Page Guide](docs/marketing/LANDING_PAGE_GUIDE.md)** - ⭐ NEW! Complete marketing website with waitlist
 
 ### 🏗️ Architecture
 

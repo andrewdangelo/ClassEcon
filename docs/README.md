@@ -2,6 +2,8 @@
 
 Welcome to the ClassEcon documentation! This directory contains all detailed documentation organized by category.
 
+> 🔍 **Looking for something specific?** Check out the [Complete Documentation Hub](INDEX.md) with search tips and use cases!
+
 ## 📚 Quick Navigation
 
 ### 🚀 Getting Started
@@ -37,6 +39,7 @@ Documentation for core platform features:
 
 | Document | Description | Feature |
 |----------|-------------|---------|
+| [Activity System Guide](features/ACTIVITY_SYSTEM_GUIDE.md) | Student transaction tracking | Activity |
 | [Job System Summary](features/JOB_SYSTEM_SUMMARY.md) | Complete job system overview | Jobs |
 | [Job Quick Start](features/JOB_SYSTEM_QUICK_START.md) | Quick setup guide for jobs | Jobs |
 | [Backpack Implementation](features/BACKPACK_IMPLEMENTATION_GUIDE.md) | Virtual inventory system | Backpack |
@@ -48,6 +51,7 @@ Documentation for core platform features:
 | [Dashboard Enhancements](features/DASHBOARD_ENHANCEMENTS.md) | UI/UX improvements | Dashboard |
 
 **Feature Quick Links:**
+- 📊 [Activity tracking system](features/ACTIVITY_SYSTEM_GUIDE.md)
 - 💼 [Set up job system](features/JOB_SYSTEM_QUICK_START.md)
 - 🎒 [Implement backpack](features/BACKPACK_IMPLEMENTATION_GUIDE.md)
 - 🔔 [Configure notifications](features/NOTIFICATION_SYSTEM.md)
@@ -86,6 +90,19 @@ Bug fixes and technical improvements:
 **Fix Quick Links:**
 - 💰 [Payment issues](fixes/PURCHASE_AND_PAYMENT_FIXES.md)
 - 🗂️ [Schema problems](fixes/ENUM_FORMAT_FIX.md)
+
+---
+
+### 📣 Marketing (docs/marketing/)
+
+Marketing materials and landing page documentation:
+
+| Document | Description | Purpose |
+|----------|-------------|---------|
+| [Landing Page Guide](marketing/LANDING_PAGE_GUIDE.md) | Complete landing page docs | Marketing |
+
+**Marketing Quick Links:**
+- 🚀 [Landing page setup](marketing/LANDING_PAGE_GUIDE.md)
 
 ---
 
@@ -240,10 +257,11 @@ findstr /s "keyword" docs\*
 
 ## 📊 Documentation Statistics
 
-- **Total Documents:** 30+
-- **Categories:** 5
-- **Code Examples:** 100+
-- **Diagrams:** 10+
+- **Total Documents:** 35+
+- **Categories:** 6 (Authentication, Features, Guides, Fixes, Archive, Marketing)
+- **Code Examples:** 150+
+- **Diagrams:** 15+
+- **Pages Documented:** 25+
 - **Last Updated:** October 13, 2025
 
 ---
