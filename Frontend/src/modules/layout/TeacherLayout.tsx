@@ -12,21 +12,23 @@ import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { ProfileMenu } from "@/components/profile/ProfileMenu";
 import { useClassContext } from "@/context/ClassContext";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const TEACHER_NAV_ITEMS = [
-  { to: "/", label: "Dashboard", icon: BookOpen },
-  { to: "/classes", label: "Classes", icon: GraduationCap },
-  { to: "/students", label: "Students", icon: Users },
-  { to: "/store", label: "Store", icon: ShoppingBag },
-  { to: "/jobs", label: "Jobs", icon: Briefcase },
-  { to: "/requests", label: "Requests", icon: Inbox },
-  { to: "/redemptions", label: "Redemptions", icon: Gift },
+  { to: "/", labelKey: "navigation.dashboard", icon: BookOpen },
+  { to: "/classes", labelKey: "navigation.classes", icon: GraduationCap },
+  { to: "/students", labelKey: "navigation.students", icon: Users },
+  { to: "/store", labelKey: "navigation.store", icon: ShoppingBag },
+  { to: "/jobs", labelKey: "navigation.jobs", icon: Briefcase },
+  { to: "/requests", labelKey: "navigation.requests", icon: Inbox },
+  { to: "/redemptions", labelKey: "navigation.redemptions", icon: Gift },
 ];
 
 export function TeacherLayout() {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const user = useAppSelector(selectUser);
   const { currentClassId } = useClassContext();
+  const { t } = useLanguage();
 
   const { data: meData, loading } = useQuery<MeQuery>(ME, {
     fetchPolicy: "cache-and-network",
@@ -81,7 +83,7 @@ export function TeacherLayout() {
                 onClick={() => setSidebarOpen(false)}
               >
                 <Icon className="h-4 w-4" />
-                <span>{item.label}</span>
+                <span>{t(item.labelKey)}</span>
               </NavLink>
             );
           })}
@@ -90,7 +92,7 @@ export function TeacherLayout() {
         {/* Teacher-specific tools section */}
         <div className="mt-6 pt-4 border-t">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-            Teacher Tools
+            {t("common.actions")}
           </h3>
           <div className="space-y-1">
             {currentClassId && (
@@ -107,7 +109,7 @@ export function TeacherLayout() {
                 onClick={() => setSidebarOpen(false)}
               >
                 <AlertTriangle className="h-4 w-4" />
-                <span>Manage Fines</span>
+                <span>{t("fines.manageFines")}</span>
               </NavLink>
             )}
             <button className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
@@ -154,7 +156,7 @@ export function TeacherLayout() {
                   )
                 }
               >
-                {item.label}
+                {t(item.labelKey)}
               </NavLink>
             ))}
           </nav>

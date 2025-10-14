@@ -19,6 +19,7 @@ import {
   Notification,
   RedemptionRequest,
   Fine,
+  BetaAccessCode,
 } from "../models";
 import {
   requireAuth,
@@ -1565,6 +1566,125 @@ export const Mutation = {
     await Fine.findByIdAndDelete(id).exec();
 
     return true;
+  },
+
+  // Beta Access Code mutations
+  async validateBetaCode(_: any, { code }: { code: string }, ctx: Ctx) {
+    const upperCode = code.trim().toUpperCase();
+    
+    const betaCode = await BetaAccessCode.findOne({ code: upperCode }).exec();
+
+    if (!betaCode) {
+      return {
+        valid: false,
+        message: "Invalid access code",
+        code: null,
+      };
+    }
+
+    if (!betaCode.isActive) {
+      return {
+        valid: false,
+        message: "This access code has been deactivated",
+        code: null,
+      };
+    }
+
+    if (betaCode.expiresAt && betaCode.expiresAt < new Date()) {
+      return {
+        valid: false,
+        message: "This access code has expired",
+        code: null,
+      };
+    }
+
+    if (betaCode.currentUses >= betaCode.maxUses) {
+      return {
+        valid: false,
+        message: "This access code has reached its maximum number of uses",
+        code: null,
+      };
+    }
+
+    // If user is authenticated, mark them as having beta access
+    if (ctx.userId) {
+      const user = await User.findById(ctx.userId).exec();
+      if (user && !user.hasBetaAccess) {
+        // Check if this user has already used this code
+        const hasUsedCode = betaCode.usedBy.some(
+          (id) => id.toString() === ctx.userId
+        );
+
+        if (!hasUsedCode) {
+          user.hasBetaAccess = true;
+          await user.save();
+
+          betaCode.usedBy.push(new Types.ObjectId(ctx.userId));
+          betaCode.currentUses += 1;
+          await betaCode.save();
+        }
+      }
+    }
+
+    return {
+      valid: true,
+      message: "Access code is valid",
+      code: betaCode,
+    };
+  },
+
+  async createBetaCode(
+    _: any,
+    {
+      code,
+      description,
+      maxUses = 1,
+      expiresAt,
+    }: {
+      code: string;
+      description?: string;
+      maxUses?: number;
+      expiresAt?: Date;
+    },
+    ctx: Ctx
+  ) {
+    requireAuth(ctx);
+    requireTeacher(ctx); // Only teachers can create codes for now
+
+    const upperCode = code.trim().toUpperCase();
+
+    // Check if code already exists
+    const existing = await BetaAccessCode.findOne({ code: upperCode }).exec();
+    if (existing) {
+      throw new GraphQLError("This access code already exists");
+    }
+
+    const betaCode = await BetaAccessCode.create({
+      code: upperCode,
+      description,
+      maxUses,
+      currentUses: 0,
+      expiresAt,
+      isActive: true,
+      usedBy: [],
+    });
+
+    return betaCode;
+  },
+
+  async deactivateBetaCode(_: any, { id }: { id: string }, ctx: Ctx) {
+    requireAuth(ctx);
+    requireTeacher(ctx); // Only teachers can deactivate codes
+
+    const betaCode = await BetaAccessCode.findById(id).exec();
+    if (!betaCode) {
+      throw new GraphQLError("Beta access code not found");
+    }
+
+    betaCode.isActive = false;
+    await betaCode.save();
+
+    return betaCode;
   },
 };
 async function getOrCreateAccount(studentId: string, classId: string) {

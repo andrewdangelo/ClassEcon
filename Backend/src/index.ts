@@ -22,9 +22,30 @@ async function main() {
   await server.start();
 
   const app = express();
+  
+  // Allow multiple origins for CORS (frontend, landing page, etc.)
+  const allowedOrigins = [
+    'http://localhost:5173', // Frontend (main app)
+    'http://localhost:5174', // Landing page
+    'http://localhost:3000', // Alternative landing page port
+    env.ORIGIN, // Any additional origin from env
+  ].filter(Boolean);
+
   app.use(
     "/graphql",
-    cors({ origin: env.ORIGIN, credentials: true }),
+    cors({ 
+      origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
+      credentials: true 
+    }),
     cookieParser(),
     express.json(),
     expressMiddleware(server, {

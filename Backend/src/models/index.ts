@@ -16,3 +16,4 @@ export * from "./PayRequestComment";
 export * from "./Notification";
 export * from "./RedemptionRequest";
 export * from "./Fine";
+export * from "./BetaAccessCode";

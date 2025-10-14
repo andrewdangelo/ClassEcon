@@ -3,6 +3,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./index.css";
+import "./i18n/config"; // Initialize i18n
 import { Layout } from "./modules/layout/Layout";
 import { RoleBasedLayout } from "./modules/layout/RoleBasedLayout";
 import Dashboard from "./modules/dashboard/Dashboard";
@@ -24,6 +25,7 @@ import { Provider } from "react-redux";
 import { store } from "@/redux/store/store";
 import GraphQLTest from "./modules/dev/GraphQLTest";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { BetaAccessGuard } from "@/components/auth/BetaAccessGuard";
 import { ThemeProvider } from "@/context/ThemeContext";
 
 import { ModernAuth } from "@/components/auth/ModernAuth";
@@ -38,26 +40,52 @@ import BackpackPage from "./modules/students/BackpackPage";
 import { JobsRouter } from "./modules/jobs/JobsRouter";
 import { FinesManagementPage } from "./modules/fines/FinesManagementPage";
 import MyActivityPage from "./modules/activity/MyActivityPage";
+import { LanguageProvider } from "@/i18n/LanguageContext";
+import SettingsPage from "./modules/settings/SettingsPage";
+import BetaCodesManagement from "./modules/admin/BetaCodesManagement";
 
 const client = createApolloClient();
 
 const router = createBrowserRouter([
-  // Public auth page
-  { path: "/auth", element: <ModernAuth /> },
+  // Public auth page - wrapped in BetaAccessGuard
+  { 
+    path: "/auth", 
+    element: (
+      <BetaAccessGuard>
+        <ModernAuth />
+      </BetaAccessGuard>
+    )
+  },
   
-  // OAuth callback routes
-  { path: "/auth/callback/google", element: <OAuthCallback provider="google" /> },
-  { path: "/auth/callback/microsoft", element: <OAuthCallback provider="microsoft" /> },
+  // OAuth callback routes - wrapped in BetaAccessGuard
+  { 
+    path: "/auth/callback/google", 
+    element: (
+      <BetaAccessGuard>
+        <OAuthCallback provider="google" />
+      </BetaAccessGuard>
+    )
+  },
+  { 
+    path: "/auth/callback/microsoft", 
+    element: (
+      <BetaAccessGuard>
+        <OAuthCallback provider="microsoft" />
+      </BetaAccessGuard>
+    )
+  },
 
   // Onboarding is a standalone page (not in Layout), but protected
   {
     path: "/onboarding",
     element: (
-      <ProtectedRoute>
-        <RequireClassGuard>
-          <TeacherOnboarding />
-        </RequireClassGuard>
-      </ProtectedRoute>
+      <BetaAccessGuard>
+        <ProtectedRoute>
+          <RequireClassGuard>
+            <TeacherOnboarding />
+          </RequireClassGuard>
+        </ProtectedRoute>
+      </BetaAccessGuard>
     ),
   },
 
@@ -65,11 +93,13 @@ const router = createBrowserRouter([
   {
     path: "/",
     element: (
-      <ProtectedRoute>
-        <RequireClassGuard>
-          <RoleBasedLayout />
-        </RequireClassGuard>
-      </ProtectedRoute>
+      <BetaAccessGuard>
+        <ProtectedRoute>
+          <RequireClassGuard>
+            <RoleBasedLayout />
+          </RequireClassGuard>
+        </ProtectedRoute>
+      </BetaAccessGuard>
     ),
     children: [
       { index: true, element: <Dashboard /> },
@@ -116,6 +146,15 @@ const router = createBrowserRouter([
           </RequireTeacher>
         ) 
       },
+      { path: "settings", element: <SettingsPage /> },
+      { 
+        path: "admin/beta-codes", 
+        element: (
+          <RequireTeacher>
+            <BetaCodesManagement />
+          </RequireTeacher>
+        ) 
+      },
       { path: "dev/graphql-test", element: <GraphQLTest /> },
     ],
   },
@@ -125,15 +164,17 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <Provider store={store}>
       <ApolloProvider client={client}>
-        <ThemeProvider>
-          <ClassProvider>
-            <CartProvider>
-              <ToastProvider>
-                <RouterProvider router={router} />
-              </ToastProvider>
-            </CartProvider>
-          </ClassProvider>
-        </ThemeProvider>
+        <LanguageProvider>
+          <ThemeProvider>
+            <ClassProvider>
+              <CartProvider>
+                <ToastProvider>
+                  <RouterProvider router={router} />
+                </ToastProvider>
+              </CartProvider>
+            </ClassProvider>
+          </ThemeProvider>
+        </LanguageProvider>
       </ApolloProvider>
     </Provider>
   </React.StrictMode>

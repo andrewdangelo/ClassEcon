@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, GraduationCap } from 'lucide-react';
+import { BetaAccessModal } from './BetaAccessModal';
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [betaModalOpen, setBetaModalOpen] = useState(false);
   const location = useLocation();
 
   const navigation = [
@@ -46,12 +48,12 @@ export default function Header() {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <a
-              href="http://localhost:5173/auth"
+            <button
+              onClick={() => setBetaModalOpen(true)}
               className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors"
             >
               Sign In
-            </a>
+            </button>
             <Link
               to="/waitlist"
               className="px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 text-white text-sm font-medium rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-sm hover:shadow-md"
@@ -93,12 +95,15 @@ export default function Header() {
               </Link>
             ))}
             <div className="pt-4 space-y-2">
-              <a
-                href="http://localhost:5173/auth"
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50"
+              <button
+                onClick={() => {
+                  setBetaModalOpen(true);
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50"
               >
                 Sign In
-              </a>
+              </button>
               <Link
                 to="/waitlist"
                 className="block px-3 py-2 bg-gradient-to-r from-primary-600 to-primary-700 text-white text-base font-medium rounded-md text-center"
@@ -110,6 +115,12 @@ export default function Header() {
           </div>
         )}
       </nav>
+
+      {/* Beta Access Modal */}
+      <BetaAccessModal 
+        isOpen={betaModalOpen} 
+        onClose={() => setBetaModalOpen(false)} 
+      />
     </header>
   );
 }

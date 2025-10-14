@@ -13,15 +13,16 @@ import { useCart } from "@/context/CartContext";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { ProfileMenu } from "@/components/profile/ProfileMenu";
 import { useClassContext } from "@/context/ClassContext";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const STUDENT_NAV_ITEMS = [
-  { to: "/", label: "Dashboard", icon: BookOpen },
-  { to: "/classes", label: "My Classes", icon: GraduationCap },
-  { to: "/backpack", label: "Backpack", icon: Backpack },
-  { to: "/jobs", label: "Job Board", icon: Briefcase },
-  { to: "/requests", label: "Requests", icon: Inbox },
-  { to: "/store", label: "Store", icon: ShoppingBag },
-  { to: "/cart", label: "Cart", icon: ShoppingCart },
+  { to: "/", labelKey: "navigation.dashboard", icon: BookOpen },
+  { to: "/classes", labelKey: "navigation.classes", icon: GraduationCap },
+  { to: "/backpack", labelKey: "navigation.backpack", icon: Backpack },
+  { to: "/jobs", labelKey: "navigation.jobs", icon: Briefcase },
+  { to: "/requests", labelKey: "navigation.requests", icon: Inbox },
+  { to: "/store", labelKey: "navigation.store", icon: ShoppingBag },
+  { to: "/cart", labelKey: "navigation.cart", icon: ShoppingCart },
 ];
 
 export function StudentLayout() {
@@ -30,6 +31,7 @@ export function StudentLayout() {
   const user = useAppSelector(selectUser);
   const { totalCount } = useCart();
   const { currentClassId } = useClassContext();
+  const { t } = useLanguage();
 
   const { data: meData, loading } = useQuery<MeQuery>(ME, {
     fetchPolicy: "cache-and-network",
@@ -82,11 +84,11 @@ export function StudentLayout() {
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )
                 }
-                title={item.label}
+                title={t(item.labelKey)}
                 onClick={() => setSidebarOpen(false)}
               >
                 <Icon className="h-4 w-4" />
-                <span className="truncate hidden md:inline">{item.label}</span>
+                <span className="truncate hidden md:inline">{t(item.labelKey)}</span>
                 {isCart && totalCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full text-xs px-1.5 py-0.5 min-w-[18px] h-4 flex items-center justify-center">
                     {totalCount}
@@ -100,7 +102,7 @@ export function StudentLayout() {
         {/* Student-specific quick actions */}
         <div className="mt-6 pt-4 border-t">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 hidden md:block">
-            Quick Actions
+            {t("dashboard.quickActions")}
           </h3>
           <div className="space-y-1">
             <NavLink
@@ -116,7 +118,7 @@ export function StudentLayout() {
               onClick={() => setSidebarOpen(false)}
             >
               <Clock className="h-4 w-4" />
-              <span className="hidden md:inline">My Activity</span>
+              <span className="hidden md:inline">{t("activity.myActivity")}</span>
             </NavLink>
             <button className="w-full flex items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
               <BookOpen className="h-4 w-4" />
@@ -124,7 +126,7 @@ export function StudentLayout() {
             </button>
             <button className="w-full flex items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
               <ShoppingBag className="h-4 w-4" />
-              <span className="hidden md:inline">My Purchases</span>
+              <span className="hidden md:inline">{t("students.purchases")}</span>
             </button>
           </div>
         </div>
@@ -162,12 +164,12 @@ export function StudentLayout() {
                   )
                 }
               >
-                {item.label}
+                {t(item.labelKey)}
               </NavLink>
             ))}
           </nav>
 
-          {/* Right side: cart, notifications, and profile */}
+          {/* Right side: cart, notifications, language switcher, and profile */}
           <div className="flex items-center gap-2">
             {/* Cart icon with badge */}
             <Button 

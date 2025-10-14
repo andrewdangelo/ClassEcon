@@ -9,7 +9,8 @@
     "start": "node dist/index.js",
     "seed": "tsx scripts/seed.ts",
     "set-passwords": "tsx scripts/set-passwords.ts",
-    "wipe": "ts-node --swc scripts/wipe.ts"
+    "wipe": "ts-node --swc scripts/wipe.ts",
+    "generate-beta-code": "tsx scripts/generate-beta-code.ts"
   },
   "keywords": [],
   "author": "",

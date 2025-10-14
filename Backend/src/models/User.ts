@@ -11,6 +11,7 @@ export interface IUser {
   oauthProvider?: "google" | "microsoft" | null;
   oauthProviderId?: string | null;
   profilePicture?: string | null;
+  hasBetaAccess: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -34,6 +35,7 @@ const UserSchema = new Schema<IUser>(
     oauthProvider: { type: String, enum: ["google", "microsoft"], default: null },
     oauthProviderId: { type: String, default: null },
     profilePicture: { type: String, default: null },
+    hasBetaAccess: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

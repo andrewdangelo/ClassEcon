@@ -103,6 +103,25 @@ export const typeDefs = [
       profilePicture: String
       createdAt: DateTime!
       updatedAt: DateTime!
+      hasBetaAccess: Boolean!
+    }
+
+    type BetaAccessCode {
+      id: ID!
+      code: String!
+      description: String
+      maxUses: Int!
+      currentUses: Int!
+      expiresAt: DateTime
+      isActive: Boolean!
+      usedBy: [User!]!
+      createdAt: DateTime!
+    }
+
+    type BetaAccessValidation {
+      valid: Boolean!
+      message: String!
+      code: BetaAccessCode
     }
 
     type ClassroomSettings {
@@ -718,6 +737,11 @@ export const typeDefs = [
       issueFine(input: IssueFineInput!): Fine!
       waiveFine(id: ID!, reason: String!): Fine!
       deleteFine(id: ID!): Boolean!
+      
+      # Beta access
+      validateBetaCode(code: String!): BetaAccessValidation!
+      createBetaCode(code: String!, description: String, maxUses: Int = 1, expiresAt: DateTime): BetaAccessCode!
+      deactivateBetaCode(id: ID!): BetaAccessCode!
     }
 
     type Subscription {
