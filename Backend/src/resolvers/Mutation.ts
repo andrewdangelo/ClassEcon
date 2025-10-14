@@ -28,15 +28,7 @@ import {
   Ctx,
 } from "./helpers";
 import { createPayRequestNotification, createRedemptionNotification } from "../services/notifications";
-import {
-  hashPassword,
-  verifyPassword,
-  signAccessToken,
-  signRefreshToken,
-  setRefreshCookie,
-  clearRefreshCookie,
-  verifyRefreshToken,
-} from "../auth";
+import { authClient } from "../services/auth-client";
 import { TransactionType } from "../utils/enums";
 import { Types } from "mongoose";
 import { pubsub, PAY_REQUEST_EVENTS } from "../pubsub";
@@ -584,7 +576,7 @@ export const Mutation = {
       .exec();
     if (existing) throw new GraphQLError("Email already in use");
 
-    const passwordHash = await hashPassword(password);
+    const passwordHash = await authClient.hashPassword(password);
     const user = await User.create({
       name,
       email: email.toLowerCase(),
@@ -592,9 +584,8 @@ export const Mutation = {
       role,
     });
 
-    const accessToken = signAccessToken(user._id.toString(), role);
-    const refreshToken = signRefreshToken(user._id.toString(), role);
-    setRefreshCookie(ctx.res, refreshToken);
+    const tokens = await authClient.signTokens(user._id.toString(), role, ctx.res);
+    const accessToken = tokens.accessToken;
 
     // If joinCode is provided, join the class
     if (joinCode && joinCode.trim()) {
@@ -657,25 +648,80 @@ export const Mutation = {
       .lean()
       .exec();
     if (!user) throw new GraphQLError("Invalid credentials");
-    const ok = await verifyPassword(password, (user as any).passwordHash);
+    const ok = await authClient.verifyPassword(password, (user as any).passwordHash);
     if (!ok) throw new GraphQLError("Invalid credentials");
 
-    const accessToken = signAccessToken(user._id.toString(), user.role);
-    const refreshToken = signRefreshToken(user._id.toString(), user.role);
-    setRefreshCookie(ctx.res, refreshToken);
+    const tokens = await authClient.signTokens(user._id.toString(), user.role, ctx.res);
 
-    return { user, accessToken };
+    return { user, accessToken: tokens.accessToken };
+  },
+
+  async oauthLogin(_: any, { provider, code }: any, ctx: any) {
+    try {
+      // Call Auth Service to exchange OAuth code for user info
+      const response = await authClient.request<{
+        userInfo: {
+          id: string;
+          email: string;
+          name: string;
+          picture?: string;
+          provider: "google" | "microsoft";
+        };
+      }>(`/oauth/${provider.toLowerCase()}`, "POST", { code });
+
+      const { userInfo } = response;
+      if (!userInfo || !userInfo.email) {
+        throw new GraphQLError("Failed to get user info from OAuth provider");
+      }
+
+      // Find or create user with OAuth provider ID
+      let user = await User.findOne({ email: userInfo.email.toLowerCase() }).exec();
+
+      if (!user) {
+        // Create new user - default to STUDENT role, no classroom yet
+        // Teacher/Parent needs to be manually upgraded or use invite flow
+        user = await User.create({
+          email: userInfo.email.toLowerCase(),
+          name: userInfo.name,
+          role: "STUDENT",
+          status: "ACTIVE",
+          passwordHash: null, // OAuth users don't have password
+          oauthProvider: userInfo.provider,
+          oauthProviderId: userInfo.id,
+          profilePicture: userInfo.picture,
+        });
+      } else {
+        // Update existing user's OAuth info if not already set
+        if (!user.oauthProvider) {
+          user.oauthProvider = userInfo.provider;
+          user.oauthProviderId = userInfo.id;
+          if (userInfo.picture && !user.profilePicture) {
+            user.profilePicture = userInfo.picture;
+          }
+          await user.save();
+        }
+      }
+
+      // Generate JWT tokens
+      const tokens = await authClient.signTokens(user._id.toString(), user.role, ctx.res);
+
+      return { user: user.toObject(), accessToken: tokens.accessToken };
+    } catch (error: any) {
+      console.error("OAuth login error:", error);
+      throw new GraphQLError(error.message || "OAuth authentication failed");
+    }
   },
 
   async refreshAccessToken(_: any, __: any, ctx: any) {
     const cookie = ctx.req.cookies?.refresh_token;
     if (!cookie) throw new GraphQLError("No refresh token");
-    const { sub, role } = verifyRefreshToken(cookie);
-    return signAccessToken(sub, role as any);
+    const payload = await authClient.verifyRefreshToken(cookie);
+    const tokens = await authClient.signTokens(payload.sub, payload.role);
+    return tokens.accessToken;
   },
 
   async logout(_: any, __: any, ctx: any) {
-    clearRefreshCookie(ctx.res);
+    authClient.clearRefreshCookie(ctx.res);
     return true;
   },
 

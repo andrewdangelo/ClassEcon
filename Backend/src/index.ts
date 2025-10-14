@@ -8,7 +8,7 @@ import { expressMiddleware } from "@apollo/server/express4";
 import { typeDefs } from "../src/schema";
 import { resolvers } from "../src/resolvers";
 import { connectMongo } from "./db/connection";
-import { verifyAccessToken, verifyRefreshToken, signAccessToken } from "./auth";
+import { authClient } from "./services/auth-client";
 import { env } from "./config";
 import { initSalaryCronJobs } from "./services/salary";
 
@@ -35,7 +35,7 @@ async function main() {
         const auth = req.headers.authorization;
         if (auth?.startsWith("Bearer ")) {
           try {
-            const payload = verifyAccessToken(auth.slice(7));
+            const payload = await authClient.verifyAccessToken(auth.slice(7));
             userId = payload.sub;
             role = payload.role;
           } catch {}
@@ -43,9 +43,9 @@ async function main() {
 
         if (!userId && (req as any).cookies?.refresh_token) {
           try {
-            const r = verifyRefreshToken((req as any).cookies.refresh_token);
-            const newAccess = signAccessToken(r.sub, r.role);
-            res.setHeader("x-access-token", newAccess);
+            const r = await authClient.verifyRefreshToken((req as any).cookies.refresh_token);
+            const tokens = await authClient.signTokens(r.sub, r.role);
+            res.setHeader("x-access-token", tokens.accessToken);
             userId = r.sub;
             role = r.role;
           } catch {}

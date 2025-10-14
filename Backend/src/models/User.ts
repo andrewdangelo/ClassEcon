@@ -8,6 +8,9 @@ export interface IUser {
   email?: string | null;
   passwordHash?: string; // for auth (JWT)
   status: UserStatus;
+  oauthProvider?: "google" | "microsoft" | null;
+  oauthProviderId?: string | null;
+  profilePicture?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,6 +31,9 @@ const UserSchema = new Schema<IUser>(
       enum: ["ACTIVE", "INVITED", "DISABLED"],
       default: "ACTIVE",
     },
+    oauthProvider: { type: String, enum: ["google", "microsoft"], default: null },
+    oauthProviderId: { type: String, default: null },
+    profilePicture: { type: String, default: null },
   },
   { timestamps: true }
 );

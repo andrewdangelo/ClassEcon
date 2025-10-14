@@ -13,6 +13,11 @@ export const typeDefs = [
       PARENT
     }
 
+    enum OAuthProvider {
+      GOOGLE
+      MICROSOFT
+    }
+
     enum UserStatus {
       ACTIVE
       INVITED
@@ -87,6 +92,9 @@ export const typeDefs = [
       name: String
       email: String
       status: UserStatus!
+      oauthProvider: OAuthProvider
+      oauthProviderId: String
+      profilePicture: String
       createdAt: DateTime!
       updatedAt: DateTime!
     }
@@ -611,6 +619,7 @@ export const typeDefs = [
       # auth
       signUp(input: SignUpInput!): AuthPayload!
       login(email: String!, password: String!): AuthPayload!
+      oauthLogin(provider: OAuthProvider!, code: String!): AuthPayload!
       refreshAccessToken: String!
       logout: Boolean!
 

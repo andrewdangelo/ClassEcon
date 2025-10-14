@@ -26,7 +26,8 @@ import GraphQLTest from "./modules/dev/GraphQLTest";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ThemeProvider } from "@/context/ThemeContext";
 
-import { LoginSignupCard } from "@/components/auth/LoginSignupCard";
+import { ModernAuth } from "@/components/auth/ModernAuth";
+import { OAuthCallback } from "@/components/auth/OAuthCallback";
 import TeacherOnboarding from "./modules/onboarding/TeacherOnboarding";
 import { RequireClassGuard } from "@/components/auth/RequireClassGuard";
 import { RequireTeacher } from "@/components/auth/RequireTeacher";
@@ -40,7 +41,11 @@ const client = createApolloClient();
 
 const router = createBrowserRouter([
   // Public auth page
-  { path: "/auth", element: <LoginSignupCard /> },
+  { path: "/auth", element: <ModernAuth /> },
+  
+  // OAuth callback routes
+  { path: "/auth/callback/google", element: <OAuthCallback provider="google" /> },
+  { path: "/auth/callback/microsoft", element: <OAuthCallback provider="microsoft" /> },
 
   // Onboarding is a standalone page (not in Layout), but protected
   {

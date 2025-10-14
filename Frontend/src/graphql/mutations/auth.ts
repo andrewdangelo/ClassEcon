@@ -29,3 +29,23 @@ export const REFRESH_ACCESS_TOKEN = gql`
     refreshAccessToken
   }
 `;
+
+export const OAUTH_LOGIN = gql`
+  mutation OAuthLogin($provider: OAuthProvider!, $code: String!) {
+    oauthLogin(provider: $provider, code: $code) {
+      user {
+        id
+        role
+        name
+        email
+        status
+        oauthProvider
+        oauthProviderId
+        profilePicture
+        createdAt
+        updatedAt
+      }
+      accessToken
+    }
+  }
+`;
