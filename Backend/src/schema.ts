@@ -81,6 +81,12 @@ export const typeDefs = [
       DENIED
     }
 
+    enum FineStatus {
+      PENDING
+      APPLIED
+      WAIVED
+    }
+
     type AuthPayload {
       user: User!
       accessToken: String!
@@ -351,6 +357,28 @@ export const typeDefs = [
       updatedAt: DateTime!
     }
 
+    type Fine {
+      id: ID!
+      studentId: ID!
+      student: User!
+      classId: ID!
+      class: Class!
+      teacherId: ID!
+      teacher: User!
+      amount: Int!
+      reason: String!
+      description: String
+      transactionId: ID
+      transaction: Transaction
+      status: FineStatus!
+      waivedReason: String
+      waivedAt: DateTime
+      waivedByUserId: ID
+      waivedBy: User
+      createdAt: DateTime!
+      updatedAt: DateTime!
+    }
+
     # Compatibility DTO for Student (User+Membership+Account+Balance)
     type Student {
       id: ID!
@@ -553,6 +581,11 @@ export const typeDefs = [
       
       # Class statistics (teacher only)
       classStatistics(classId: ID!): ClassStatistics!
+      
+      # Fines
+      finesByClass(classId: ID!, status: FineStatus): [Fine!]!
+      finesByStudent(studentId: ID!, classId: ID!): [Fine!]!
+      fine(id: ID!): Fine
     }
     
     type ClassStatistics {
@@ -615,6 +648,14 @@ export const typeDefs = [
       availability: String
     }
 
+    input IssueFineInput {
+      studentId: ID!
+      classId: ID!
+      amount: Int!
+      reason: String!
+      description: String
+    }
+
     type Mutation {
       # auth
       signUp(input: SignUpInput!): AuthPayload!
@@ -672,6 +713,11 @@ export const typeDefs = [
       markNotificationAsRead(id: ID!): Notification!
       markAllNotificationsAsRead: Boolean!
       clearAllNotifications: Boolean!
+      
+      # Fines
+      issueFine(input: IssueFineInput!): Fine!
+      waiveFine(id: ID!, reason: String!): Fine!
+      deleteFine(id: ID!): Boolean!
     }
 
     type Subscription {

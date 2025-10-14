@@ -26,6 +26,8 @@ import {
   Target
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import StudentActivityWidget from "@/components/activity/StudentActivityWidget";
+import BalanceOverTimeChart from "@/components/activity/BalanceOverTimeChart";
 
 export default function StudentDashboard() {
   const { currentClassId, current } = useCurrentClass();
@@ -118,6 +120,16 @@ export default function StudentDashboard() {
           <span>Last updated: {new Date().toLocaleTimeString()}</span>
         </div>
       </div>
+
+      {/* Balance Over Time Chart */}
+      {user?.id && currentClassId && (
+        <BalanceOverTimeChart 
+          studentId={user.id}
+          classId={currentClassId}
+          currentBalance={myBalance}
+          defaultCurrency={current?.defaultCurrency || "CE$"}
+        />
+      )}
 
       {/* Main Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -279,6 +291,15 @@ export default function StudentDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Activity Widget */}
+      {user?.id && currentClassId && (
+        <StudentActivityWidget 
+          studentId={user.id}
+          classId={currentClassId}
+          defaultCurrency={current?.defaultCurrency || "CE$"}
+        />
+      )}
     </div>
   );
 }

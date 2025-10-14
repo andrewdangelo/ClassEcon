@@ -18,6 +18,7 @@ import {
   PayRequestComment,
   Notification,
   RedemptionRequest,
+  Fine,
 } from "../models";
 import {
   requireAuth,
@@ -27,7 +28,12 @@ import {
   genJoinCode,
   Ctx,
 } from "./helpers";
-import { createPayRequestNotification, createRedemptionNotification } from "../services/notifications";
+import { 
+  createPayRequestNotification, 
+  createRedemptionNotification,
+  createFineNotification,
+  createFineWaivedNotification,
+} from "../services/notifications";
 import { authClient } from "../services/auth-client";
 import { TransactionType } from "../utils/enums";
 import { Types } from "mongoose";
@@ -1405,6 +1411,160 @@ export const Mutation = {
     await application.save();
 
     return application.toObject();
+  },
+
+  // Fine management
+  async issueFine(_: any, { input }: any, ctx: Ctx) {
+    requireAuth(ctx);
+    const { studentId, classId, amount, reason, description } = input;
+
+    // Ensure teacher has access to this class
+    await requireClassTeacher(ctx, classId);
+
+    // Validate inputs
+    if (amount <= 0) {
+      throw new GraphQLError("Fine amount must be greater than zero");
+    }
+
+    if (!reason || !reason.trim()) {
+      throw new GraphQLError("Reason is required for issuing a fine");
+    }
+
+    // Verify student is in the class
+    const membership = await Membership.findOne({
+      userId: toId(studentId),
+      classIds: toId(classId),
+      role: "STUDENT",
+    }).exec();
+
+    if (!membership) {
+      throw new GraphQLError("Student not found in this class");
+    }
+
+    // Get or create student's account
+    const account = await getOrCreateAccount(studentId, classId);
+
+    // Get class info for classroomId
+    const classDoc = await ClassModel.findById(classId).lean().exec();
+    if (!classDoc) {
+      throw new GraphQLError("Class not found");
+    }
+
+    // Create fine record
+    const fine = await Fine.create({
+      studentId: toId(studentId),
+      classId: toId(classId),
+      teacherId: toId(ctx.userId!),
+      amount,
+      reason: reason.trim(),
+      description: description?.trim() || null,
+      status: "APPLIED",
+    });
+
+    // Create transaction to deduct the fine amount
+    const transaction = await Transaction.create({
+      accountId: account._id,
+      classId: toId(classId),
+      classroomId: classDoc.classroomId,
+      type: "FINE",
+      amount: -amount, // Negative amount for debit
+      memo: `Fine: ${reason}`,
+      createdByUserId: toId(ctx.userId!),
+    });
+
+    // Update fine with transaction ID
+    fine.transactionId = transaction._id;
+    await fine.save();
+
+    // Get student info for notification
+    const student = await User.findById(studentId).lean().exec();
+    
+    // Send notification to student
+    await createFineNotification(fine.toObject(), student?.name || "Student");
+
+    return fine;
+  },
+
+  async waiveFine(_: any, { id, reason }: any, ctx: Ctx) {
+    requireAuth(ctx);
+
+    const fine = await Fine.findById(id).exec();
+    if (!fine) {
+      throw new GraphQLError("Fine not found");
+    }
+
+    // Ensure teacher has access to this class
+    await requireClassTeacher(ctx, fine.classId.toString());
+
+    if (fine.status === "WAIVED") {
+      throw new GraphQLError("Fine is already waived");
+    }
+
+    if (!reason || !reason.trim()) {
+      throw new GraphQLError("Reason is required for waiving a fine");
+    }
+
+    // Store the old status before updating
+    const wasApplied = fine.status === "APPLIED";
+
+    // Update fine status
+    fine.status = "WAIVED";
+    fine.waivedReason = reason.trim();
+    fine.waivedAt = new Date();
+    fine.waivedByUserId = toId(ctx.userId!);
+    await fine.save();
+
+    // If there's a transaction, create a refund transaction
+    if (fine.transactionId && wasApplied) {
+      const account = await Account.findOne({
+        studentId: fine.studentId,
+        classId: fine.classId,
+      }).exec();
+
+      if (account) {
+        const classDoc = await ClassModel.findById(fine.classId).lean().exec();
+        if (classDoc) {
+          await Transaction.create({
+            accountId: account._id,
+            classId: fine.classId,
+            classroomId: classDoc.classroomId,
+            type: "REFUND",
+            amount: fine.amount, // Positive amount for credit
+            memo: `Fine waived: ${fine.reason}`,
+            createdByUserId: toId(ctx.userId!),
+          });
+        }
+      }
+    }
+
+    // Get student info for notification
+    const student = await User.findById(fine.studentId).lean().exec();
+    
+    // Send notification to student
+    await createFineWaivedNotification(fine.toObject(), student?.name || "Student");
+
+    return fine;
+  },
+
+  async deleteFine(_: any, { id }: any, ctx: Ctx) {
+    requireAuth(ctx);
+
+    const fine = await Fine.findById(id).exec();
+    if (!fine) {
+      throw new GraphQLError("Fine not found");
+    }
+
+    // Ensure teacher has access to this class
+    await requireClassTeacher(ctx, fine.classId.toString());
+
+    // Only allow deletion of pending fines that haven't been applied
+    if (fine.status === "APPLIED" && fine.transactionId) {
+      throw new GraphQLError("Cannot delete an applied fine. Use waive instead.");
+    }
+
+    await Fine.findByIdAndDelete(id).exec();
+
+    return true;
   },
 };
 async function getOrCreateAccount(studentId: string, classId: string) {

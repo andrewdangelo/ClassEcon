@@ -1,7 +1,7 @@
 import React from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, BookOpen, GraduationCap, ShoppingBag, ShoppingCart, Inbox, Backpack, Briefcase } from "lucide-react";
+import { Menu, BookOpen, GraduationCap, ShoppingBag, ShoppingCart, Inbox, Backpack, Briefcase, Clock } from "lucide-react";
 import { ClassSwitcher } from "@/components/sidebar/ClassSwitcher";
 import { useQuery } from "@apollo/client/react";
 import { ME } from "@/graphql/queries/me";
@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { ProfileMenu } from "@/components/profile/ProfileMenu";
+import { useClassContext } from "@/context/ClassContext";
 
 const STUDENT_NAV_ITEMS = [
   { to: "/", label: "Dashboard", icon: BookOpen },
@@ -28,6 +29,7 @@ export function StudentLayout() {
   const navigate = useNavigate();
   const user = useAppSelector(selectUser);
   const { totalCount } = useCart();
+  const { currentClassId } = useClassContext();
 
   const { data: meData, loading } = useQuery<MeQuery>(ME, {
     fetchPolicy: "cache-and-network",
@@ -101,6 +103,21 @@ export function StudentLayout() {
             Quick Actions
           </h3>
           <div className="space-y-1">
+            <NavLink
+              to={`/classes/${currentClassId}/activity`}
+              className={({ isActive }) =>
+                cn(
+                  "w-full flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors relative",
+                  isActive
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                )
+              }
+              onClick={() => setSidebarOpen(false)}
+            >
+              <Clock className="h-4 w-4" />
+              <span className="hidden md:inline">My Activity</span>
+            </NavLink>
             <button className="w-full flex items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
               <BookOpen className="h-4 w-4" />
               <span className="hidden md:inline">My Assignments</span>

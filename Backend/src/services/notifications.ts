@@ -258,3 +258,31 @@ export async function createJobApprovalNotification(
   }
 }
 
+export async function createFineNotification(
+  fine: any,
+  studentName: string
+) {
+  return createNotification({
+    userId: fine.studentId,
+    type: "FINE_ISSUED",
+    title: "Fine Issued",
+    message: `You have been fined CE$ ${fine.amount} for: ${fine.reason}`,
+    relatedId: fine._id || fine.id,
+    relatedType: "Fine",
+  });
+}
+
+export async function createFineWaivedNotification(
+  fine: any,
+  studentName: string
+) {
+  return createNotification({
+    userId: fine.studentId,
+    type: "FINE_WAIVED",
+    title: "Fine Waived",
+    message: `Your fine of CE$ ${fine.amount} has been waived. Reason: ${fine.waivedReason}`,
+    relatedId: fine._id || fine.id,
+    relatedType: "Fine",
+  });
+}
+

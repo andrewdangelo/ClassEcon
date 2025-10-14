@@ -19,6 +19,7 @@ import {
   Job,
   JobApplication,
   Employment,
+  Fine,
 } from "../models";
 import { Role } from "../utils/enums";
 import {
@@ -757,39 +758,13 @@ export const Query = {
     });
 
     // Get balance stats - compute from transactions
+    // Note: FINE and PURCHASE are already stored as negative amounts, so we just sum them directly
     const balanceAgg = await Transaction.aggregate([
       { $match: { classId: classIdObj } },
       {
         $group: {
-          _id: "$userId",
-          balance: {
-            $sum: {
-              $switch: {
-                branches: [
-                  {
-                    case: {
-                      $in: [
-                        "$type",
-                        ["DEPOSIT", "REFUND", "PAYROLL", "TRANSFER_CREDIT", "INCOME"],
-                      ],
-                    },
-                    then: "$amount",
-                  },
-                  {
-                    case: {
-                      $in: [
-                        "$type",
-                        ["WITHDRAWAL", "PURCHASE", "FINE", "TRANSFER_DEBIT", "EXPENSE"],
-                      ],
-                    },
-                    then: { $multiply: [-1, "$amount"] },
-                  },
-                  { case: { $eq: ["$type", "ADJUSTMENT"] }, then: "$amount" },
-                ],
-                default: 0,
-              },
-            },
-          },
+          _id: "$accountId",
+          balance: { $sum: "$amount" }
         },
       },
     ]);
@@ -809,5 +784,46 @@ export const Query = {
       averageBalance: Math.round(averageBalance * 100) / 100,
       totalCirculation: Math.round(totalCirculation * 100) / 100,
     };
+  },
+
+  // Fine queries
+  finesByClass: async (_: any, { classId, status }: any, ctx: Ctx) => {
+    requireAuth(ctx);
+    await requireClassTeacher(ctx, classId);
+
+    const query: any = { classId: toId(classId) };
+    if (status) {
+      query.status = status;
+    }
+
+    return Fine.find(query)
+      .sort({ createdAt: -1 })
+      .exec();
+  },
+
+  finesByStudent: async (_: any, { studentId, classId }: any, ctx: Ctx) => {
+    requireAuth(ctx);
+    await assertSelfOrTeacherForStudent(ctx, studentId);
+
+    return Fine.find({
+      studentId: toId(studentId),
+      classId: toId(classId),
+    })
+      .sort({ createdAt: -1 })
+      .exec();
+  },
+
+  fine: async (_: any, { id }: any, ctx: Ctx) => {
+    requireAuth(ctx);
+    const fine = await Fine.findById(id).exec();
+    
+    if (!fine) {
+      throw new GraphQLError("Fine not found");
+    }
+
+    // Check if user is the student or a teacher in the class
+    await assertSelfOrTeacherForStudent(ctx, fine.studentId.toString());
+
+    return fine;
   },
 };

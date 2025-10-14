@@ -36,6 +36,8 @@ import { RedemptionRequestsPage } from "./modules/requests/RedemptionRequestsPag
 import StudentDetail from "./modules/students/StudentDetail";
 import BackpackPage from "./modules/students/BackpackPage";
 import { JobsRouter } from "./modules/jobs/JobsRouter";
+import { FinesManagementPage } from "./modules/fines/FinesManagementPage";
+import MyActivityPage from "./modules/activity/MyActivityPage";
 
 const client = createApolloClient();
 
@@ -75,6 +77,14 @@ const router = createBrowserRouter([
       { path: "classes/new", element: <ClassCreate /> },
       { path: "classes/:classId", element: <ClassOverview /> },
       { path: "classes/:classId/manage", element: <ClassManage /> },
+      { 
+        path: "classes/:classId/fines", 
+        element: (
+          <RequireTeacher>
+            <FinesManagementPage />
+          </RequireTeacher>
+        ) 
+      },
       { path: "students", element: <Students /> },
       { 
         path: "students/:studentId", 
@@ -85,6 +95,7 @@ const router = createBrowserRouter([
         ) 
       },
       { path: "backpack", element: <BackpackPage /> },
+      { path: "classes/:classId/activity", element: <MyActivityPage /> },
       { path: "jobs", element: <JobsRouter /> }, // Routes to management for teachers, board for students
       { path: "requests", element: <RequestsPage /> },
       { 

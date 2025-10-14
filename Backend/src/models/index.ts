@@ -15,3 +15,4 @@ export * from "./PayRequest";
 export * from "./PayRequestComment";
 export * from "./Notification";
 export * from "./RedemptionRequest";
+export * from "./Fine";

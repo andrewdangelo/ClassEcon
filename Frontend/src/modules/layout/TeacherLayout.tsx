@@ -1,7 +1,7 @@
 import React from "react";
 import { Outlet, NavLink } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, BookOpen, GraduationCap, Users, ShoppingBag, Inbox, Gift, Briefcase } from "lucide-react";
+import { Menu, BookOpen, GraduationCap, Users, ShoppingBag, Inbox, Gift, Briefcase, AlertTriangle } from "lucide-react";
 import { ClassSwitcher } from "@/components/sidebar/ClassSwitcher";
 import { useQuery } from "@apollo/client/react";
 import { ME } from "@/graphql/queries/me";
@@ -11,6 +11,7 @@ import { selectUser } from "@/redux/authSlice";
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { ProfileMenu } from "@/components/profile/ProfileMenu";
+import { useClassContext } from "@/context/ClassContext";
 
 const TEACHER_NAV_ITEMS = [
   { to: "/", label: "Dashboard", icon: BookOpen },
@@ -25,6 +26,7 @@ const TEACHER_NAV_ITEMS = [
 export function TeacherLayout() {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const user = useAppSelector(selectUser);
+  const { currentClassId } = useClassContext();
 
   const { data: meData, loading } = useQuery<MeQuery>(ME, {
     fetchPolicy: "cache-and-network",
@@ -91,6 +93,23 @@ export function TeacherLayout() {
             Teacher Tools
           </h3>
           <div className="space-y-1">
+            {currentClassId && (
+              <NavLink
+                to={`/classes/${currentClassId}/fines`}
+                className={({ isActive }) =>
+                  cn(
+                    "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                    isActive
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  )
+                }
+                onClick={() => setSidebarOpen(false)}
+              >
+                <AlertTriangle className="h-4 w-4" />
+                <span>Manage Fines</span>
+              </NavLink>
+            )}
             <button className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
               <GraduationCap className="h-4 w-4" />
               <span>Class Analytics</span>

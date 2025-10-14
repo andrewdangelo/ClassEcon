@@ -5,6 +5,7 @@ import { Subscription } from "./Subscription";
 import { Class } from "./Class";
 import { PayRequest } from "./PayRequest";
 import { Student } from "./Student";
+import { Fine } from "./Fine";
 import { pickId } from "./helpers";
 import { StoreItem, Purchase, User, RedemptionRequest, Job, JobApplication } from "../models";
 
@@ -149,4 +150,5 @@ export const resolvers = {
     id: pickId,
     user: (parent: any) => ({ _id: parent.userId }),
   },
+  Fine,
 };

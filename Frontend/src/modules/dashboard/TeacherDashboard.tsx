@@ -46,6 +46,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import RecentFinesWidget from "@/components/fines/RecentFinesWidget";
+import { IssueFineDialog } from "@/components/fines/IssueFineDialog";
 
 // Widget type definitions
 type WidgetType = 
@@ -197,6 +199,9 @@ export default function TeacherDashboard() {
   // Edit mode state
   const [isEditMode, setIsEditMode] = React.useState(false);
   const [isAddWidgetDialogOpen, setIsAddWidgetDialogOpen] = React.useState(false);
+  
+  // Fine dialog state
+  const [isIssueFineDialogOpen, setIsIssueFineDialogOpen] = React.useState(false);
 
   // Load enabled widgets from localStorage
   const [enabledWidgets, setEnabledWidgets] = React.useState<WidgetType[]>(() => {
@@ -422,6 +427,16 @@ export default function TeacherDashboard() {
               );
             })}
           </div>
+          
+          {/* Fines Widget */}
+          {currentClassId && (
+            <div className="mt-6">
+              <RecentFinesWidget 
+                classId={currentClassId} 
+                onIssueFineBtnClick={() => setIsIssueFineDialogOpen(true)}
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -596,6 +611,15 @@ export default function TeacherDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Issue Fine Dialog */}
+      {currentClassId && (
+        <IssueFineDialog
+          open={isIssueFineDialogOpen}
+          onOpenChange={setIsIssueFineDialogOpen}
+          classId={currentClassId}
+        />
+      )}
     </div>
   );
 }
