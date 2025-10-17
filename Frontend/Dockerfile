@@ -39,6 +39,9 @@ RUN pnpm build
 # Production stage - serve with nginx
 FROM nginx:alpine
 
+# Remove default nginx config (prevents conflicts)
+RUN rm -f /etc/nginx/conf.d/default.conf
+
 # Copy built files from builder
 COPY --from=builder /app/dist /usr/share/nginx/html
 

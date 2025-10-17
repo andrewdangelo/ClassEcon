@@ -18,6 +18,9 @@ RUN npm run build
 # ----------------------------
 FROM nginx:alpine
 
+# Remove default nginx config (prevents conflicts)
+RUN rm -f /etc/nginx/conf.d/default.conf
+
 # Copy build output from Vite
 COPY --from=builder /app/dist /usr/share/nginx/html
 
