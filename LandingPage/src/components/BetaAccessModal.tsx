@@ -76,16 +76,31 @@ export const BetaAccessModal = ({ isOpen, onClose }: BetaAccessModalProps) => {
         });
         
         // Redirect to the main application auth page with code as URL parameter
-        // Since localStorage doesn't work across different ports
-        let frontendUrl = import.meta.env.VITE_FRONTEND_URL || 
-                          (window.location.hostname === 'localhost' 
-                            ? 'http://localhost:5173' 
-                            : `${window.location.protocol}//${window.location.hostname.replace('landing', 'frontend')}`);
+        // Since localStorage doesn't work across different domains/ports
+        let frontendUrl = import.meta.env.VITE_FRONTEND_URL;
+        
+        if (!frontendUrl) {
+          // Fallback for local development only
+          if (window.location.hostname === 'localhost') {
+            frontendUrl = 'http://localhost:5173';
+          } else {
+            // Production: VITE_FRONTEND_URL MUST be set in Railway environment variables
+            console.error('❌ VITE_FRONTEND_URL is not set! Cannot redirect to frontend.');
+            setStatus('error');
+            setMessage('Configuration error. Please contact support.');
+            return;
+          }
+        }
         
         // Remove trailing slash if present
         frontendUrl = frontendUrl.replace(/\/$/, '');
         
         console.log('🔗 Redirecting to frontend:', frontendUrl);
+        console.log('📝 Environment check:', {
+          VITE_FRONTEND_URL: import.meta.env.VITE_FRONTEND_URL,
+          VITE_NODE_ENV: import.meta.env.VITE_NODE_ENV,
+          hostname: window.location.hostname
+        });
         
         setTimeout(() => {
           window.location.href = `${frontendUrl}/auth?betaCode=${upperCode}`;
