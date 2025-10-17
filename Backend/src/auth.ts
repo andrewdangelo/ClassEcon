@@ -1,5 +1,5 @@
 // src/auth.ts
-import jwt from "jsonwebtoken";
+import jwt, { type SignOptions } from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import type { Response } from "express";
 import { env } from "./config";
@@ -15,14 +15,18 @@ export async function verifyPassword(plain: string, hash: string) {
 }
 
 export function signAccessToken(userId: string, role: JWTPayload["role"]) {
-  return jwt.sign({ sub: userId, role }, env.JWT_SECRET, {
-    expiresIn: env.JWT_EXPIRES_IN,
-  });
+  return jwt.sign(
+    { sub: userId, role }, 
+    env.JWT_SECRET, 
+    { expiresIn: env.JWT_EXPIRES_IN } as SignOptions
+  );
 }
 export function signRefreshToken(userId: string, role: JWTPayload["role"]) {
-  return jwt.sign({ sub: userId, role }, env.REFRESH_JWT_SECRET, {
-    expiresIn: env.REFRESH_JWT_EXPIRES_IN,
-  });
+  return jwt.sign(
+    { sub: userId, role }, 
+    env.REFRESH_JWT_SECRET, 
+    { expiresIn: env.REFRESH_JWT_EXPIRES_IN } as SignOptions
+  );
 }
 export function verifyAccessToken(token: string): JWTPayload {
   return jwt.verify(token, env.JWT_SECRET) as JWTPayload;

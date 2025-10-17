@@ -27,7 +27,8 @@ export const BetaAccessModal = ({ isOpen, onClose }: BetaAccessModalProps) => {
 
     try {
       // Call GraphQL mutation to validate code
-      const response = await fetch('http://localhost:4000/graphql', {
+      const graphqlUrl = import.meta.env.VITE_GRAPHQL_URL || 'http://localhost:4000/graphql';
+      const response = await fetch(graphqlUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -76,8 +77,9 @@ export const BetaAccessModal = ({ isOpen, onClose }: BetaAccessModalProps) => {
         
         // Redirect to the main application auth page with code as URL parameter
         // Since localStorage doesn't work across different ports
+        const frontendUrl = import.meta.env.VITE_FRONTEND_URL || 'http://localhost:5173';
         setTimeout(() => {
-          window.location.href = `http://localhost:5173/auth?betaCode=${upperCode}`;
+          window.location.href = `${frontendUrl}/auth?betaCode=${upperCode}`;
         }, 1500);
       } else {
         setStatus('error');

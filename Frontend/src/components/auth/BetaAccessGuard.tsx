@@ -48,7 +48,8 @@ export const BetaAccessGuard = ({ children }: BetaAccessGuardProps) => {
         if (!hasValidatedCode || !storedCode) {
           console.log('❌ No beta access found, redirecting to landing page');
           // No beta access - redirect to landing page
-          window.location.href = 'http://localhost:5174';
+          const landingPageUrl = import.meta.env.VITE_LANDING_PAGE_URL || 'http://localhost:5174';
+          window.location.href = landingPageUrl;
           return;
         }
 
@@ -56,7 +57,8 @@ export const BetaAccessGuard = ({ children }: BetaAccessGuardProps) => {
 
         // Optionally, re-validate the code with the server
         // This ensures the code is still valid (not expired/deactivated)
-        const response = await fetch('http://localhost:4000/graphql', {
+        const graphqlUrl = import.meta.env.VITE_GRAPHQL_URL || 'http://localhost:4000/graphql';
+        const response = await fetch(graphqlUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -80,8 +82,9 @@ export const BetaAccessGuard = ({ children }: BetaAccessGuardProps) => {
           setError('Failed to validate beta access');
           localStorage.removeItem('betaAccessValidated');
           localStorage.removeItem('betaAccessCode');
+          const landingPageUrl = import.meta.env.VITE_LANDING_PAGE_URL || 'http://localhost:5174';
           setTimeout(() => {
-            window.location.href = 'http://localhost:5174';
+            window.location.href = landingPageUrl;
           }, 3000);
           return;
         }
@@ -92,8 +95,9 @@ export const BetaAccessGuard = ({ children }: BetaAccessGuardProps) => {
           setError(result.message || 'Beta access has been revoked');
           localStorage.removeItem('betaAccessValidated');
           localStorage.removeItem('betaAccessCode');
+          const landingPageUrl = import.meta.env.VITE_LANDING_PAGE_URL || 'http://localhost:5174';
           setTimeout(() => {
-            window.location.href = 'http://localhost:5174';
+            window.location.href = landingPageUrl;
           }, 3000);
           return;
         }

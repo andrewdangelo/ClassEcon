@@ -23,13 +23,8 @@ async function main() {
 
   const app = express();
   
-  // Allow multiple origins for CORS (frontend, landing page, etc.)
-  const allowedOrigins = [
-    'http://localhost:5173', // Frontend (main app)
-    'http://localhost:5174', // Landing page
-    'http://localhost:3000', // Alternative landing page port
-    env.ORIGIN, // Any additional origin from env
-  ].filter(Boolean);
+  // Allow multiple origins for CORS from environment configuration
+  const allowedOrigins = [...env.CORS_ORIGINS, env.ORIGIN].filter(Boolean);
 
   app.use(
     "/graphql",
