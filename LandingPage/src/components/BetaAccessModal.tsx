@@ -77,7 +77,16 @@ export const BetaAccessModal = ({ isOpen, onClose }: BetaAccessModalProps) => {
         
         // Redirect to the main application auth page with code as URL parameter
         // Since localStorage doesn't work across different ports
-        const frontendUrl = import.meta.env.VITE_FRONTEND_URL || 'http://localhost:5173';
+        let frontendUrl = import.meta.env.VITE_FRONTEND_URL || 
+                          (window.location.hostname === 'localhost' 
+                            ? 'http://localhost:5173' 
+                            : `${window.location.protocol}//${window.location.hostname.replace('landing', 'frontend')}`);
+        
+        // Remove trailing slash if present
+        frontendUrl = frontendUrl.replace(/\/$/, '');
+        
+        console.log('🔗 Redirecting to frontend:', frontendUrl);
+        
         setTimeout(() => {
           window.location.href = `${frontendUrl}/auth?betaCode=${upperCode}`;
         }, 1500);
