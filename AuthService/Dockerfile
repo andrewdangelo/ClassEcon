@@ -37,12 +37,13 @@ RUN pnpm install --frozen-lockfile --prod
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
 
-# Expose port (Railway will set PORT env variable)
+# Expose port (Railway will set PORT env variable dynamically)
 EXPOSE 4001
 
-# Health check
+# Note: Railway uses its own health check system via railway.toml
+# Internal Docker HEALTHCHECK is supplementary
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:4001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD node -e "require('http').get('http://localhost:${PORT:-4001}/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Start the service
-CMD ["pnpm", "start"]
+CMD ["node", "dist/index.js"]
