@@ -4,7 +4,11 @@
 
 Your Landing Page is redirecting to `localhost:5173` instead of the production Frontend URL.
 
-**Root Cause:** Vite environment variables (`VITE_*`) are **embedded at build time**, not runtime. The current deployed build was created **before** you set `VITE_FRONTEND_URL` in Railway.
+**Root Cause:** The Dockerfile wasn't passing `VITE_*` environment variables from Railway to the Vite build process. Vite needs these variables at **build time** to embed them in the compiled JavaScript.
+
+## ✅ FIXED - Dockerfile Updated
+
+The Dockerfile has been updated to accept and pass VITE environment variables during the build.
 
 ## Current Configuration
 
