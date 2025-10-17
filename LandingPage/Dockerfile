@@ -9,8 +9,21 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
-# Copy all source files and build
+# Copy all source files
 COPY . .
+
+# Build arguments for Vite environment variables
+# Railway will automatically pass these as build args
+ARG VITE_GRAPHQL_URL
+ARG VITE_FRONTEND_URL
+ARG VITE_NODE_ENV
+
+# Set as environment variables for the build process
+ENV VITE_GRAPHQL_URL=$VITE_GRAPHQL_URL
+ENV VITE_FRONTEND_URL=$VITE_FRONTEND_URL
+ENV VITE_NODE_ENV=$VITE_NODE_ENV
+
+# Build the application (Vite will embed the VITE_* env vars)
 RUN npm run build
 
 # ----------------------------
