@@ -14,6 +14,14 @@ export class AuthServiceClient {
     body?: any,
     options: { useApiKey?: boolean } = {}
   ): Promise<T> {
+    const authServiceUrl = getAuthServiceUrl();
+    
+    // Check if auth service URL is configured
+    if (!authServiceUrl || authServiceUrl.includes('localhost')) {
+      console.warn(`[Auth Service] WARNING: AUTH_SERVICE_URL not properly configured (${authServiceUrl}). Skipping auth service call.`);
+      throw new Error('Auth service not available');
+    }
+
     const headers: HeadersInit = {
       "Content-Type": "application/json",
     };
@@ -22,18 +30,23 @@ export class AuthServiceClient {
       headers["x-service-api-key"] = getServiceApiKey();
     }
 
-    const response = await fetch(`${getAuthServiceUrl()}${endpoint}`, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    });
+    try {
+      const response = await fetch(`${authServiceUrl}${endpoint}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+      });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: "Unknown error" }));
-      throw new Error(error.error || `Auth service error: ${response.status}`);
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(error.error || `Auth service error: ${response.status}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error(`[Auth Service] Request to ${endpoint} failed:`, error);
+      throw error;
     }
-
-    return response.json();
   }
 
   async hashPassword(password: string): Promise<string> {

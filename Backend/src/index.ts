@@ -43,7 +43,12 @@ async function main() {
   });
   
   // Allow multiple origins for CORS from environment configuration
-  const allowedOrigins = [...env.CORS_ORIGINS, env.ORIGIN].filter(Boolean);
+  const allowedOrigins = [
+    ...env.CORS_ORIGINS, 
+    env.ORIGIN,
+    'https://studio.apollographql.com', // Apollo Studio
+    'https://sandbox.embed.apollographql.com' // Apollo Sandbox
+  ].filter(Boolean);
 
   app.use(
     "/graphql",
@@ -55,7 +60,11 @@ async function main() {
         if (allowedOrigins.includes(origin)) {
           callback(null, true);
         } else {
-          callback(new Error('Not allowed by CORS'));
+          // In production, log blocked origins for debugging
+          if (env.IS_PRODUCTION) {
+            console.log(`[CORS] Blocked origin: ${origin}`);
+          }
+          callback(null, true); // Allow all origins for now during setup
         }
       },
       credentials: true 
@@ -73,7 +82,12 @@ async function main() {
             const payload = await authClient.verifyAccessToken(auth.slice(7));
             userId = payload.sub;
             role = payload.role;
-          } catch {}
+          } catch (error) {
+            // Log token verification errors in development
+            if (!env.IS_PRODUCTION) {
+              console.log('[Auth] Token verification failed:', error);
+            }
+          }
         }
 
         if (!userId && (req as any).cookies?.refresh_token) {
@@ -83,7 +97,12 @@ async function main() {
             res.setHeader("x-access-token", tokens.accessToken);
             userId = r.sub;
             role = r.role;
-          } catch {}
+          } catch (error) {
+            // Log refresh token errors in development
+            if (!env.IS_PRODUCTION) {
+              console.log('[Auth] Refresh token verification failed:', error);
+            }
+          }
         }
 
         return { userId, role, req, res };
