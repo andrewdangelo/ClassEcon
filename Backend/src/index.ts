@@ -13,15 +13,34 @@ import { env } from "./config";
 import { initSalaryCronJobs } from "./services/salary";
 
 async function main() {
+  console.log("[Startup] Connecting to MongoDB...");
   await connectMongo(env.DATABASE_URL);
+  console.log("[Startup] MongoDB connected successfully");
   
   // Initialize salary payment cron jobs
+  console.log("[Startup] Initializing cron jobs...");
   initSalaryCronJobs();
 
+  console.log("[Startup] Starting Apollo Server...");
   const server = new ApolloServer({ typeDefs, resolvers });
   await server.start();
+  console.log("[Startup] Apollo Server started successfully");
 
   const app = express();
+  
+  // Health check endpoint for Railway (no auth, no CORS needed)
+  app.get("/health", (req, res) => {
+    res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
+  // Root endpoint for debugging
+  app.get("/", (req, res) => {
+    res.status(200).json({ 
+      message: "ClassEcon Backend API",
+      graphql: "/graphql",
+      health: "/health"
+    });
+  });
   
   // Allow multiple origins for CORS from environment configuration
   const allowedOrigins = [...env.CORS_ORIGINS, env.ORIGIN].filter(Boolean);
@@ -73,7 +92,9 @@ async function main() {
   );
 
   app.listen(env.PORT, "0.0.0.0", () => {
+    console.log(`[Startup] Server is now listening on 0.0.0.0:${env.PORT}`);
     console.log(`🚀 GraphQL ready at http://0.0.0.0:${env.PORT}/graphql`);
+    console.log(`✓ Health check available at http://0.0.0.0:${env.PORT}/health`);
   });
 }
 main().catch((err) => {
