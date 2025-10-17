@@ -36,11 +36,12 @@ FROM nginx:alpine
 # Copy built files from builder
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy nginx configuration template
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
-# Expose port 80 (Railway will map this)
+# Expose port (Railway will set PORT env var)
 EXPOSE 80
 
-# Start nginx
+# nginx will substitute $PORT in the template and start
+# The official nginx image automatically processes templates in /etc/nginx/templates/
 CMD ["nginx", "-g", "daemon off;"]
