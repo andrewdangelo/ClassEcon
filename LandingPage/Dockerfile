@@ -21,11 +21,15 @@ FROM nginx:alpine
 # Copy build output from Vite
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy Nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy Nginx configuration template
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
-# Expose port 80 (Railway auto-maps it)
-EXPOSE 80
+# Copy custom entrypoint script
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
-# Run Nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Expose dynamic port
+EXPOSE ${PORT:-80}
+
+# Use custom entrypoint to substitute PORT and start nginx
+ENTRYPOINT ["/docker-entrypoint.sh"]
