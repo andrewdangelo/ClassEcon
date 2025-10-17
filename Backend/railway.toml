@@ -2,7 +2,7 @@
 builder = "DOCKERFILE"
 
 [deploy]
-startCommand = "pnpm start"
+startCommand = "node dist/src/index.js"
 healthcheckPath = "/graphql"
 healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"
