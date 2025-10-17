@@ -72,8 +72,8 @@ async function main() {
     })
   );
 
-  app.listen(env.PORT, () => {
-    console.log(`🚀 GraphQL ready at http://localhost:${env.PORT}/graphql`);
+  app.listen(env.PORT, "0.0.0.0", () => {
+    console.log(`🚀 GraphQL ready at http://0.0.0.0:${env.PORT}/graphql`);
   });
 }
 main().catch((err) => {
