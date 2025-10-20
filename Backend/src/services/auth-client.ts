@@ -16,9 +16,9 @@ export class AuthServiceClient {
   ): Promise<T> {
     const authServiceUrl = getAuthServiceUrl();
     
-    // Check if auth service URL is configured
-    if (!authServiceUrl || authServiceUrl.includes('localhost')) {
-      console.warn(`[Auth Service] WARNING: AUTH_SERVICE_URL not properly configured (${authServiceUrl}). Skipping auth service call.`);
+    // Check if auth service URL is configured (allow localhost in development)
+    if (!authServiceUrl) {
+      console.warn(`[Auth Service] WARNING: AUTH_SERVICE_URL not configured. Skipping auth service call.`);
       throw new Error('Auth service not available');
     }
 

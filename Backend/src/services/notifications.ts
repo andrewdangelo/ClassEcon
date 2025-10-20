@@ -27,10 +27,18 @@ export async function createNotification(input: CreateNotificationInput) {
   });
 
   const notificationObj = notification.toObject();
+  
+  // Convert ObjectIds to strings for GraphQL
+  const notificationForSubscription = {
+    ...notificationObj,
+    _id: notificationObj._id.toString(),
+    userId: notificationObj.userId.toString(),
+    relatedId: notificationObj.relatedId?.toString(),
+  };
 
   // Publish to subscription
   pubsub.publish(NOTIFICATION_EVENTS.NOTIFICATION_RECEIVED, {
-    notificationReceived: notificationObj,
+    notificationReceived: notificationForSubscription,
   });
 
   return notificationObj;

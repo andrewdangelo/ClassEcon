@@ -24,9 +24,11 @@ async function main() {
   // Error handling
   app.use(errorHandler);
 
-  // Start server - bind to 0.0.0.0 for Railway deployment
-  app.listen(env.PORT, "0.0.0.0", () => {
-    console.log(`🔐 Auth Service ready at http://0.0.0.0:${env.PORT}`);
+  // Start server - bind to localhost in dev, 0.0.0.0 in production for Railway
+  const host = env.NODE_ENV === "development" ? "localhost" : "0.0.0.0";
+  
+  app.listen(env.PORT, host, () => {
+    console.log(`🔐 Auth Service ready at http://${host}:${env.PORT}`);
   });
 }
 

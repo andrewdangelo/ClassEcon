@@ -28,4 +28,6 @@ export const env = {
   MICROSOFT_CLIENT_ID: process.env.MICROSOFT_CLIENT_ID || "",
   MICROSOFT_CLIENT_SECRET: process.env.MICROSOFT_CLIENT_SECRET || "",
   MICROSOFT_REDIRECT_URI: process.env.MICROSOFT_REDIRECT_URI || "",
+
+  NODE_ENV: process.env.NODE_ENV || "production",
 };
