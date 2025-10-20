@@ -3,11 +3,14 @@
 # ----------------------------
 FROM node:18-alpine AS builder
 
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 WORKDIR /app
 
 # Copy package files and install dependencies
-COPY package*.json ./
-RUN npm ci
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 # Copy all source files
 COPY . .
@@ -24,7 +27,7 @@ ENV VITE_FRONTEND_URL=$VITE_FRONTEND_URL
 ENV VITE_NODE_ENV=$VITE_NODE_ENV
 
 # Build the application (Vite will embed the VITE_* env vars)
-RUN npm run build
+RUN pnpm run build
 
 # ----------------------------
 # Stage 2 — Serve with Nginx
