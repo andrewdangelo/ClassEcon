@@ -5,6 +5,9 @@ import { GET_CLASSES_BY_USER } from "@/graphql/queries/classes";
 import { ClassesByUserQuery } from "@/graphql/__generated__/graphql";
 import { useClassContext } from "@/context/ClassContext";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import JoinClassModal from "@/components/classes/JoinClassModal";
 
 type Props = {
   meId: string | undefined;
@@ -32,10 +35,19 @@ export function ClassSwitcher({ meId, className }: Props) {
   };
 
   return (
-    <div className={cn("space-y-1", className)}>
-      <label className="text-xs font-medium text-muted-foreground">
-        Current class
-      </label>
+    <div className={cn("space-y-2", className)}>
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-medium text-muted-foreground">
+          Current class
+        </label>
+        <JoinClassModal 
+          trigger={
+            <Button variant="ghost" size="sm" className="h-6 px-2">
+              <Plus className="h-3 w-3" />
+            </Button>
+          }
+        />
+      </div>
       <select
         value={currentClassId ?? ""}
         onChange={handleChange}
@@ -47,7 +59,7 @@ export function ClassSwitcher({ meId, className }: Props) {
         {classes.map((c) => (
           <option key={c.id} value={c.id}>
             {c.name}
-            {c.term ? ` — ${c.term}` : ""}
+            {c.subject && c.period ? ` — ${c.subject} • Period ${c.period}` : ""}
           </option>
         ))}
       </select>

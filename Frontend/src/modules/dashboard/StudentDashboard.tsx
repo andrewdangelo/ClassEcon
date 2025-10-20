@@ -28,6 +28,7 @@ import {
 import { cn } from "@/lib/utils";
 import StudentActivityWidget from "@/components/activity/StudentActivityWidget";
 import BalanceOverTimeChart from "@/components/activity/BalanceOverTimeChart";
+import JoinClassModal from "@/components/classes/JoinClassModal";
 
 export default function StudentDashboard() {
   const { currentClassId, current } = useCurrentClass();
@@ -71,12 +72,13 @@ export default function StudentDashboard() {
   if (!currentClassId) {
     return (
       <div className="flex items-center justify-center min-h-64">
-        <div className="text-center">
+        <div className="text-center space-y-4">
           <ShoppingBag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">No Class Selected</h3>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mb-4">
             Join a class to start participating in the classroom economy.
           </p>
+          <JoinClassModal />
         </div>
       </div>
     );
@@ -115,9 +117,12 @@ export default function StudentDashboard() {
             {current?.name || "Your classroom economy progress"}
           </p>
         </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Clock className="h-4 w-4" />
-          <span>Last updated: {new Date().toLocaleTimeString()}</span>
+        <div className="flex items-center gap-4">
+          <JoinClassModal />
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Clock className="h-4 w-4" />
+            <span>Last updated: {new Date().toLocaleTimeString()}</span>
+          </div>
         </div>
       </div>
 
