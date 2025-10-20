@@ -43,6 +43,7 @@ import MyActivityPage from "./modules/activity/MyActivityPage";
 import { LanguageProvider } from "@/i18n/LanguageContext";
 import SettingsPage from "./modules/settings/SettingsPage";
 import BetaCodesManagement from "./modules/admin/BetaCodesManagement";
+import { SubscriptionSettingsPage } from "./pages/SubscriptionSettings";
 
 const client = createApolloClient();
 
@@ -147,6 +148,14 @@ const router = createBrowserRouter([
         ) 
       },
       { path: "settings", element: <SettingsPage /> },
+      { 
+        path: "settings/subscription", 
+        element: (
+          <RequireTeacher>
+            <SubscriptionSettingsPage />
+          </RequireTeacher>
+        ) 
+      },
       { 
         path: "admin/beta-codes", 
         element: (

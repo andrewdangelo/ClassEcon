@@ -207,6 +207,14 @@ export enum EmploymentStatus {
   Ended = 'ENDED'
 }
 
+export type FeatureCheckResult = {
+  __typename?: 'FeatureCheckResult';
+  allowed: Scalars['Boolean']['output'];
+  currentUsage?: Maybe<Scalars['Int']['output']>;
+  limit?: Maybe<Scalars['Int']['output']>;
+  reason?: Maybe<Scalars['String']['output']>;
+};
+
 export type Fine = {
   __typename?: 'Fine';
   amount: Scalars['Int']['output'];
@@ -348,8 +356,10 @@ export type Mutation = {
   approveJobApplication: JobApplication;
   approvePayRequest: PayRequest;
   approveRedemption: RedemptionRequest;
+  cancelSubscription: SubscriptionPlan;
   clearAllNotifications: Scalars['Boolean']['output'];
   createBetaCode: BetaAccessCode;
+  createCheckoutSession: Scalars['String']['output'];
   createClass: Class;
   createJob: Job;
   createPayRequest: PayRequest;
@@ -370,6 +380,7 @@ export type Mutation = {
   markAllNotificationsAsRead: Scalars['Boolean']['output'];
   markNotificationAsRead: Notification;
   oauthLogin: AuthPayload;
+  reactivateSubscription: SubscriptionPlan;
   rebukePayRequest: PayRequest;
   refreshAccessToken: Scalars['String']['output'];
   rejectJobApplication: JobApplication;
@@ -426,6 +437,11 @@ export type MutationCreateBetaCodeArgs = {
   description?: InputMaybe<Scalars['String']['input']>;
   expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
   maxUses?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type MutationCreateCheckoutSessionArgs = {
+  planTier: PlanTier;
 };
 
 
@@ -668,6 +684,43 @@ export type Payslip = {
   updatedAt: Scalars['DateTime']['output'];
 };
 
+export type PlanInfo = {
+  __typename?: 'PlanInfo';
+  billingPeriod: Scalars['String']['output'];
+  features: Array<Scalars['String']['output']>;
+  limits: PlanLimits;
+  name: Scalars['String']['output'];
+  price: Scalars['Float']['output'];
+  stripePriceId?: Maybe<Scalars['String']['output']>;
+  tier: PlanTier;
+};
+
+export type PlanLimits = {
+  __typename?: 'PlanLimits';
+  analytics: Scalars['Boolean']['output'];
+  customCurrency: Scalars['Boolean']['output'];
+  exportData: Scalars['Boolean']['output'];
+  maxClasses?: Maybe<Scalars['Int']['output']>;
+  maxJobs?: Maybe<Scalars['Int']['output']>;
+  maxStoreItems?: Maybe<Scalars['Int']['output']>;
+  maxStudentsPerClass?: Maybe<Scalars['Int']['output']>;
+  prioritySupport: Scalars['Boolean']['output'];
+};
+
+export enum PlanStatus {
+  Active = 'ACTIVE',
+  Cancelled = 'CANCELLED',
+  Expired = 'EXPIRED',
+  Trial = 'TRIAL'
+}
+
+export enum PlanTier {
+  Basic = 'BASIC',
+  Enterprise = 'ENTERPRISE',
+  FreeTrial = 'FREE_TRIAL',
+  Premium = 'PREMIUM'
+}
+
 export type Purchase = {
   __typename?: 'Purchase';
   accountId: Scalars['ID']['output'];
@@ -702,6 +755,10 @@ export enum PurchaseStatus {
 export type Query = {
   __typename?: 'Query';
   account?: Maybe<Account>;
+  availablePlans: Array<PlanInfo>;
+  canAddStudent: FeatureCheckResult;
+  canCreateClass: FeatureCheckResult;
+  checkFeatureAccess: FeatureCheckResult;
   class?: Maybe<Class>;
   classStatistics: ClassStatistics;
   classes: Array<Class>;
@@ -719,6 +776,7 @@ export type Query = {
   me?: Maybe<User>;
   membershipsByClass: Array<Membership>;
   myClasses: Array<Class>;
+  mySubscription: SubscriptionPlan;
   notifications: Array<Notification>;
   payRequest?: Maybe<PayRequest>;
   payRequestComments: Array<PayRequestComment>;
@@ -743,6 +801,16 @@ export type Query = {
 export type QueryAccountArgs = {
   classId: Scalars['ID']['input'];
   studentId: Scalars['ID']['input'];
+};
+
+
+export type QueryCanAddStudentArgs = {
+  classId: Scalars['ID']['input'];
+};
+
+
+export type QueryCheckFeatureAccessArgs = {
+  feature: Scalars['String']['input'];
 };
 
 
@@ -1049,6 +1117,24 @@ export type SubscriptionPayRequestStatusChangedArgs = {
 
 export type SubscriptionPayRequestUpdatedArgs = {
   classId: Scalars['ID']['input'];
+};
+
+export type SubscriptionPlan = {
+  __typename?: 'SubscriptionPlan';
+  cancelAtPeriodEnd: Scalars['Boolean']['output'];
+  cancelledAt?: Maybe<Scalars['DateTime']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  currentPeriodEnd?: Maybe<Scalars['DateTime']['output']>;
+  currentPeriodStart?: Maybe<Scalars['DateTime']['output']>;
+  id: Scalars['ID']['output'];
+  limits: PlanLimits;
+  planTier: PlanTier;
+  status: PlanStatus;
+  stripeCustomerId?: Maybe<Scalars['String']['output']>;
+  stripeSubscriptionId?: Maybe<Scalars['String']['output']>;
+  trialEndsAt?: Maybe<Scalars['DateTime']['output']>;
+  updatedAt: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
 };
 
 export type Transaction = {
@@ -1683,6 +1769,52 @@ export type StudentsByTeacherQueryVariables = Exact<{ [key: string]: never; }>;
 
 export type StudentsByTeacherQuery = { __typename?: 'Query', studentsByTeacher: Array<{ __typename?: 'Student', id: string, name: string, balance: number, classId: string, class: { __typename?: 'Class', id: string, name: string, subject?: string | null, period?: string | null } }> };
 
+export type MySubscriptionQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type MySubscriptionQuery = { __typename?: 'Query', mySubscription: { __typename?: 'SubscriptionPlan', id: string, userId: string, planTier: PlanTier, status: PlanStatus, stripeCustomerId?: string | null, stripeSubscriptionId?: string | null, currentPeriodStart?: any | null, currentPeriodEnd?: any | null, trialEndsAt?: any | null, cancelAtPeriodEnd: boolean, cancelledAt?: any | null, createdAt: any, updatedAt: any, limits: { __typename?: 'PlanLimits', maxClasses?: number | null, maxStudentsPerClass?: number | null, maxStoreItems?: number | null, maxJobs?: number | null, customCurrency: boolean, analytics: boolean, exportData: boolean, prioritySupport: boolean } } };
+
+export type AvailablePlansQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type AvailablePlansQuery = { __typename?: 'Query', availablePlans: Array<{ __typename?: 'PlanInfo', tier: PlanTier, name: string, price: number, billingPeriod: string, features: Array<string>, stripePriceId?: string | null, limits: { __typename?: 'PlanLimits', maxClasses?: number | null, maxStudentsPerClass?: number | null, maxStoreItems?: number | null, maxJobs?: number | null, customCurrency: boolean, analytics: boolean, exportData: boolean, prioritySupport: boolean } }> };
+
+export type CheckFeatureAccessQueryVariables = Exact<{
+  feature: Scalars['String']['input'];
+}>;
+
+
+export type CheckFeatureAccessQuery = { __typename?: 'Query', checkFeatureAccess: { __typename?: 'FeatureCheckResult', allowed: boolean, currentUsage?: number | null, limit?: number | null, reason?: string | null } };
+
+export type CanCreateClassQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type CanCreateClassQuery = { __typename?: 'Query', canCreateClass: { __typename?: 'FeatureCheckResult', allowed: boolean, currentUsage?: number | null, limit?: number | null, reason?: string | null } };
+
+export type CanAddStudentQueryVariables = Exact<{
+  classId: Scalars['ID']['input'];
+}>;
+
+
+export type CanAddStudentQuery = { __typename?: 'Query', canAddStudent: { __typename?: 'FeatureCheckResult', allowed: boolean, currentUsage?: number | null, limit?: number | null, reason?: string | null } };
+
+export type CreateCheckoutSessionMutationVariables = Exact<{
+  planTier: PlanTier;
+}>;
+
+
+export type CreateCheckoutSessionMutation = { __typename?: 'Mutation', createCheckoutSession: string };
+
+export type CancelSubscriptionMutationVariables = Exact<{ [key: string]: never; }>;
+
+
+export type CancelSubscriptionMutation = { __typename?: 'Mutation', cancelSubscription: { __typename?: 'SubscriptionPlan', id: string, userId: string, planTier: PlanTier, status: PlanStatus, cancelAtPeriodEnd: boolean, cancelledAt?: any | null, createdAt: any, updatedAt: any, limits: { __typename?: 'PlanLimits', maxClasses?: number | null, maxStudentsPerClass?: number | null, maxStoreItems?: number | null, maxJobs?: number | null, customCurrency: boolean, analytics: boolean, exportData: boolean, prioritySupport: boolean } } };
+
+export type ReactivateSubscriptionMutationVariables = Exact<{ [key: string]: never; }>;
+
+
+export type ReactivateSubscriptionMutation = { __typename?: 'Mutation', reactivateSubscription: { __typename?: 'SubscriptionPlan', id: string, userId: string, planTier: PlanTier, status: PlanStatus, cancelAtPeriodEnd: boolean, cancelledAt?: any | null, createdAt: any, updatedAt: any, limits: { __typename?: 'PlanLimits', maxClasses?: number | null, maxStudentsPerClass?: number | null, maxStoreItems?: number | null, maxJobs?: number | null, customCurrency: boolean, analytics: boolean, exportData: boolean, prioritySupport: boolean } } };
+
 export type NotificationReceivedSubscriptionVariables = Exact<{
   userId: Scalars['ID']['input'];
 }>;
@@ -1791,6 +1923,14 @@ export const StudentTransactionsDocument = {"kind":"Document","definitions":[{"k
 export const StudentsByClassDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"StudentsByClass"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"classId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"studentsByClass"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"classId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"classId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"classId"}},{"kind":"Field","name":{"kind":"Name","value":"balance"}}]}}]}}]} as unknown as DocumentNode<StudentsByClassQuery, StudentsByClassQueryVariables>;
 export const StudentsDirectoryDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"StudentsDirectory"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"filter"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"StudentsFilter"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"limit"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}},"defaultValue":{"kind":"IntValue","value":"50"}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"offset"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}},"defaultValue":{"kind":"IntValue","value":"0"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"students"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"filter"},"value":{"kind":"Variable","name":{"kind":"Name","value":"filter"}}},{"kind":"Argument","name":{"kind":"Name","value":"limit"},"value":{"kind":"Variable","name":{"kind":"Name","value":"limit"}}},{"kind":"Argument","name":{"kind":"Name","value":"offset"},"value":{"kind":"Variable","name":{"kind":"Name","value":"offset"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"nodes"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}}]}}]} as unknown as DocumentNode<StudentsDirectoryQuery, StudentsDirectoryQueryVariables>;
 export const StudentsByTeacherDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"StudentsByTeacher"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"studentsByTeacher"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"balance"}},{"kind":"Field","name":{"kind":"Name","value":"classId"}},{"kind":"Field","name":{"kind":"Name","value":"class"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"subject"}},{"kind":"Field","name":{"kind":"Name","value":"period"}}]}}]}}]}}]} as unknown as DocumentNode<StudentsByTeacherQuery, StudentsByTeacherQueryVariables>;
+export const MySubscriptionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"MySubscription"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"mySubscription"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"planTier"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"limits"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"maxClasses"}},{"kind":"Field","name":{"kind":"Name","value":"maxStudentsPerClass"}},{"kind":"Field","name":{"kind":"Name","value":"maxStoreItems"}},{"kind":"Field","name":{"kind":"Name","value":"maxJobs"}},{"kind":"Field","name":{"kind":"Name","value":"customCurrency"}},{"kind":"Field","name":{"kind":"Name","value":"analytics"}},{"kind":"Field","name":{"kind":"Name","value":"exportData"}},{"kind":"Field","name":{"kind":"Name","value":"prioritySupport"}}]}},{"kind":"Field","name":{"kind":"Name","value":"stripeCustomerId"}},{"kind":"Field","name":{"kind":"Name","value":"stripeSubscriptionId"}},{"kind":"Field","name":{"kind":"Name","value":"currentPeriodStart"}},{"kind":"Field","name":{"kind":"Name","value":"currentPeriodEnd"}},{"kind":"Field","name":{"kind":"Name","value":"trialEndsAt"}},{"kind":"Field","name":{"kind":"Name","value":"cancelAtPeriodEnd"}},{"kind":"Field","name":{"kind":"Name","value":"cancelledAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]}}]} as unknown as DocumentNode<MySubscriptionQuery, MySubscriptionQueryVariables>;
+export const AvailablePlansDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"AvailablePlans"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"availablePlans"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"tier"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"price"}},{"kind":"Field","name":{"kind":"Name","value":"billingPeriod"}},{"kind":"Field","name":{"kind":"Name","value":"limits"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"maxClasses"}},{"kind":"Field","name":{"kind":"Name","value":"maxStudentsPerClass"}},{"kind":"Field","name":{"kind":"Name","value":"maxStoreItems"}},{"kind":"Field","name":{"kind":"Name","value":"maxJobs"}},{"kind":"Field","name":{"kind":"Name","value":"customCurrency"}},{"kind":"Field","name":{"kind":"Name","value":"analytics"}},{"kind":"Field","name":{"kind":"Name","value":"exportData"}},{"kind":"Field","name":{"kind":"Name","value":"prioritySupport"}}]}},{"kind":"Field","name":{"kind":"Name","value":"features"}},{"kind":"Field","name":{"kind":"Name","value":"stripePriceId"}}]}}]}}]} as unknown as DocumentNode<AvailablePlansQuery, AvailablePlansQueryVariables>;
+export const CheckFeatureAccessDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"CheckFeatureAccess"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"feature"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"checkFeatureAccess"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"feature"},"value":{"kind":"Variable","name":{"kind":"Name","value":"feature"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"allowed"}},{"kind":"Field","name":{"kind":"Name","value":"currentUsage"}},{"kind":"Field","name":{"kind":"Name","value":"limit"}},{"kind":"Field","name":{"kind":"Name","value":"reason"}}]}}]}}]} as unknown as DocumentNode<CheckFeatureAccessQuery, CheckFeatureAccessQueryVariables>;
+export const CanCreateClassDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"CanCreateClass"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"canCreateClass"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"allowed"}},{"kind":"Field","name":{"kind":"Name","value":"currentUsage"}},{"kind":"Field","name":{"kind":"Name","value":"limit"}},{"kind":"Field","name":{"kind":"Name","value":"reason"}}]}}]}}]} as unknown as DocumentNode<CanCreateClassQuery, CanCreateClassQueryVariables>;
+export const CanAddStudentDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"CanAddStudent"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"classId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"canAddStudent"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"classId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"classId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"allowed"}},{"kind":"Field","name":{"kind":"Name","value":"currentUsage"}},{"kind":"Field","name":{"kind":"Name","value":"limit"}},{"kind":"Field","name":{"kind":"Name","value":"reason"}}]}}]}}]} as unknown as DocumentNode<CanAddStudentQuery, CanAddStudentQueryVariables>;
+export const CreateCheckoutSessionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CreateCheckoutSession"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"planTier"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"PlanTier"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"createCheckoutSession"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"planTier"},"value":{"kind":"Variable","name":{"kind":"Name","value":"planTier"}}}]}]}}]} as unknown as DocumentNode<CreateCheckoutSessionMutation, CreateCheckoutSessionMutationVariables>;
+export const CancelSubscriptionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CancelSubscription"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cancelSubscription"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"planTier"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"limits"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"maxClasses"}},{"kind":"Field","name":{"kind":"Name","value":"maxStudentsPerClass"}},{"kind":"Field","name":{"kind":"Name","value":"maxStoreItems"}},{"kind":"Field","name":{"kind":"Name","value":"maxJobs"}},{"kind":"Field","name":{"kind":"Name","value":"customCurrency"}},{"kind":"Field","name":{"kind":"Name","value":"analytics"}},{"kind":"Field","name":{"kind":"Name","value":"exportData"}},{"kind":"Field","name":{"kind":"Name","value":"prioritySupport"}}]}},{"kind":"Field","name":{"kind":"Name","value":"cancelAtPeriodEnd"}},{"kind":"Field","name":{"kind":"Name","value":"cancelledAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]}}]} as unknown as DocumentNode<CancelSubscriptionMutation, CancelSubscriptionMutationVariables>;
+export const ReactivateSubscriptionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"ReactivateSubscription"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"reactivateSubscription"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"planTier"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"limits"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"maxClasses"}},{"kind":"Field","name":{"kind":"Name","value":"maxStudentsPerClass"}},{"kind":"Field","name":{"kind":"Name","value":"maxStoreItems"}},{"kind":"Field","name":{"kind":"Name","value":"maxJobs"}},{"kind":"Field","name":{"kind":"Name","value":"customCurrency"}},{"kind":"Field","name":{"kind":"Name","value":"analytics"}},{"kind":"Field","name":{"kind":"Name","value":"exportData"}},{"kind":"Field","name":{"kind":"Name","value":"prioritySupport"}}]}},{"kind":"Field","name":{"kind":"Name","value":"cancelAtPeriodEnd"}},{"kind":"Field","name":{"kind":"Name","value":"cancelledAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]}}]} as unknown as DocumentNode<ReactivateSubscriptionMutation, ReactivateSubscriptionMutationVariables>;
 export const NotificationReceivedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"NotificationReceived"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"userId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"notificationReceived"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"userId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"userId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"relatedId"}},{"kind":"Field","name":{"kind":"Name","value":"relatedType"}},{"kind":"Field","name":{"kind":"Name","value":"isRead"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]}}]} as unknown as DocumentNode<NotificationReceivedSubscription, NotificationReceivedSubscriptionVariables>;
 export const PayRequestCreatedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"PayRequestCreated"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"classId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"payRequestCreated"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"classId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"classId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"student"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"amount"}},{"kind":"Field","name":{"kind":"Name","value":"reason"}},{"kind":"Field","name":{"kind":"Name","value":"justification"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}}]}}]}}]} as unknown as DocumentNode<PayRequestCreatedSubscription, PayRequestCreatedSubscriptionVariables>;
 export const PayRequestStatusChangedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"PayRequestStatusChanged"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"classId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"payRequestStatusChanged"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"classId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"classId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"amount"}},{"kind":"Field","name":{"kind":"Name","value":"teacherComment"}}]}}]}}]} as unknown as DocumentNode<PayRequestStatusChangedSubscription, PayRequestStatusChangedSubscriptionVariables>;

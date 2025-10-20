@@ -48,6 +48,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import RecentFinesWidget from "@/components/fines/RecentFinesWidget";
 import { IssueFineDialog } from "@/components/fines/IssueFineDialog";
+import { SubscriptionBanner } from "@/components/subscription/SubscriptionBanner";
 
 // Widget type definitions
 type WidgetType = 
@@ -305,6 +306,9 @@ export default function TeacherDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Subscription Banner */}
+      <SubscriptionBanner />
+      
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

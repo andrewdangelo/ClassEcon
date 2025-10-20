@@ -10,6 +10,7 @@ import { useAppDispatch } from "@/redux/store/store";
 import { clearAuth } from "@/redux/authSlice";
 import { LOGOUT } from "@/graphql/mutations/auth";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { SubscriptionBannerCompact } from "@/components/subscription/SubscriptionBanner";
 
 export function Layout() {
   const [open, setOpen] = React.useState(false);
@@ -44,6 +45,9 @@ export function Layout() {
     <div className={cn("min-h-screen", compact ? "md:pl-56" : "md:pl-72")}>
       {/* Sidebar */}
       <Sidebar open={open} onClose={() => setOpen(false)} />
+
+      {/* Subscription Banner */}
+      {role === "TEACHER" && <SubscriptionBannerCompact />}
 
       {/* Top bar */}
       <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur">

@@ -1,0 +1,127 @@
+# Subscription queries
+query MySubscription {
+  mySubscription {
+    id
+    userId
+    planTier
+    status
+    limits {
+      maxClasses
+      maxStudentsPerClass
+      maxStoreItems
+      maxJobs
+      customCurrency
+      analytics
+      exportData
+      prioritySupport
+    }
+    stripeCustomerId
+    stripeSubscriptionId
+    currentPeriodStart
+    currentPeriodEnd
+    trialEndsAt
+    cancelAtPeriodEnd
+    cancelledAt
+    createdAt
+    updatedAt
+  }
+}
+
+query AvailablePlans {
+  availablePlans {
+    tier
+    name
+    price
+    billingPeriod
+    limits {
+      maxClasses
+      maxStudentsPerClass
+      maxStoreItems
+      maxJobs
+      customCurrency
+      analytics
+      exportData
+      prioritySupport
+    }
+    features
+    stripePriceId
+  }
+}
+
+query CheckFeatureAccess($feature: String!) {
+  checkFeatureAccess(feature: $feature) {
+    allowed
+    currentUsage
+    limit
+    reason
+  }
+}
+
+query CanCreateClass {
+  canCreateClass {
+    allowed
+    currentUsage
+    limit
+    reason
+  }
+}
+
+query CanAddStudent($classId: ID!) {
+  canAddStudent(classId: $classId) {
+    allowed
+    currentUsage
+    limit
+    reason
+  }
+}
+
+# Subscription mutations
+mutation CreateCheckoutSession($planTier: PlanTier!) {
+  createCheckoutSession(planTier: $planTier)
+}
+
+mutation CancelSubscription {
+  cancelSubscription {
+    id
+    userId
+    planTier
+    status
+    limits {
+      maxClasses
+      maxStudentsPerClass
+      maxStoreItems
+      maxJobs
+      customCurrency
+      analytics
+      exportData
+      prioritySupport
+    }
+    cancelAtPeriodEnd
+    cancelledAt
+    createdAt
+    updatedAt
+  }
+}
+
+mutation ReactivateSubscription {
+  reactivateSubscription {
+    id
+    userId
+    planTier
+    status
+    limits {
+      maxClasses
+      maxStudentsPerClass
+      maxStoreItems
+      maxJobs
+      customCurrency
+      analytics
+      exportData
+      prioritySupport
+    }
+    cancelAtPeriodEnd
+    cancelledAt
+    createdAt
+    updatedAt
+  }
+}

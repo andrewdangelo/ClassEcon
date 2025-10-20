@@ -87,6 +87,20 @@ export const typeDefs = [
       WAIVED
     }
 
+    enum PlanTier {
+      FREE_TRIAL
+      BASIC
+      PREMIUM
+      ENTERPRISE
+    }
+
+    enum PlanStatus {
+      ACTIVE
+      TRIAL
+      CANCELLED
+      EXPIRED
+    }
+
     type AuthPayload {
       user: User!
       accessToken: String!
@@ -398,6 +412,53 @@ export const typeDefs = [
       updatedAt: DateTime!
     }
 
+    # ---------- Subscription System ----------
+    type PlanLimits {
+      maxClasses: Int
+      maxStudentsPerClass: Int
+      maxStoreItems: Int
+      maxJobs: Int
+      customCurrency: Boolean!
+      analytics: Boolean!
+      exportData: Boolean!
+      prioritySupport: Boolean!
+    }
+
+    type PlanInfo {
+      tier: PlanTier!
+      name: String!
+      price: Float!
+      billingPeriod: String!
+      limits: PlanLimits!
+      features: [String!]!
+      stripePriceId: String
+    }
+
+    type SubscriptionPlan {
+      id: ID!
+      userId: ID!
+      planTier: PlanTier!
+      status: PlanStatus!
+      limits: PlanLimits!
+      stripeCustomerId: String
+      stripeSubscriptionId: String
+      currentPeriodStart: DateTime
+      currentPeriodEnd: DateTime
+      trialEndsAt: DateTime
+      cancelAtPeriodEnd: Boolean!
+      cancelledAt: DateTime
+      createdAt: DateTime!
+      updatedAt: DateTime!
+    }
+
+    type FeatureCheckResult {
+      allowed: Boolean!
+      currentUsage: Int
+      limit: Int
+      reason: String
+    }
+
+    # ---------- Compatibility DTOs ----------
     # Compatibility DTO for Student (User+Membership+Account+Balance)
     type Student {
       id: ID!
@@ -605,6 +666,13 @@ export const typeDefs = [
       finesByClass(classId: ID!, status: FineStatus): [Fine!]!
       finesByStudent(studentId: ID!, classId: ID!): [Fine!]!
       fine(id: ID!): Fine
+
+      # Subscription
+      mySubscription: SubscriptionPlan!
+      availablePlans: [PlanInfo!]!
+      checkFeatureAccess(feature: String!): FeatureCheckResult!
+      canCreateClass: FeatureCheckResult!
+      canAddStudent(classId: ID!): FeatureCheckResult!
     }
     
     type ClassStatistics {
@@ -742,6 +810,11 @@ export const typeDefs = [
       validateBetaCode(code: String!): BetaAccessValidation!
       createBetaCode(code: String!, description: String, maxUses: Int = 1, expiresAt: DateTime): BetaAccessCode!
       deactivateBetaCode(id: ID!): BetaAccessCode!
+
+      # Subscription management
+      createCheckoutSession(planTier: PlanTier!): String!
+      cancelSubscription: SubscriptionPlan!
+      reactivateSubscription: SubscriptionPlan!
     }
 
     type Subscription {

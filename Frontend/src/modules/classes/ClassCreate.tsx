@@ -11,6 +11,8 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CREATE_CLASS } from "@/graphql/mutations/createClass";
 import { ArrowLeft } from "lucide-react";
+import { useCanCreateClass } from "@/hooks/useSubscription";
+import { FeatureLimitGate } from "@/components/subscription/FeatureGate";
 
 const jobPeriods = ["WEEKLY", "MONTHLY", "SEMESTER"] as const;
 const currencyRegex = /^[A-Z$€£¥]{1,4}$/;
@@ -66,6 +68,7 @@ export default function ClassCreate() {
   const { push } = useToast();
   const navigate = useNavigate();
   const [mode, setMode] = React.useState<Mode>("edit");
+  const { canCreate, currentUsage, limit } = useCanCreateClass();
 
   const [createClassMutation] = useMutation(CREATE_CLASS);
 
@@ -179,9 +182,14 @@ export default function ClassCreate() {
   // =========================
   if (mode === "edit") {
     return (
-      <div className="space-y-6 max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center gap-4">
+      <FeatureLimitGate 
+        feature="maxClasses" 
+        currentUsage={currentUsage || 0}
+        showWarning={true}
+      >
+        <div className="space-y-6 max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="flex items-center gap-4">
           <Button
             variant="outline"
             size="sm"
@@ -455,6 +463,7 @@ export default function ClassCreate() {
         </div>
       </form>
       </div>
+      </FeatureLimitGate>
     );
   }
 

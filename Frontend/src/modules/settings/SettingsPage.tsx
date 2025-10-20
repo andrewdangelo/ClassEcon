@@ -5,11 +5,15 @@ import { Button } from "@/components/ui/button";
 import { useTheme } from "@/context/ThemeContext";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Language, languages } from "@/i18n/config";
-import { Moon, Sun, Globe, Check } from "lucide-react";
+import { Moon, Sun, Globe, Check, Crown } from "lucide-react";
+import { useClassContext } from "@/context/ClassContext";
+import { Link } from "react-router-dom";
+import { PlanBadge } from "@/components/subscription/FeatureGate";
 
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
+  const { role } = useClassContext();
 
   return (
     <div className="container max-w-4xl py-8">
@@ -21,6 +25,37 @@ export default function SettingsPage() {
       </div>
 
       <div className="space-y-6">
+        {/* Subscription Section - Teachers Only */}
+        {role === "TEACHER" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Crown className="h-5 w-5 text-amber-500" />
+                Subscription
+              </CardTitle>
+              <CardDescription>
+                Manage your subscription plan and billing
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-base font-medium">Current Plan</Label>
+                    <PlanBadge />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    View and manage your subscription
+                  </p>
+                </div>
+                <Link to="/settings/subscription">
+                  <Button variant="outline">Manage Subscription</Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Appearance Section */}
         <Card>
           <CardHeader>

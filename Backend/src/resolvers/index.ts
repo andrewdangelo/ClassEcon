@@ -6,14 +6,22 @@ import { Class } from "./Class";
 import { PayRequest } from "./PayRequest";
 import { Student } from "./Student";
 import { Fine } from "./Fine";
+import { SubscriptionPlanResolvers } from "./SubscriptionPlan";
 import { pickId } from "./helpers";
 import { StoreItem, Purchase, User, RedemptionRequest, Job, JobApplication } from "../models";
 
 export const resolvers = {
   ...scalars,
-  Query,
-  Mutation,
+  Query: {
+    ...Query,
+    ...SubscriptionPlanResolvers.Query,
+  },
+  Mutation: {
+    ...Mutation,
+    ...SubscriptionPlanResolvers.Mutation,
+  },
   Subscription,
+  SubscriptionPlan: SubscriptionPlanResolvers.SubscriptionPlan,
   Class,
   PayRequest,
   Student,

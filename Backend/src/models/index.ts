@@ -17,3 +17,4 @@ export * from "./Notification";
 export * from "./RedemptionRequest";
 export * from "./Fine";
 export * from "./BetaAccessCode";
+export * from "./Subscription";
