@@ -1,12 +1,22 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 type Role = "TEACHER" | "STUDENT" | "PARENT";
+type SubscriptionTier = "FREE" | "TRIAL" | "STARTER" | "PROFESSIONAL" | "SCHOOL";
+type SubscriptionStatus = "ACTIVE" | "TRIAL" | "EXPIRED" | "CANCELED" | "PAST_DUE";
 
 export type User = {
   id: string;
   name: string;
   email?: string;
   role: Role;
+  subscriptionTier?: SubscriptionTier;
+  subscriptionStatus?: SubscriptionStatus;
+  subscriptionExpiresAt?: string;
+  trialStartedAt?: string;
+  trialEndsAt?: string;
+  isFoundingMember?: boolean;
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
 };
 
 interface AuthState {

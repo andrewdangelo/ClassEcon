@@ -24,6 +24,22 @@ export const typeDefs = [
       DISABLED
     }
 
+    enum SubscriptionTier {
+      FREE
+      TRIAL
+      STARTER
+      PROFESSIONAL
+      SCHOOL
+    }
+
+    enum SubscriptionStatus {
+      ACTIVE
+      TRIAL
+      EXPIRED
+      CANCELED
+      PAST_DUE
+    }
+
     enum TransactionType {
       DEPOSIT
       WITHDRAWAL
@@ -118,6 +134,14 @@ export const typeDefs = [
       createdAt: DateTime!
       updatedAt: DateTime!
       hasBetaAccess: Boolean!
+      subscriptionTier: SubscriptionTier!
+      subscriptionStatus: SubscriptionStatus!
+      subscriptionExpiresAt: DateTime
+      trialStartedAt: DateTime
+      trialEndsAt: DateTime
+      isFoundingMember: Boolean!
+      stripeCustomerId: String
+      stripeSubscriptionId: String
     }
 
     type BetaAccessCode {

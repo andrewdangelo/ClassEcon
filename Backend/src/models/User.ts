@@ -1,5 +1,5 @@
 import { Schema, model, Types } from "mongoose";
-import type { Role, UserStatus } from "../utils/enums";
+import type { Role, UserStatus, SubscriptionTier, SubscriptionStatus } from "../utils/enums";
 
 export interface IUser {
   _id: Types.ObjectId;
@@ -12,6 +12,14 @@ export interface IUser {
   oauthProviderId?: string | null;
   profilePicture?: string | null;
   hasBetaAccess: boolean;
+  subscriptionTier: SubscriptionTier;
+  subscriptionStatus: SubscriptionStatus;
+  subscriptionExpiresAt?: Date | null;
+  trialStartedAt?: Date | null;
+  trialEndsAt?: Date | null;
+  isFoundingMember: boolean;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,6 +44,22 @@ const UserSchema = new Schema<IUser>(
     oauthProviderId: { type: String, default: null },
     profilePicture: { type: String, default: null },
     hasBetaAccess: { type: Boolean, default: false },
+    subscriptionTier: {
+      type: String,
+      enum: ["FREE", "TRIAL", "STARTER", "PROFESSIONAL", "SCHOOL"],
+      default: "FREE",
+    },
+    subscriptionStatus: {
+      type: String,
+      enum: ["ACTIVE", "TRIAL", "EXPIRED", "CANCELED", "PAST_DUE"],
+      default: "ACTIVE",
+    },
+    subscriptionExpiresAt: { type: Date, default: null },
+    trialStartedAt: { type: Date, default: null },
+    trialEndsAt: { type: Date, default: null },
+    isFoundingMember: { type: Boolean, default: false },
+    stripeCustomerId: { type: String, default: null },
+    stripeSubscriptionId: { type: String, default: null },
   },
   { timestamps: true }
 );
