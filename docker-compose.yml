@@ -1,6 +1,24 @@
 version: '3.8'
 
 services:
+  mongodb:
+    image: mongo:7
+    container_name: classecon-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=classecon
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+    networks:
+      - classecon-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/classecon --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   auth-service:
     build:
       context: ./AuthService
@@ -43,3 +61,7 @@ services:
 networks:
   classecon-network:
     driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local

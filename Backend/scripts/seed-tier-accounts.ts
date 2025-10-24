@@ -8,12 +8,13 @@
 
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import dotenv from "dotenv";
+import { connectMongo } from "../src/db/connection";
 import { User } from "../src/models/User";
 import { Classroom } from "../src/models/Classroom";
-import { Class } from "../src/models/Class";
+import { ClassModel } from "../src/models/Class";
 import { Membership } from "../src/models/Membership";
 import { Account } from "../src/models/Account";
-import dotenv from "dotenv";
 
 dotenv.config();
 
@@ -164,7 +165,7 @@ const TEST_ACCOUNTS = [
 async function seedTierAccounts() {
   try {
     console.log("🔗 Connecting to MongoDB...");
-    await mongoose.connect(MONGO_URI);
+    await connectMongo(MONGO_URI);
     console.log("✅ Connected to MongoDB");
 
     console.log("\n🗑️  Cleaning up existing test accounts...");
@@ -180,7 +181,7 @@ async function seedTierAccounts() {
       name: { $regex: /Tier Economics|Founding Member Economics/ }
     });
     
-    await Class.deleteMany({
+    await ClassModel.deleteMany({
       name: { $regex: /Tier Economics|Founding Member Economics/ }
     });
 
@@ -238,7 +239,7 @@ async function seedTierAccounts() {
       console.log(`   ✅ Classroom created`);
 
       // Create class
-      const classDoc = await Class.create({
+      const classDoc = await ClassModel.create({
         classroomId: classroom._id,
         name: config.className,
         slug: config.className.toLowerCase().replace(/\s+/g, "-"),
@@ -262,7 +263,7 @@ async function seedTierAccounts() {
       // Create memberships
       await Membership.create({
         userId: teacher._id,
-        classId: [classDoc._id],
+        classIds: [classDoc._id],
         role: "TEACHER",
         status: "ACTIVE",
       });
@@ -270,7 +271,7 @@ async function seedTierAccounts() {
       for (const student of students) {
         await Membership.create({
           userId: student._id,
-          classId: [classDoc._id],
+          classIds: [classDoc._id],
           role: "STUDENT",
           status: "ACTIVE",
         });
