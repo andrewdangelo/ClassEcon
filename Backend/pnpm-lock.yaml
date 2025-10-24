@@ -56,6 +56,9 @@ importers:
       node-cron:
         specifier: ^4.2.1
         version: 4.2.1
+      stripe:
+        specifier: ^19.1.0
+        version: 19.1.0(@types/node@24.3.1)
       ws:
         specifier: ^8.18.3
         version: 8.18.3
@@ -1120,6 +1123,15 @@ packages:
   statuses@2.0.1:
     resolution: {integrity: sha512-RwNA9Z/7PrK06rYLIzFMlaF+l73iwpzsqRIFgbMLbTcLD6cOao82TaWefPXQvB2fOC4AjuYSEndS7N/mTCbkdQ==}
     engines: {node: '>= 0.8'}
+
+  stripe@19.1.0:
+    resolution: {integrity: sha512-FjgIiE98dMMTNssfdjMvFdD4eZyEzdWAOwPYqzhPRNZeg9ggFWlPXmX1iJKD5pPIwZBaPlC3SayQQkwsPo6/YQ==}
+    engines: {node: '>=16'}
+    peerDependencies:
+      '@types/node': '>=16'
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
 
   to-buffer@1.2.1:
     resolution: {integrity: sha512-tB82LpAIWjhLYbqjx3X4zEeHN6M8CiuOEy2JY8SEQVdYRe3CCHOFaqrBW1doLDrfpWhplcW7BL+bO3/6S3pcDQ==}
@@ -2212,6 +2224,12 @@ snapshots:
       memory-pager: 1.5.0
 
   statuses@2.0.1: {}
+
+  stripe@19.1.0(@types/node@24.3.1):
+    dependencies:
+      qs: 6.13.0
+    optionalDependencies:
+      '@types/node': 24.3.1
 
   to-buffer@1.2.1:
     dependencies:
