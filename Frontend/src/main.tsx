@@ -44,6 +44,7 @@ import { LanguageProvider } from "@/i18n/LanguageContext";
 import SettingsPage from "./modules/settings/SettingsPage";
 import BetaCodesManagement from "./modules/admin/BetaCodesManagement";
 import { SubscriptionSettingsPage } from "./pages/SubscriptionSettings";
+import TierTestingPage from "./pages/TierTestingPage";
 
 const client = createApolloClient();
 
@@ -163,6 +164,10 @@ const router = createBrowserRouter([
             <BetaCodesManagement />
           </RequireTeacher>
         ) 
+      },
+      { 
+        path: "dev/tier-testing", 
+        element: <TierTestingPage /> 
       },
       { path: "dev/graphql-test", element: <GraphQLTest /> },
     ],

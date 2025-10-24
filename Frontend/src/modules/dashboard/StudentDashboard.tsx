@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import StudentActivityWidget from "@/components/activity/StudentActivityWidget";
 import BalanceOverTimeChart from "@/components/activity/BalanceOverTimeChart";
 import JoinClassModal from "@/components/classes/JoinClassModal";
+import { FeatureGate } from "@/components/subscription/TierComponents";
 
 export default function StudentDashboard() {
   const { currentClassId, current } = useCurrentClass();
@@ -126,14 +127,16 @@ export default function StudentDashboard() {
         </div>
       </div>
 
-      {/* Balance Over Time Chart */}
+      {/* Balance Over Time Chart - Professional+ feature */}
       {user?.id && currentClassId && (
-        <BalanceOverTimeChart 
-          studentId={user.id}
-          classId={currentClassId}
-          currentBalance={myBalance}
-          defaultCurrency={current?.defaultCurrency || "CE$"}
-        />
+        <FeatureGate feature="balanceHistory">
+          <BalanceOverTimeChart 
+            studentId={user.id}
+            classId={currentClassId}
+            currentBalance={myBalance}
+            defaultCurrency={current?.defaultCurrency || "CE$"}
+          />
+        </FeatureGate>
       )}
 
       {/* Main Stats Grid */}
@@ -297,13 +300,15 @@ export default function StudentDashboard() {
         </Card>
       </div>
 
-      {/* Activity Widget */}
+      {/* Activity Widget - Professional+ feature */}
       {user?.id && currentClassId && (
-        <StudentActivityWidget 
-          studentId={user.id}
-          classId={currentClassId}
-          defaultCurrency={current?.defaultCurrency || "CE$"}
-        />
+        <FeatureGate feature="activityTracking">
+          <StudentActivityWidget 
+            studentId={user.id}
+            classId={currentClassId}
+            defaultCurrency={current?.defaultCurrency || "CE$"}
+          />
+        </FeatureGate>
       )}
     </div>
   );

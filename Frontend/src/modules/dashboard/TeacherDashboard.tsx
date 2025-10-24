@@ -49,6 +49,8 @@ import { Badge } from "@/components/ui/badge";
 import RecentFinesWidget from "@/components/fines/RecentFinesWidget";
 import { IssueFineDialog } from "@/components/fines/IssueFineDialog";
 import { SubscriptionBanner } from "@/components/subscription/SubscriptionBanner";
+import { TierBadge, TrialBanner } from "@/components/subscription/TierComponents";
+import { useSubscriptionTier, useClassLimit } from "@/hooks/useSubscriptionTier";
 
 // Widget type definitions
 type WidgetType = 
@@ -197,6 +199,10 @@ export default function TeacherDashboard() {
   const navigate = useNavigate();
   const { currentClassId } = useClassContext();
 
+  // Subscription tier info
+  const { tier, isTrialActive, daysRemainingInTrial } = useSubscriptionTier();
+  const { exceeded: classLimitExceeded, limit: classLimit, remaining: classesRemaining } = useClassLimit(0); // Will update with actual count
+
   // Edit mode state
   const [isEditMode, setIsEditMode] = React.useState(false);
   const [isAddWidgetDialogOpen, setIsAddWidgetDialogOpen] = React.useState(false);
@@ -306,14 +312,18 @@ export default function TeacherDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Trial Banner */}
+      <TrialBanner />
+      
       {/* Subscription Banner */}
       <SubscriptionBanner />
       
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-3">
             Teacher Dashboard
+            <TierBadge />
           </h1>
           <p className="text-muted-foreground">
             {isEditMode ? "Edit your dashboard - Add or remove widgets" : "Overview of all your classroom economies"}
