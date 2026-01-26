@@ -16,7 +16,7 @@ import { Types } from 'mongoose';
 
 // Initialize Stripe with test key
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-11-20.acacia',
+  apiVersion: '2025-09-30.clover',
   typescript: true,
 });
 
@@ -264,7 +264,7 @@ export class StripeService {
     }
 
     try {
-      const invoice = await stripe.invoices.retrieveUpcoming({
+      const invoice = await stripe.invoices.createPreview({
         subscription: user.stripeSubscriptionId,
       });
       return invoice;
@@ -329,7 +329,7 @@ export class StripeService {
     if (status === 'active') {
       user.subscriptionStatus = 'ACTIVE';
     } else if (status === 'canceled' || status === 'unpaid') {
-      user.subscriptionStatus = 'CANCELLED';
+      user.subscriptionStatus = 'CANCELED';
     } else if (status === 'past_due') {
       user.subscriptionStatus = 'PAST_DUE';
     } else if (status === 'trialing') {
@@ -337,8 +337,9 @@ export class StripeService {
     }
 
     // Update expiration date
-    if (subscription.current_period_end) {
-      user.subscriptionExpiresAt = new Date(subscription.current_period_end * 1000);
+    const periodEnd = (subscription as any).current_period_end;
+    if (periodEnd) {
+      user.subscriptionExpiresAt = new Date(periodEnd * 1000);
     }
 
     // Check if scheduled for cancellation
@@ -368,7 +369,7 @@ export class StripeService {
 
     // Downgrade to FREE tier
     user.subscriptionTier = 'FREE';
-    user.subscriptionStatus = 'CANCELLED';
+    user.subscriptionStatus = 'CANCELED';
     user.stripeSubscriptionId = null;
     user.subscriptionExpiresAt = null;
 

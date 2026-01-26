@@ -38,8 +38,8 @@ export const stripeSubscriptionResolvers = {
         trialEndsAt: user.trialEndsAt,
         isFoundingMember: user.isFoundingMember,
         cancelAtPeriodEnd: stripeSubscription?.cancel_at_period_end || false,
-        currentPeriodEnd: stripeSubscription?.current_period_end
-          ? new Date((stripeSubscription.current_period_end as number) * 1000)
+        currentPeriodEnd: (stripeSubscription as any)?.current_period_end
+          ? new Date(((stripeSubscription as any).current_period_end as number) * 1000)
           : null,
       };
     },
