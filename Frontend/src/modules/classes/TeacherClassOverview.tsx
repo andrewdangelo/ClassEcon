@@ -5,7 +5,8 @@ import {useQuery } from "@apollo/client/react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { Copy, Share2 } from "lucide-react";
+import { Copy, Share2, Settings } from "lucide-react";
+import { ClassSettingsModal } from "@/components/classes/ClassSettingsModal";
 
 const TEACHER_OVERVIEW = gql`
   query TeacherOverview_Data($id: ID!) {
@@ -13,6 +14,8 @@ const TEACHER_OVERVIEW = gql`
       id
       name
       slug
+      subject
+      period
       defaultCurrency
       joinCode
 
@@ -71,8 +74,9 @@ type Props = {
 
 export default function TeacherOverview({ klass }: Props) {
   const { push } = useToast();
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
   
-  const { data, loading, error } = useQuery(TEACHER_OVERVIEW, {
+  const { data, loading, error, refetch } = useQuery(TEACHER_OVERVIEW, {
     variables: { id: klass.id },
     fetchPolicy: "cache-first",
   });
@@ -113,6 +117,24 @@ export default function TeacherOverview({ klass }: Props) {
 
   return (
     <div className="space-y-6">
+      {/* Class Header with Settings */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">{c.name}</h2>
+          <p className="text-muted-foreground">
+            {[c.subject, c.period].filter(Boolean).join(" • ") || "Class Dashboard"}
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setSettingsOpen(true)}
+        >
+          <Settings className="h-4 w-4 mr-2" />
+          Class Settings
+        </Button>
+      </div>
+
       {/* Join Code Section */}
       {c.joinCode && (
         <Card>
@@ -251,6 +273,14 @@ export default function TeacherOverview({ klass }: Props) {
         </CardContent>
       </Card>
       </div>
+
+      {/* Class Settings Modal */}
+      <ClassSettingsModal
+        classId={klass.id}
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        onUpdated={() => refetch()}
+      />
     </div>
   );
 }

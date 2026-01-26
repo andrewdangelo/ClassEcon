@@ -244,6 +244,15 @@ You'll know everything is working when:
 
 ---
 
+## Beta Access Codes
+
+If you need to create beta access codes for early testers, see the dedicated guide:
+
+[docs/authentication/BETA_ACCESS_CODE.md](docs/authentication/BETA_ACCESS_CODE.md)
+
+---
+
+
 ## 🎉 You're All Set!
 
 The OAuth integration is complete and ready to test. Start with the regular UI testing, then configure OAuth providers as needed. Refer to `OAUTH_SETUP_GUIDE.md` for detailed provider setup instructions.

@@ -26,10 +26,15 @@ export const UPDATE_CLASS = gql`
     updateClass(id: $id, input: $input) {
       id
       name
+      description
       subject
       period
       gradeLevel
       joinCode
+      schoolName
+      district
+      payPeriodDefault
+      startingBalance
       defaultCurrency
       isArchived
       updatedAt

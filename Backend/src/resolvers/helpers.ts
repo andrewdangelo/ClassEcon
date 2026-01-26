@@ -19,7 +19,17 @@ export function requireTeacher(ctx: Ctx) {
 }
 
 export async function requireClassTeacher(ctx: Ctx, classId: string) {
-  requireTeacher(ctx);
+  requireAuth(ctx);
+  
+  // Admins always have access
+  if (ctx.role === "ADMIN") {
+    const klass = await ClassModel.findById(classId).lean<IClass | null>().exec();
+    if (!klass) throw new GraphQLError("Class not found");
+    return klass;
+  }
+  
+  // Otherwise must be a teacher of the class
+  if (ctx.role !== "TEACHER") throw new GraphQLError("Forbidden");
   const klass = await ClassModel.findById(classId).lean<IClass | null>().exec();
   if (!klass) throw new GraphQLError("Class not found");
   const teacherIds = (klass.teacherIds ?? []).map((t) => t.toString());
