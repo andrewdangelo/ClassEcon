@@ -5,7 +5,7 @@ import type { Response } from "express";
 const getAuthServiceUrl = () => process.env.AUTH_SERVICE_URL || "http://localhost:4001";
 const getServiceApiKey = () => process.env.SERVICE_API_KEY || "";
 
-export type JWTPayload = { sub: string; role: "TEACHER" | "STUDENT" | "PARENT" };
+export type JWTPayload = { sub: string; role: "ADMIN" | "TEACHER" | "STUDENT" | "PARENT" };
 
 export class AuthServiceClient {
   async request<T>(

@@ -57,7 +57,7 @@ router.post("/sign-tokens", validateServiceApiKey, (req: Request, res: Response)
       return res.status(400).json({ error: "userId and role are required" });
     }
     
-    if (!["TEACHER", "STUDENT", "PARENT"].includes(role)) {
+    if (!["ADMIN", "TEACHER", "STUDENT", "PARENT"].includes(role)) {
       return res.status(400).json({ error: "Invalid role" });
     }
     

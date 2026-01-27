@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import type { Response } from "express";
 import { env } from "./config";
 
-export type JWTPayload = { sub: string; role: "TEACHER" | "STUDENT" | "PARENT" };
+export type JWTPayload = { sub: string; role: "ADMIN" | "TEACHER" | "STUDENT" | "PARENT" };
 
 export async function hashPassword(plain: string): Promise<string> {
   const salt = await bcrypt.genSalt(12);

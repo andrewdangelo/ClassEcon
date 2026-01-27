@@ -1,0 +1,190 @@
+# Email Service GraphQL Schema
+# Production-grade email service with transactional and bulk email support
+
+scalar DateTime
+
+# ============ Enums ============
+
+enum SubscriberStatus {
+  SUBSCRIBED
+  UNSUBSCRIBED
+  SUPPRESSED
+}
+
+enum CampaignStatus {
+  DRAFT
+  QUEUED
+  SENDING
+  SENT
+  FAILED
+}
+
+enum JobStatus {
+  QUEUED
+  SENDING
+  SENT
+  FAILED
+  RETRY
+}
+
+enum TokenPurpose {
+  EMAIL_2FA
+  PASSWORD_RESET
+}
+
+# ============ Types ============
+
+type Subscriber {
+  id: ID!
+  email: String!
+  status: SubscriberStatus!
+  tags: [String!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Campaign {
+  id: ID!
+  name: String
+  subject: String!
+  status: CampaignStatus!
+  sentAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type CampaignStats {
+  queued: Int!
+  sending: Int!
+  sent: Int!
+  failed: Int!
+  retry: Int!
+  total: Int!
+}
+
+type DeliveryJob {
+  id: ID!
+  type: String!
+  status: JobStatus!
+  toEmail: String!
+  subject: String!
+  attempts: Int!
+  lastError: String
+  scheduledAt: DateTime!
+  sentAt: DateTime
+  createdAt: DateTime!
+}
+
+type CampaignWithStats {
+  campaign: Campaign!
+  stats: CampaignStats!
+}
+
+type CampaignList {
+  campaigns: [Campaign!]!
+  total: Int!
+}
+
+# ============ Inputs ============
+
+input SendEmail2FAInput {
+  userId: String!
+  email: String!
+}
+
+input VerifyEmail2FAInput {
+  userId: String!
+  email: String!
+  code: String!
+}
+
+input SendPasswordResetInput {
+  userId: String!
+  email: String!
+  redirectUrl: String!
+}
+
+input ConsumePasswordResetInput {
+  email: String!
+  token: String!
+}
+
+input SubscribeInput {
+  email: String!
+  tags: [String!]
+}
+
+input CampaignInput {
+  name: String
+  subject: String!
+  html: String!
+  text: String
+}
+
+input ListCampaignsInput {
+  status: CampaignStatus
+  limit: Int
+  offset: Int
+}
+
+# ============ Queries ============
+
+type Query {
+  # Health check
+  health: Boolean!
+
+  # Subscriber queries (admin only)
+  subscriber(email: String!): Subscriber
+  subscribers(status: SubscriberStatus, limit: Int, offset: Int): [Subscriber!]!
+  subscriberCount(status: SubscriberStatus): Int!
+
+  # Campaign queries (admin only)
+  campaign(id: ID!): Campaign
+  campaigns(input: ListCampaignsInput): CampaignList!
+  campaignStats(id: ID!): CampaignStats!
+  campaignWithStats(id: ID!): CampaignWithStats
+}
+
+# ============ Mutations ============
+
+type Mutation {
+  # ---- Transactional: Email 2FA ----
+  # Send a 2FA verification code to the user's email
+  # Called by backend services via x-service-token
+  sendEmail2FA(input: SendEmail2FAInput!): Boolean!
+
+  # Verify a 2FA code
+  # Called by backend services via x-service-token
+  verifyEmail2FA(input: VerifyEmail2FAInput!): Boolean!
+
+  # ---- Transactional: Password Reset ----
+  # Send a password reset link
+  # Called by backend services via x-service-token
+  sendPasswordReset(input: SendPasswordResetInput!): Boolean!
+
+  # Consume/validate a password reset token
+  # This does NOT change the password - upstream service handles that
+  # Called by backend services via x-service-token
+  consumePasswordReset(input: ConsumePasswordResetInput!): Boolean!
+
+  # ---- Email List ----
+  # Subscribe an email to the mailing list
+  subscribe(input: SubscribeInput!): Subscriber!
+
+  # Unsubscribe using a token (from email link)
+  unsubscribeByToken(token: String!, email: String!): Boolean!
+
+  # ---- Campaigns (admin only) ----
+  # Create a new campaign (starts in DRAFT status)
+  createCampaign(input: CampaignInput!): Campaign!
+
+  # Queue a campaign for sending to all subscribers
+  queueCampaignSend(campaignId: ID!): Boolean!
+
+  # ---- Admin operations ----
+  # Manually suppress a subscriber (admin only)
+  suppressSubscriber(email: String!): Boolean!
+
+  # Reactivate a suppressed subscriber (admin only)
+  reactivateSubscriber(email: String!): Boolean!
+}

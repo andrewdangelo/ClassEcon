@@ -7,6 +7,7 @@ import { PayRequest } from "./PayRequest";
 import { Student } from "./Student";
 import { Fine } from "./Fine";
 import { SubscriptionPlanResolvers } from "./SubscriptionPlan";
+import { AdminQuery, AdminMutation, AuditLogResolvers } from "./Admin";
 import { pickId } from "./helpers";
 import { StoreItem, Purchase, User, RedemptionRequest, Job, JobApplication } from "../models";
 
@@ -15,16 +16,19 @@ export const resolvers = {
   Query: {
     ...Query,
     ...SubscriptionPlanResolvers.Query,
+    ...AdminQuery,
   },
   Mutation: {
     ...Mutation,
     ...SubscriptionPlanResolvers.Mutation,
+    ...AdminMutation,
   },
   Subscription,
   SubscriptionPlan: SubscriptionPlanResolvers.SubscriptionPlan,
   Class,
   PayRequest,
   Student,
+  ...AuditLogResolvers,
   // generic ID pickers
   Classroom: { id: pickId },
   User: { id: pickId },

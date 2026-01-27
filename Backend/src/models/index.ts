@@ -18,3 +18,4 @@ export * from "./RedemptionRequest";
 export * from "./Fine";
 export * from "./BetaAccessCode";
 export * from "./Subscription";
+export * from "./AuditLog";

@@ -28,6 +28,23 @@ export const BetaAccessModal = ({ isOpen, onClose }: BetaAccessModalProps) => {
     try {
       // Call GraphQL mutation to validate code
       const graphqlUrl = import.meta.env.VITE_GRAPHQL_URL || 'http://localhost:4000/graphql';
+      
+      // Validate the URL format - must include protocol and /graphql path
+      if (!graphqlUrl.startsWith('http://') && !graphqlUrl.startsWith('https://')) {
+        console.error('❌ VITE_GRAPHQL_URL must include protocol (http:// or https://):', graphqlUrl);
+        setStatus('error');
+        setMessage('Configuration error: Invalid API URL. Please contact support.');
+        return;
+      }
+      
+      // Warn if using Railway internal URL (won't work from browser)
+      if (graphqlUrl.includes('.railway.internal')) {
+        console.error('❌ VITE_GRAPHQL_URL cannot use Railway internal URL from browser:', graphqlUrl);
+        setStatus('error');
+        setMessage('Configuration error: Cannot reach API. Please contact support.');
+        return;
+      }
+      
       const response = await fetch(graphqlUrl, {
         method: 'POST',
         headers: {

@@ -8,6 +8,7 @@ export const typeDefs = [
     # Note: DateTime is provided by DateTimeTypeDefinition; don't redeclare it here.
 
     enum Role {
+      ADMIN
       TEACHER
       STUDENT
       PARENT
@@ -22,6 +23,7 @@ export const typeDefs = [
       ACTIVE
       INVITED
       DISABLED
+      BANNED
     }
 
     enum SubscriptionTier {
@@ -142,6 +144,64 @@ export const typeDefs = [
       isFoundingMember: Boolean!
       stripeCustomerId: String
       stripeSubscriptionId: String
+      # Admin-only fields
+      classCount: Int
+      lastLoginAt: DateTime
+      banReason: String
+      bannedAt: DateTime
+      bannedByUserId: ID
+    }
+
+    type AdminUserResult {
+      nodes: [User!]!
+      totalCount: Int!
+      pageInfo: PageInfo!
+    }
+
+    type PageInfo {
+      hasNextPage: Boolean!
+      hasPreviousPage: Boolean!
+      totalPages: Int!
+      currentPage: Int!
+    }
+
+    type AdminDashboardStats {
+      totalUsers: Int!
+      totalTeachers: Int!
+      totalStudents: Int!
+      totalParents: Int!
+      totalAdmins: Int!
+      activeUsers: Int!
+      bannedUsers: Int!
+      disabledUsers: Int!
+      totalClasses: Int!
+      activeClasses: Int!
+      archivedClasses: Int!
+      totalClassrooms: Int!
+      totalBetaCodes: Int!
+      activeBetaCodes: Int!
+      totalBetaCodeUses: Int!
+      newUsersToday: Int!
+      newUsersThisWeek: Int!
+      newUsersThisMonth: Int!
+    }
+
+    type AuditLog {
+      id: ID!
+      adminUserId: ID!
+      adminUser: User
+      action: String!
+      targetType: String!
+      targetId: ID!
+      details: JSON
+      ipAddress: String
+      userAgent: String
+      createdAt: DateTime!
+    }
+
+    type AuditLogResult {
+      nodes: [AuditLog!]!
+      totalCount: Int!
     }
 
     type BetaAccessCode {
@@ -698,6 +758,48 @@ export const typeDefs = [
       canCreateClass: FeatureCheckResult!
       canAddStudent(classId: ID!): FeatureCheckResult!
     }
+
+    # ---------- Admin Queries (ADMIN role only) ----------
+    extend type Query {
+      # Dashboard stats
+      adminDashboardStats: AdminDashboardStats!
+      
+      # User management
+      adminUsers(
+        search: String
+        role: Role
+        status: UserStatus
+        limit: Int = 50
+        offset: Int = 0
+        sortBy: String = "createdAt"
+        sortOrder: String = "desc"
+      ): AdminUserResult!
+      
+      adminUser(id: ID!): User
+      
+      # All classes (including archived)
+      adminClasses(
+        search: String
+        isArchived: Boolean
+        limit: Int = 50
+        offset: Int = 0
+      ): [Class!]!
+      
+      # All classrooms
+      adminClassrooms(limit: Int = 50, offset: Int = 0): [Classroom!]!
+      
+      # Beta codes
+      adminBetaCodes(activeOnly: Boolean = false): [BetaAccessCode!]!
+      
+      # Audit logs
+      adminAuditLogs(
+        adminUserId: ID
+        action: String
+        targetType: String
+        limit: Int = 50
+        offset: Int = 0
+      ): AuditLogResult!
+    }
     
     type ClassStatistics {
       totalStudents: Int!
@@ -839,6 +941,54 @@ export const typeDefs = [
       createCheckoutSession(planTier: PlanTier!): String!
       cancelSubscription: SubscriptionPlan!
       reactivateSubscription: SubscriptionPlan!
+    }
+
+    # ---------- Admin Mutations (ADMIN role only) ----------
+    input AdminUpdateUserInput {
+      name: String
+      email: String
+      role: Role
+      status: UserStatus
+      hasBetaAccess: Boolean
+      subscriptionTier: SubscriptionTier
+      subscriptionStatus: SubscriptionStatus
+      isFoundingMember: Boolean
+    }
+
+    input AdminUpdateClassroomInput {
+      name: String
+      settings: ClassroomSettingsInput
+    }
+
+    input ClassroomSettingsInput {
+      currency: String
+      overdraft: Int
+      transferAcrossClasses: Boolean
+    }
+
+    extend type Mutation {
+      # User management
+      adminBanUser(userId: ID!, reason: String!): User!
+      adminUnbanUser(userId: ID!): User!
+      adminUpdateUser(userId: ID!, input: AdminUpdateUserInput!): User!
+      adminDeleteUser(userId: ID!, hard: Boolean = false): Boolean!
+      adminImpersonateUser(userId: ID!): AuthPayload!
+      adminResetUserPassword(userId: ID!, newPassword: String!): Boolean!
+      adminGrantBetaAccess(userId: ID!): User!
+      adminRevokeBetaAccess(userId: ID!): User!
+      
+      # Classroom management
+      adminUpdateClassroom(classroomId: ID!, input: AdminUpdateClassroomInput!): Classroom!
+      adminDeleteClassroom(classroomId: ID!, hard: Boolean = false): Boolean!
+      adminTransferClassroomOwnership(classroomId: ID!, newOwnerId: ID!): Classroom!
+      
+      # Class management
+      adminForceDeleteClass(classId: ID!): Boolean!
+      adminRestoreClass(classId: ID!): Class!
+      
+      # System actions
+      adminPurgeInactiveUsers(daysInactive: Int!): Int!
+      adminSendBulkEmail(userIds: [ID!]!, subject: String!, body: String!): Boolean!
     }
 
     type Subscription {

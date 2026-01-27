@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/src/index.js",
     "seed": "tsx scripts/seed.ts",
+    "seed-admin": "tsx scripts/seed-admin.ts",
     "seed-tiers": "tsx scripts/seed-tier-accounts.ts",
     "set-passwords": "tsx scripts/set-passwords.ts",
     "wipe": "ts-node --swc scripts/wipe.ts",

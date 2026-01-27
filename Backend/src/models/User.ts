@@ -29,7 +29,7 @@ const UserSchema = new Schema<IUser>(
   {
     role: {
       type: String,
-      enum: ["TEACHER", "STUDENT", "PARENT"],
+      enum: ["ADMIN", "TEACHER", "STUDENT", "PARENT"],
       required: true,
     },
     name: { type: String, required: true, trim: true },
@@ -37,7 +37,7 @@ const UserSchema = new Schema<IUser>(
     passwordHash: { type: String },
     status: {
       type: String,
-      enum: ["ACTIVE", "INVITED", "DISABLED"],
+      enum: ["ACTIVE", "INVITED", "DISABLED", "BANNED"],
       default: "ACTIVE",
     },
     oauthProvider: { type: String, enum: ["google", "microsoft"], default: null },

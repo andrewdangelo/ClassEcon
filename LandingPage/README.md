@@ -170,6 +170,32 @@ netlify deploy --prod
 
 Build the project and deploy the `dist` folder to any static hosting service.
 
+## Railway Deployment
+
+### Environment Variables (Build Args)
+
+These must be set as **build arguments** in Railway since Vite embeds them at build time:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `VITE_GRAPHQL_URL` | **Public** Backend GraphQL URL | `https://backend-production-xxxx.up.railway.app/graphql` |
+| `VITE_FRONTEND_URL` | **Public** Frontend app URL | `https://frontend-production-xxxx.up.railway.app` |
+| `VITE_NODE_ENV` | Environment | `production` |
+
+⚠️ **IMPORTANT**: 
+- `VITE_GRAPHQL_URL` must be the **public** Railway URL, NOT the internal `*.railway.internal` URL
+- The landing page runs in the browser, so it cannot use Railway's private networking
+- Include the full path with protocol: `https://...up.railway.app/graphql`
+
+### Setting Build Args in Railway
+
+1. Go to your Landing Page service in Railway
+2. Click **Variables** tab
+3. Add the variables above
+4. Click **Settings** → **Build** 
+5. Ensure "Use variables as build args" is enabled (or Railway does this automatically for `VITE_*` prefixed vars)
+6. Trigger a **redeploy** for changes to take effect
+
 ## License
 
 MIT
