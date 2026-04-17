@@ -241,6 +241,50 @@ export const AdminQuery = {
       totalCount,
     };
   },
+
+  async adminSubscriptionStats(_: any, __: any, ctx: Ctx) {
+    requireAdmin(ctx);
+
+    const [
+      totalSubscriptions,
+      activeSubscriptions,
+      trialSubscriptions,
+      expiredSubscriptions,
+      cancelledSubscriptions,
+      foundingMembers,
+      tierCounts,
+    ] = await Promise.all([
+      User.countDocuments({ role: "TEACHER" }),
+      User.countDocuments({ role: "TEACHER", subscriptionStatus: "ACTIVE" }),
+      User.countDocuments({ role: "TEACHER", subscriptionStatus: "TRIAL" }),
+      User.countDocuments({ role: "TEACHER", subscriptionStatus: "EXPIRED" }),
+      User.countDocuments({ role: "TEACHER", subscriptionStatus: "CANCELED" }),
+      User.countDocuments({ isFoundingMember: true }),
+      User.aggregate([
+        { $match: { role: "TEACHER" } },
+        { $group: { _id: "$subscriptionTier", count: { $sum: 1 } } },
+      ]),
+    ]);
+
+    return {
+      totalSubscriptions,
+      activeSubscriptions,
+      trialSubscriptions,
+      expiredSubscriptions,
+      cancelledSubscriptions,
+      foundingMembers,
+      tierBreakdown: Object.fromEntries(
+        tierCounts.map((t: any) => [t._id || "FREE", t.count])
+      ),
+    };
+  },
+
+  async adminUserSubscription(_: any, { userId }: { userId: string }, ctx: Ctx) {
+    requireAdmin(ctx);
+    const user = await User.findById(userId).lean().exec();
+    if (!user) return null;
+    return { ...user, id: user._id.toString() };
+  },
 };
 
 export const AdminMutation = {
@@ -631,6 +675,163 @@ export const AdminMutation = {
     );
 
     return true;
+  },
+
+  // Subscription management mutations
+  async adminUpdateSubscription(
+    _: any,
+    { userId, input }: { userId: string; input: any },
+    ctx: Ctx
+  ) {
+    requireAdmin(ctx);
+
+    const user = await User.findById(userId);
+    if (!user) throw new GraphQLError("User not found");
+
+    const previousValues: any = {};
+
+    if (input.subscriptionTier !== undefined) {
+      previousValues.subscriptionTier = user.subscriptionTier;
+      user.subscriptionTier = input.subscriptionTier;
+    }
+    if (input.subscriptionStatus !== undefined) {
+      previousValues.subscriptionStatus = user.subscriptionStatus;
+      user.subscriptionStatus = input.subscriptionStatus;
+    }
+    if (input.isFoundingMember !== undefined) {
+      previousValues.isFoundingMember = user.isFoundingMember;
+      user.isFoundingMember = input.isFoundingMember;
+    }
+    if (input.trialEndsAt !== undefined) {
+      previousValues.trialEndsAt = user.trialEndsAt;
+      user.trialEndsAt = input.trialEndsAt ? new Date(input.trialEndsAt) : null;
+    }
+    if (input.subscriptionExpiresAt !== undefined) {
+      previousValues.subscriptionExpiresAt = user.subscriptionExpiresAt;
+      user.subscriptionExpiresAt = input.subscriptionExpiresAt 
+        ? new Date(input.subscriptionExpiresAt) 
+        : null;
+    }
+
+    await user.save();
+
+    await createAuditLog(
+      ctx.userId!,
+      "UPDATE_SUBSCRIPTION",
+      "User",
+      userId,
+      { previousValues, newValues: input },
+      ctx
+    );
+
+    return { ...user.toObject(), id: user._id.toString() };
+  },
+
+  async adminCancelSubscription(
+    _: any,
+    { userId, immediately = false, reason }: { userId: string; immediately?: boolean; reason?: string },
+    ctx: Ctx
+  ) {
+    requireAdmin(ctx);
+
+    const user = await User.findById(userId);
+    if (!user) throw new GraphQLError("User not found");
+
+    const previousTier = user.subscriptionTier;
+    const previousStatus = user.subscriptionStatus;
+
+    if (immediately) {
+      user.subscriptionTier = "FREE";
+      user.subscriptionStatus = "CANCELED";
+      user.stripeSubscriptionId = null;
+    } else {
+      user.subscriptionStatus = "CANCELED";
+    }
+
+    await user.save();
+
+    await createAuditLog(
+      ctx.userId!,
+      "CANCEL_SUBSCRIPTION",
+      "User",
+      userId,
+      { previousTier, previousStatus, immediately, reason },
+      ctx
+    );
+
+    return { ...user.toObject(), id: user._id.toString() };
+  },
+
+  async adminExtendTrial(
+    _: any,
+    { userId, days }: { userId: string; days: number },
+    ctx: Ctx
+  ) {
+    requireAdmin(ctx);
+
+    const user = await User.findById(userId);
+    if (!user) throw new GraphQLError("User not found");
+
+    const previousTrialEndsAt = user.trialEndsAt;
+    const newTrialEndsAt = new Date();
+    newTrialEndsAt.setDate(newTrialEndsAt.getDate() + days);
+
+    user.trialEndsAt = newTrialEndsAt;
+    user.subscriptionStatus = "TRIAL";
+    await user.save();
+
+    await createAuditLog(
+      ctx.userId!,
+      "EXTEND_TRIAL",
+      "User",
+      userId,
+      { previousTrialEndsAt, newTrialEndsAt, daysAdded: days },
+      ctx
+    );
+
+    return { ...user.toObject(), id: user._id.toString() };
+  },
+
+  async adminGrantFoundingMember(_: any, { userId }: { userId: string }, ctx: Ctx) {
+    requireAdmin(ctx);
+
+    const user = await User.findById(userId);
+    if (!user) throw new GraphQLError("User not found");
+
+    user.isFoundingMember = true;
+    await user.save();
+
+    await createAuditLog(
+      ctx.userId!,
+      "GRANT_FOUNDING_MEMBER",
+      "User",
+      userId,
+      {},
+      ctx
+    );
+
+    return { ...user.toObject(), id: user._id.toString() };
+  },
+
+  async adminRevokeFoundingMember(_: any, { userId }: { userId: string }, ctx: Ctx) {
+    requireAdmin(ctx);
+
+    const user = await User.findById(userId);
+    if (!user) throw new GraphQLError("User not found");
+
+    user.isFoundingMember = false;
+    await user.save();
+
+    await createAuditLog(
+      ctx.userId!,
+      "REVOKE_FOUNDING_MEMBER",
+      "User",
+      userId,
+      {},
+      ctx
+    );
+
+    return { ...user.toObject(), id: user._id.toString() };
   },
 };
 

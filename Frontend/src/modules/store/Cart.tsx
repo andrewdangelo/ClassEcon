@@ -75,8 +75,8 @@ export default function Cart() {
 
   if (itemsArray.length === 0) {
     return (
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Shopping Cart</h2>
+      <div className="page-stack-tight">
+        <h2 className="page-title text-2xl md:text-3xl">Shopping Cart</h2>
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-8">
             <ShoppingCart className="w-12 h-12 text-muted-foreground mb-4" />
@@ -91,15 +91,15 @@ export default function Cart() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Shopping Cart</h2>
+    <div className="page-stack-tight">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="page-title text-2xl md:text-3xl">Shopping Cart</h2>
         <Button variant="outline" onClick={() => navigate('/store')}>
           Continue Shopping
         </Button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-5 sm:gap-6 lg:grid-cols-3">
         {/* Cart Items */}
         <div className="lg:col-span-2 space-y-4">
           {itemsArray.map((item) => (

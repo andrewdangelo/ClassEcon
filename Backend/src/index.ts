@@ -11,6 +11,9 @@ import { connectMongo } from "./db/connection";
 import { authClient } from "./services/auth-client";
 import { env } from "./config";
 import { initSalaryCronJobs } from "./services/salary";
+import internalRoutes from "./routes/internal";
+// Note: Stripe webhooks are now handled by PaymentService directly
+// stripeRoutes removed - see PaymentService for webhook handling
 
 async function main() {
   console.log("[Startup] Connecting to MongoDB...");
@@ -38,9 +41,13 @@ async function main() {
     res.status(200).json({ 
       message: "ClassEcon Backend API",
       graphql: "/graphql",
-      health: "/health"
+      health: "/health",
+      internal: "/api/internal"
     });
   });
+
+  // Internal API routes for service-to-service communication
+  app.use("/api/internal", express.json(), internalRoutes);
   
   // Allow multiple origins for CORS from environment configuration
   const allowedOrigins = [
@@ -105,7 +112,7 @@ async function main() {
           }
         }
 
-        return { userId, role, req, res };
+        return { userId, role, req, res, user: userId ? { userId, role } : null };
       },
     })
   );

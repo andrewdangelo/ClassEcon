@@ -41,7 +41,7 @@ export function StudentLayout() {
   const username = displayUser?.name || "—";
 
   return (
-    <div className="min-h-screen md:pl-56">
+    <div className="app-surface min-h-screen md:pl-56">
       {/* Student Sidebar - Compact for simplified navigation */}
       <aside
         className={cn(
@@ -59,7 +59,7 @@ export function StudentLayout() {
               {loading ? "…" : username}
             </span>
           </div>
-          <span className="rounded-md border px-2 py-1 text-xs font-medium bg-green-50 text-green-700 border-green-200">
+          <span className="rounded-md border border-success/25 bg-success/15 px-2 py-1 text-xs font-medium text-success">
             Student
           </span>
         </div>
@@ -78,10 +78,10 @@ export function StudentLayout() {
                 to={item.to}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors relative",
+                    "relative flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors duration-200",
                     isActive
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      ? "bg-primary/12 text-primary shadow-sm"
+                      : "text-muted-foreground hover:bg-primary/8 hover:text-foreground"
                   )
                 }
                 title={t(item.labelKey)}
@@ -109,10 +109,10 @@ export function StudentLayout() {
               to={`/classes/${currentClassId}/activity`}
               className={({ isActive }) =>
                 cn(
-                  "w-full flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors relative",
+                  "relative flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors duration-200",
                   isActive
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    ? "bg-primary/12 text-primary shadow-sm"
+                    : "text-muted-foreground hover:bg-primary/8 hover:text-foreground"
                 )
               }
               onClick={() => setSidebarOpen(false)}
@@ -120,11 +120,11 @@ export function StudentLayout() {
               <Clock className="h-4 w-4" />
               <span className="hidden md:inline">{t("activity.myActivity")}</span>
             </NavLink>
-            <button className="w-full flex items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
+            <button className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground transition-colors duration-200 hover:bg-primary/8 hover:text-foreground">
               <BookOpen className="h-4 w-4" />
               <span className="hidden md:inline">My Assignments</span>
             </button>
-            <button className="w-full flex items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
+            <button className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground transition-colors duration-200 hover:bg-primary/8 hover:text-foreground">
               <ShoppingBag className="h-4 w-4" />
               <span className="hidden md:inline">{t("students.purchases")}</span>
             </button>
@@ -134,7 +134,7 @@ export function StudentLayout() {
 
       {/* Top bar */}
       <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur">
-        <div className="container flex h-14 items-center justify-between">
+        <div className="app-shell-x flex h-14 items-center justify-between">
           <div className="flex items-center gap-2">
             <button
               className="-ml-1 inline-flex items-center justify-center rounded-md p-2 md:hidden"
@@ -157,7 +157,7 @@ export function StudentLayout() {
                 to={item.to}
                 className={({ isActive }) =>
                   cn(
-                    "text-sm font-medium transition-colors",
+                    "text-sm font-medium transition-colors duration-200",
                     isActive
                       ? "text-primary"
                       : "text-muted-foreground hover:text-foreground"
@@ -193,8 +193,7 @@ export function StudentLayout() {
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="container py-6">
+      <main className="app-page">
         <Outlet />
       </main>
     </div>

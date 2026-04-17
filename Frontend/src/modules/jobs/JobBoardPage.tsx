@@ -122,10 +122,10 @@ export function JobBoardPage() {
   };
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Job Board</h1>
-        <p className="text-muted-foreground">Browse and apply for available class jobs</p>
+    <div className="page-stack">
+      <div className="space-y-1">
+        <h1 className="page-title">Job Board</h1>
+        <p className="page-subtitle !mt-0">Browse and apply for available class jobs</p>
       </div>
 
       <Tabs defaultValue="available" className="w-full">

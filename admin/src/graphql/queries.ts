@@ -681,6 +681,21 @@ export const ADMIN_GET_AUDIT_LOGS = gql`
   }
 `
 
+// Admin Subscription Stats
+export const GET_ADMIN_SUBSCRIPTION_STATS = gql`
+  query GetAdminSubscriptionStats {
+    adminSubscriptionStats {
+      totalSubscriptions
+      activeSubscriptions
+      trialSubscriptions
+      expiredSubscriptions
+      cancelledSubscriptions
+      foundingMembers
+      tierBreakdown
+    }
+  }
+`
+
 // Admin System Actions
 export const ADMIN_PURGE_INACTIVE_USERS = gql`
   mutation AdminPurgeInactiveUsers($daysInactive: Int!) {

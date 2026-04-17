@@ -22,7 +22,10 @@ export default function Store() {
     [currentClassId]
   )
 
-  if (!currentClassId) return <div>Select a class to view the store.</div>
+  if (!currentClassId)
+    return (
+      <p className="text-muted-foreground">Select a class to view the store.</p>
+    )
 
   if (query.error) {
     return <div className="text-sm text-destructive">Failed to load store: {query.error.message}</div>
@@ -36,9 +39,9 @@ export default function Store() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">
+    <div className="page-stack-tight">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <h2 className="page-title text-2xl md:text-3xl">
           Class Store — {current?.name} {current?.term ? `· ${current.term}` : ""}
         </h2>
 
@@ -58,7 +61,7 @@ export default function Store() {
       {query.loading ? (
         <div className="text-sm text-muted-foreground">Loading items…</div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-3">
           {items.map((it) => (
             <Card key={it.id}>
               <CardHeader><CardTitle>{it.name}</CardTitle></CardHeader>

@@ -13,6 +13,7 @@ import {
   Bell,
   ClipboardList,
   Building2,
+  UserCog,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
@@ -36,6 +37,7 @@ const navigation = [
   { name: 'Classrooms', href: '/classrooms', icon: Building2 },
   { name: 'Beta Codes', href: '/beta-codes', icon: Key },
   { name: 'Subscriptions', href: '/subscriptions', icon: CreditCard },
+  { name: 'Subscription Mgmt', href: '/subscription-management', icon: UserCog },
   { name: 'Transactions', href: '/transactions', icon: ArrowLeftRight },
   { name: 'Audit Logs', href: '/audit-logs', icon: ClipboardList },
   { name: 'Settings', href: '/settings', icon: Settings },

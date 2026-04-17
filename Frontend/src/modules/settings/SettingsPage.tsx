@@ -16,15 +16,15 @@ export default function SettingsPage() {
   const { role } = useClassContext();
 
   return (
-    <div className="container max-w-4xl py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">{t("settings.title")}</h1>
-        <p className="text-muted-foreground mt-2">
+    <div className="page-stack mx-auto w-full max-w-4xl">
+      <div>
+        <h1 className="page-title">{t("settings.title")}</h1>
+        <p className="page-subtitle">
           {t("settings.general")}
         </p>
       </div>
 
-      <div className="space-y-6">
+      <div className="flex flex-col gap-6 md:gap-8">
         {/* Subscription Section - Teachers Only */}
         {role === "TEACHER" && (
           <Card>

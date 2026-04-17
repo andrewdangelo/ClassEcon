@@ -370,28 +370,27 @@ export default function ClassManage() {
   const classData = (data as any).class;
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="page-stack mx-auto w-full max-w-4xl">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start">
           <Button
             variant="outline"
             size="sm"
             onClick={() => navigate(`/classes/${classId}`)}
+            className="shrink-0 self-start"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Class
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Manage Class
-            </h1>
-            <p className="text-muted-foreground">
+          <div className="min-w-0 space-y-1">
+            <h1 className="page-title">Manage Class</h1>
+            <p className="page-subtitle !mt-0">
               Update class information and settings
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <Button
             onClick={handleSave}
             disabled={isSaving}

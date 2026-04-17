@@ -51,31 +51,13 @@ export function Sidebar({
   onClose: () => void;
 }) {
   const { role: contextRole } = useClassContext();
-  const { data, loading, error } = useQuery<MeQuery>(ME, {
+  const { data, loading } = useQuery<MeQuery>(ME, {
     fetchPolicy: "cache-and-network",
   });
 
   const user = data?.me;
   const role = user?.role || contextRole || "STUDENT"; // Default to STUDENT if both are undefined
   const username = user?.name || "—";
-
-  // Debug: log the current role
-  console.log("Sidebar role detection:", { 
-    userRole: user?.role, 
-    contextRole, 
-    finalRole: role,
-    loading,
-    error: error?.message
-  });
-
-  // Debug: Check NAV_ITEMS filtering
-  console.log("NAV_ITEMS filtering:", {
-    role,
-    NAV_ITEMS,
-    visible: NAV_ITEMS.filter((n) => n.roles.includes(role)),
-    requestsItem: NAV_ITEMS.find(n => n.to === "/requests"),
-    includesStudent: NAV_ITEMS.find(n => n.to === "/requests")?.roles.includes("STUDENT")
-  });
 
   const compact = role === "STUDENT"; // auto-compact for students
   const visible = NAV_ITEMS.filter((n) => n.roles.includes(role));
@@ -102,7 +84,14 @@ export function Sidebar({
             {loading ? "…" : error ? "Error" : username}
           </span>
         </div>
-        <span className="rounded-md border px-2 py-1 text-xs uppercase">
+        <span
+          className={cn(
+            "rounded-md border px-2 py-1 text-xs font-medium uppercase tracking-wide",
+            role === "TEACHER"
+              ? "border-primary/25 bg-primary/12 text-primary"
+              : "border-success/25 bg-success/15 text-success"
+          )}
+        >
           {role?.toLowerCase() || "—"}
         </span>
       </div>
@@ -118,10 +107,10 @@ export function Sidebar({
               to={n.to}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-2 rounded-md px-2 py-2 text-sm",
+                  "flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors duration-200",
                   isActive
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    ? "bg-primary/12 text-primary shadow-sm"
+                    : "text-muted-foreground hover:bg-primary/8 hover:text-foreground"
                 )
               }
               title={n.label}

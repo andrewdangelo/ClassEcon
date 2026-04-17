@@ -28,4 +28,8 @@ export const env = {
   
   NODE_ENV: process.env.NODE_ENV || "development",
   IS_PRODUCTION: process.env.NODE_ENV === "production",
+  
+  // PaymentService URL for subscription/payment operations
+  PAYMENT_SERVICE_URL: process.env.PAYMENT_SERVICE_URL || "http://localhost:4003",
+  PAYMENT_SERVICE_API_KEY: process.env.PAYMENT_SERVICE_API_KEY || "dev-internal-key",
 };

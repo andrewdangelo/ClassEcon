@@ -1,0 +1,55 @@
+# GitHub Copilot — ClassEcon
+
+Use this document for UI, UX, and frontend decisions. The **canonical** design brief is [.impeccable.md](../.impeccable.md) at the repository root; update that file first, then mirror changes here if needed.
+
+## Design Context
+
+### Users
+
+**Primary audiences:** teachers and students, with **dual optimization**:
+
+- **Students** use ClassEcon like a **classroom banking app**: they need to **visualize** balances, jobs, the store, and flows (earn, spend, requests) and **navigate** them without friction—quick comprehension, low cognitive load during class time.
+- **Teachers** **manage everything**: classes, roles, jobs, store, approvals, and reporting. Interfaces should support **dense, efficient** workflows without sacrificing clarity—scannable lists, trustworthy numbers, obvious next actions.
+
+**Context of use:** classrooms and homes; mixed devices; often interrupted sessions. UI should feel **calm under load** (clear states, recoverable errors, obvious progress).
+
+### Brand Personality
+
+**Voice (your words):** clean, polished, easy to use.
+
+**Emotional goals:** **clean**, **polished**, **fun**—serious enough for money and school trust, light enough that students stay engaged. Avoid feeling childish or corporate-stiff; aim for **approachable competence**.
+
+**References (what to borrow):**
+
+- **[Acorns](https://www.acorns.com/)** — calm onboarding, rounded confidence, “grown-up simple” money framing, gentle encouragement without noise.
+- **[Robinhood](https://robinhood.com/)** — **legible hierarchy** for balances and actions; bold primary actions; mobile-first density where appropriate (adapt for classroom: less speculation, more **clarity**).
+
+**Anti-reference:** **ClassBank** — do **not** mirror its layout, typography, color story, or component patterns. Treat it as a **differentiation** bar: ClassEcon should feel **distinct** (own spacing rhythm, own accent discipline, own navigation model).
+
+### Aesthetic Direction
+
+**Direction:** **minimal** structure, **bold/playful** accents used **sparingly** (motion, color, illustration—not clutter), and **trustworthy** typography and numbers (tabular figures where needed, consistent currency formatting).
+
+**Theme:** **Both** light and dark—implement **parity** (same information hierarchy, AA contrast in each). Prefer **system or user preference** with a sensible default per surface (e.g. marketing may skew light; app may follow user choice).
+
+**Color & type (implementation hints for agents):** prefer **OKLCH** and **tinted neutrals** toward the brand hue when evolving beyond current HSL shadcn tokens; pair a **distinctive display** face with a **refined body** face per Impeccable rules—avoid reflex “AI default” font stacks.
+
+**Differentiation:** the memorable impression should be **“this is our class’s bank—clear, fair, and ours”**—not generic edtech, not a clone of consumer trading apps, not ClassBank.
+
+### Design Principles
+
+1. **Two modes of attention:** student surfaces prioritize **scan + visualize** (balances, status, next step); teacher surfaces prioritize **manage at scale** (tables, filters, batch actions) without hiding humanity (empty states that teach, kind errors).
+2. **Trust before flair:** polished spacing, consistent numeric treatment, and predictable navigation come before decorative playfulness.
+3. **Playfulness is seasoning:** one strong accent, purposeful motion on key transitions, or a single delightful moment beats scattered “fun” widgets.
+4. **Light/dark parity at WCAG 2.1 AA** for text, controls, and focus—not an afterthought.
+5. **Deliberate distance from ClassBank:** when in doubt, change composition, type pairing, or accent strategy—not just hue shifts.
+
+### Accessibility & constraints
+
+- **Target:** **WCAG 2.1 AA** minimum for text, non-text contrast, focus visibility, and touch targets where applicable.
+- **Reduced motion / color vision:** no special institutional requirements noted; still honor **`prefers-reduced-motion`** and do not rely on color alone for state.
+
+### Technical context (from codebase)
+
+- **Frontend:** Vite + React + Tailwind; shadcn-style **HSL CSS variables** in `Frontend/src/index.css` with `dark` class strategy.
+- **Landing:** separate Tailwind baseline (`LandingPage`)—keep marketing and app **cohesive** over time (shared voice, divergent layout needs OK).

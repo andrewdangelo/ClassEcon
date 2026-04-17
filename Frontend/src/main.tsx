@@ -44,6 +44,9 @@ import { LanguageProvider } from "@/i18n/LanguageContext";
 import SettingsPage from "./modules/settings/SettingsPage";
 import BetaCodesManagement from "./modules/admin/BetaCodesManagement";
 import { SubscriptionSettingsPage } from "./pages/SubscriptionSettings";
+import { PricingPage } from "./pages/PricingPage";
+import { SubscriptionSuccessPage } from "./pages/SubscriptionSuccessPage";
+import { GettingStartedPage } from "./pages/GettingStartedPage";
 import TierTestingPage from "./pages/TierTestingPage";
 
 const client = createApolloClient();
@@ -156,6 +159,30 @@ const router = createBrowserRouter([
             <SubscriptionSettingsPage />
           </RequireTeacher>
         ) 
+      },
+      { 
+        path: "subscription/settings", 
+        element: (
+          <RequireTeacher>
+            <SubscriptionSettingsPage />
+          </RequireTeacher>
+        ) 
+      },
+      { 
+        path: "subscription/success", 
+        element: (
+          <RequireTeacher>
+            <SubscriptionSuccessPage />
+          </RequireTeacher>
+        ) 
+      },
+      { 
+        path: "pricing", 
+        element: <PricingPage /> 
+      },
+      { 
+        path: "getting-started", 
+        element: <GettingStartedPage /> 
       },
       { 
         path: "admin/beta-codes", 

@@ -42,7 +42,7 @@ export function Layout() {
   };
 
   return (
-    <div className={cn("min-h-screen", compact ? "md:pl-56" : "md:pl-72")}>
+    <div className={cn("app-surface min-h-screen", compact ? "md:pl-56" : "md:pl-72")}>
       {/* Sidebar */}
       <Sidebar open={open} onClose={() => setOpen(false)} />
 
@@ -51,7 +51,7 @@ export function Layout() {
 
       {/* Top bar */}
       <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur">
-        <div className="container flex h-14 items-center justify-between">
+        <div className="app-shell-x flex h-14 items-center justify-between">
           <div className="flex items-center gap-2">
             <button
               className="-ml-1 inline-flex items-center justify-center rounded-md p-2 md:hidden"
@@ -125,8 +125,7 @@ export function Layout() {
         </div>
       </header>
 
-      {/* Page content */}
-      <main className="container py-6">
+      <main className="app-page">
         <Outlet />
       </main>
     </div>

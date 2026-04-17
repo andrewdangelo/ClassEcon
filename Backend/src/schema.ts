@@ -106,16 +106,18 @@ export const typeDefs = [
     }
 
     enum PlanTier {
-      FREE_TRIAL
-      BASIC
-      PREMIUM
-      ENTERPRISE
+      FREE
+      TRIAL
+      STARTER
+      PROFESSIONAL
+      SCHOOL
     }
 
     enum PlanStatus {
       ACTIVE
       TRIAL
-      CANCELLED
+      CANCELED
+      PAST_DUE
       EXPIRED
     }
 
@@ -524,6 +526,7 @@ export const typeDefs = [
       planTier: PlanTier!
       status: PlanStatus!
       limits: PlanLimits!
+      isFoundingMember: Boolean!
       stripeCustomerId: String
       stripeSubscriptionId: String
       currentPeriodStart: DateTime
@@ -757,6 +760,11 @@ export const typeDefs = [
       checkFeatureAccess(feature: String!): FeatureCheckResult!
       canCreateClass: FeatureCheckResult!
       canAddStudent(classId: ID!): FeatureCheckResult!
+      
+      # Billing
+      upcomingInvoice: JSON
+      myPaymentMethods: [JSON!]!
+      getInvoices(limit: Int): [Invoice!]!
     }
 
     # ---------- Admin Queries (ADMIN role only) ----------
@@ -941,6 +949,41 @@ export const typeDefs = [
       createCheckoutSession(planTier: PlanTier!): String!
       cancelSubscription: SubscriptionPlan!
       reactivateSubscription: SubscriptionPlan!
+      
+      # Payment Service Integration
+      createPaymentCheckout(tier: String!, interval: String!, isFoundingMember: Boolean): PaymentCheckoutResponse!
+      createBillingPortalSession(returnUrl: String): BillingPortalResponse!
+      upgradeSubscription(tier: String!, interval: String): UpgradeResponse!
+    }
+
+    # Payment Response Types
+    type PaymentCheckoutResponse {
+      sessionId: String!
+      url: String!
+    }
+
+    type BillingPortalResponse {
+      url: String!
+    }
+
+    type UpgradeResponse {
+      success: Boolean!
+      message: String
+      checkoutUrl: String
+    }
+
+    type Invoice {
+      id: ID!
+      number: String!
+      status: String!
+      amountDue: Int!
+      amountPaid: Int!
+      currency: String!
+      periodStart: DateTime!
+      periodEnd: DateTime!
+      invoiceUrl: String
+      invoicePdfUrl: String
+      createdAt: DateTime!
     }
 
     # ---------- Admin Mutations (ADMIN role only) ----------
@@ -986,9 +1029,41 @@ export const typeDefs = [
       adminForceDeleteClass(classId: ID!): Boolean!
       adminRestoreClass(classId: ID!): Class!
       
+      # Subscription management (admin)
+      adminUpdateSubscription(userId: ID!, input: AdminSubscriptionInput!): User!
+      adminCancelSubscription(userId: ID!, immediately: Boolean = false, reason: String): User!
+      adminExtendTrial(userId: ID!, days: Int!): User!
+      adminGrantFoundingMember(userId: ID!): User!
+      adminRevokeFoundingMember(userId: ID!): User!
+      
       # System actions
       adminPurgeInactiveUsers(daysInactive: Int!): Int!
       adminSendBulkEmail(userIds: [ID!]!, subject: String!, body: String!): Boolean!
+    }
+    
+    input AdminSubscriptionInput {
+      subscriptionTier: SubscriptionTier
+      subscriptionStatus: SubscriptionStatus
+      isFoundingMember: Boolean
+      trialEndsAt: DateTime
+      subscriptionExpiresAt: DateTime
+    }
+    
+    # Admin subscription stats
+    type AdminSubscriptionStats {
+      totalSubscriptions: Int!
+      activeSubscriptions: Int!
+      trialSubscriptions: Int!
+      expiredSubscriptions: Int!
+      cancelledSubscriptions: Int!
+      foundingMembers: Int!
+      tierBreakdown: JSON!
+    }
+    
+    extend type Query {
+      # Admin subscription queries
+      adminSubscriptionStats: AdminSubscriptionStats!
+      adminUserSubscription(userId: ID!): User
     }
 
     type Subscription {

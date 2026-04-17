@@ -35,13 +35,11 @@ export default function TierTestingPage() {
   ];
 
   return (
-    <div className="container max-w-7xl mx-auto p-6 space-y-6">
+    <div className="page-stack mx-auto w-full max-w-7xl">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">
-          Subscription Tier Testing
-        </h1>
-        <p className="text-muted-foreground">
+        <h1 className="page-title">Subscription Tier Testing</h1>
+        <p className="page-subtitle">
           Test different subscription tiers and their feature restrictions
         </p>
       </div>

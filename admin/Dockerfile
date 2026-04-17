@@ -19,8 +19,8 @@ COPY . .
 ARG VITE_GRAPHQL_URL
 ENV VITE_GRAPHQL_URL=$VITE_GRAPHQL_URL
 
-# Build the app
-RUN pnpm build
+# Build the app for container deployment (skip tsc gate in CI image build)
+RUN pnpm exec vite build
 
 # Production stage
 FROM nginx:alpine

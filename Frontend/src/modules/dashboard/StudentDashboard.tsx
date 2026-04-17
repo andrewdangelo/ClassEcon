@@ -107,21 +107,21 @@ export default function StudentDashboard() {
   const loading = studentsLoading || requestsLoading || storeLoading;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
+    <div className="flex flex-col gap-8 md:gap-10">
+      {/* Header — stack on narrow viewports, asymmetric row on md+ */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0 space-y-1">
+          <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">
             My Dashboard
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground max-w-prose text-sm md:text-base">
             {current?.name || "Your classroom economy progress"}
           </p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <JoinClassModal />
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Clock className="h-4 w-4" />
+            <Clock className="h-4 w-4 shrink-0" />
             <span>Last updated: {new Date().toLocaleTimeString()}</span>
           </div>
         </div>
@@ -140,7 +140,7 @@ export default function StudentDashboard() {
       )}
 
       {/* Main Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">My Balance</CardTitle>
@@ -148,7 +148,7 @@ export default function StudentDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {loading ? "Loading..." : `${current?.defaultCurrency || "CE$"} ${myBalance.toFixed(2)}`}
+              {loading ? "…" : `${current?.defaultCurrency || "CE$"} ${myBalance.toFixed(2)}`}
             </div>
             <p className="text-xs text-muted-foreground">
               Available to spend
@@ -163,7 +163,7 @@ export default function StudentDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {loading ? "Loading..." : `#${myRank}`}
+              {loading ? "…" : `#${myRank}`}
             </div>
             <p className="text-xs text-muted-foreground">
               Out of {totalStudents} students
@@ -174,14 +174,16 @@ export default function StudentDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
-            <AlertCircle className={cn(
-              "h-4 w-4",
-              pendingRequests.length > 0 ? "text-orange-500" : "text-muted-foreground"
-            )} />
+            <AlertCircle
+              className={cn(
+                "h-4 w-4",
+                pendingRequests.length > 0 ? "text-warning" : "text-muted-foreground"
+              )}
+            />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {loading ? "Loading..." : pendingRequests.length}
+              {loading ? "…" : pendingRequests.length}
             </div>
             <p className="text-xs text-muted-foreground">
               Awaiting approval
@@ -196,7 +198,7 @@ export default function StudentDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {loading ? "Loading..." : affordableItems.length}
+              {loading ? "…" : affordableItems.length}
             </div>
             <p className="text-xs text-muted-foreground">
               Items I can buy
@@ -206,11 +208,11 @@ export default function StudentDashboard() {
       </div>
 
       {/* Secondary Stats & Progress */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-green-500" />
+              <TrendingUp className="h-5 w-5 text-success" />
               Recent Activity
             </CardTitle>
             <CardDescription>

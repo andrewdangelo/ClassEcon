@@ -1,0 +1,109 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run Admin",
+      "type": "shell",
+      "command": "cd admin && (pnpm dev || npm run dev || npm start)",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "group": "services",
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Run AuthService",
+      "type": "shell",
+      "command": "cd AuthService && (pnpm dev || npm run dev || npm start)",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "group": "services",
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Run Backend",
+      "type": "shell",
+      "command": "cd Backend && (pnpm dev || npm run dev || npm start)",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "group": "services",
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Run EmailService",
+      "type": "shell",
+      "command": "cd EmailService && (pnpm dev || npm run dev || npm start)",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "group": "services",
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Run Frontend",
+      "type": "shell",
+      "command": "cd Frontend && (pnpm dev || npm run dev || npm start)",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "group": "services",
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Run LandingPage",
+      "type": "shell",
+      "command": "cd LandingPage && (pnpm dev || npm run dev || npm start)",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "group": "services",
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Run PaymentService",
+      "type": "shell",
+      "command": "cd PaymentService && (pnpm dev || npm run dev || npm start)",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "group": "services",
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Run All Services",
+      "dependsOn": [
+        "Run Admin",
+        "Run AuthService",
+        "Run Backend",
+        "Run EmailService",
+        "Run Frontend",
+        "Run LandingPage",
+        "Run PaymentService"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    }
+  ]
+}

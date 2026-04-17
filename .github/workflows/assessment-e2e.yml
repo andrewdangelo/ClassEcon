@@ -1,0 +1,116 @@
+name: Assessment E2E
+
+on:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 8 * * *"
+
+jobs:
+  fast-checks:
+    runs-on: ubuntu-latest
+    env:
+      BILLING_MODE: mock
+      E2E_BILLING_MODE: mock
+      E2E_REQUIRE_FRONTEND: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: assessment/pnpm-lock.yaml
+
+      - name: Start backend stack
+        run: docker compose up -d mongodb auth-service payment-service backend
+
+      - name: Install assessment dependencies
+        run: pnpm --dir assessment install --frozen-lockfile
+
+      - name: Run contract tests
+        run: pnpm --dir assessment run test:contracts
+
+      - name: Run API permission matrix
+        run: pnpm --dir assessment run test:e2e:api
+
+      - name: Teardown stack
+        if: always()
+        run: docker compose down -v
+
+  ui-smoke:
+    runs-on: ubuntu-latest
+    env:
+      BILLING_MODE: mock
+      E2E_BILLING_MODE: mock
+      VITE_E2E_BETA_BYPASS: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: assessment/pnpm-lock.yaml
+
+      - name: Start full stack
+        run: docker compose up -d mongodb auth-service payment-service backend frontend
+
+      - name: Install assessment dependencies
+        run: pnpm --dir assessment install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm --dir assessment exec playwright install --with-deps chromium
+
+      - name: Run browser smoke E2E
+        run: pnpm --dir assessment run test:e2e:smoke
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts-smoke
+          path: assessment/e2e/artifacts/test-results
+          if-no-files-found: ignore
+
+      - name: Teardown stack
+        if: always()
+        run: docker compose down -v
+
+  stripe-validation:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    env:
+      BILLING_MODE: stripe
+      E2E_BILLING_MODE: stripe
+      E2E_REQUIRE_FRONTEND: "false"
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+      E2E_ENABLE_STRIPE_BILLING: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: assessment/pnpm-lock.yaml
+
+      - name: Start backend stack for stripe tests
+        run: docker compose up -d mongodb auth-service payment-service backend
+
+      - name: Install assessment dependencies
+        run: pnpm --dir assessment install --frozen-lockfile
+
+      - name: Run stripe billing E2E
+        run: pnpm --dir assessment run test:e2e:billing:stripe
+
+      - name: Teardown stack
+        if: always()
+        run: docker compose down -v

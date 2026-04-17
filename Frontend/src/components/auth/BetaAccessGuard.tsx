@@ -15,7 +15,8 @@ export const BetaAccessGuard = ({ children }: BetaAccessGuardProps) => {
       try {
         // Skip beta access check in development if DISABLE_BETA_CHECK is set
         const skipBetaCheck = localStorage.getItem('DISABLE_BETA_CHECK') === 'true';
-        if (skipBetaCheck && import.meta.env.DEV) {
+        const allowE2eBypass = import.meta.env.VITE_E2E_BETA_BYPASS === 'true';
+        if (skipBetaCheck && (import.meta.env.DEV || allowE2eBypass)) {
           console.log('⚠️ Beta access check disabled for development');
           setHasAccess(true);
           setIsValidating(false);
@@ -119,16 +120,16 @@ export const BetaAccessGuard = ({ children }: BetaAccessGuardProps) => {
 
   if (isValidating) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="auth-shell">
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 mb-4 bg-blue-100 rounded-full">
-            <Shield className="w-8 h-8 text-blue-600 animate-pulse" />
+          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary/15">
+            <Shield className="h-8 w-8 animate-pulse text-primary" />
           </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            Verifying Access
+          <h2 className="mb-2 font-display text-xl font-semibold text-foreground">
+            Verifying access
           </h2>
-          <p className="text-gray-600">
-            Please wait while we verify your beta access...
+          <p className="text-muted-foreground">
+            Please wait while we verify your beta access…
           </p>
         </div>
       </div>
@@ -137,17 +138,17 @@ export const BetaAccessGuard = ({ children }: BetaAccessGuardProps) => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center max-w-md">
-          <div className="inline-flex items-center justify-center w-16 h-16 mb-4 bg-red-100 rounded-full">
-            <AlertCircle className="w-8 h-8 text-red-600" />
+      <div className="auth-shell">
+        <div className="max-w-md text-center">
+          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-destructive/15">
+            <AlertCircle className="h-8 w-8 text-destructive" />
           </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            Access Denied
+          <h2 className="mb-2 font-display text-xl font-semibold text-foreground">
+            Access denied
           </h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <p className="text-sm text-gray-500">
-            Redirecting to landing page...
+          <p className="mb-4 text-muted-foreground">{error}</p>
+          <p className="text-sm text-muted-foreground">
+            Redirecting to landing page…
           </p>
         </div>
       </div>

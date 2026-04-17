@@ -16,8 +16,10 @@ export default function RequestsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">Loading...</div>
+      <div className="flex h-64 items-center justify-center">
+        <p className="text-sm text-muted-foreground">
+          Loading your request inbox…
+        </p>
       </div>
     );
   }

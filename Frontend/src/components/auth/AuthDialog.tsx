@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useMutation } from "@apollo/client/react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,6 +11,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/Label";
+import { LOGIN, SIGN_UP } from "@/graphql/mutations/auth";
+import { useAppDispatch } from "@/redux/store/store";
+import { setCredentials } from "@/redux/authSlice";
 
 type Mode = "login" | "signup";
 
@@ -19,7 +22,9 @@ export function AuthDialog({
 }: {
   triggerText?: string;
 }) {
-  const { login, signUp } = useAuth();
+  const dispatch = useAppDispatch();
+  const [runLogin] = useMutation(LOGIN);
+  const [runSignUp] = useMutation(SIGN_UP);
   const [open, setOpen] = React.useState(false);
   const [mode, setMode] = React.useState<Mode>("login");
   const [form, setForm] = React.useState({
@@ -37,14 +42,30 @@ export function AuthDialog({
     setError(null);
     try {
       if (mode === "login") {
-        await login(form.email, form.password);
-      } else {
-        await signUp({
-          name: form.name,
-          email: form.email,
-          password: form.password,
-          role: form.role,
+        const { data } = await runLogin({
+          variables: { email: form.email, password: form.password },
         });
+        const payload = data?.login;
+        if (!payload?.accessToken || !payload.user) {
+          throw new Error("Login failed");
+        }
+        dispatch(setCredentials({ accessToken: payload.accessToken, user: payload.user }));
+      } else {
+        const { data } = await runSignUp({
+          variables: {
+            input: {
+              name: form.name,
+              email: form.email,
+              password: form.password,
+              role: form.role,
+            },
+          },
+        });
+        const payload = data?.signUp;
+        if (!payload?.accessToken || !payload.user) {
+          throw new Error("Sign up failed");
+        }
+        dispatch(setCredentials({ accessToken: payload.accessToken, user: payload.user }));
       }
       setOpen(false);
     } catch (err: any) {

@@ -34,65 +34,65 @@ import {
 import BalanceOverTimeChart from "@/components/activity/BalanceOverTimeChart";
 
 const TRANSACTION_CONFIG = {
-  DEPOSIT: { 
-    icon: TrendingUp, 
-    color: "text-green-600 dark:text-green-400", 
-    bgColor: "bg-green-50 dark:bg-green-950",
-    label: "Deposit" 
+  DEPOSIT: {
+    icon: TrendingUp,
+    color: "text-success",
+    bgColor: "bg-success/15",
+    label: "Deposit",
   },
-  INCOME: { 
-    icon: DollarSign, 
-    color: "text-green-600 dark:text-green-400", 
-    bgColor: "bg-green-50 dark:bg-green-950",
-    label: "Income" 
+  INCOME: {
+    icon: DollarSign,
+    color: "text-success",
+    bgColor: "bg-success/15",
+    label: "Income",
   },
-  PAYROLL: { 
-    icon: Wallet, 
-    color: "text-blue-600 dark:text-blue-400", 
-    bgColor: "bg-blue-50 dark:bg-blue-950",
-    label: "Payroll" 
+  PAYROLL: {
+    icon: Wallet,
+    color: "text-primary",
+    bgColor: "bg-primary/12",
+    label: "Payroll",
   },
-  REFUND: { 
-    icon: RefreshCw, 
-    color: "text-cyan-600 dark:text-cyan-400", 
-    bgColor: "bg-cyan-50 dark:bg-cyan-950",
-    label: "Refund" 
+  REFUND: {
+    icon: RefreshCw,
+    color: "text-primary",
+    bgColor: "bg-primary/8",
+    label: "Refund",
   },
-  PURCHASE: { 
-    icon: ShoppingBag, 
-    color: "text-purple-600 dark:text-purple-400", 
-    bgColor: "bg-purple-50 dark:bg-purple-950",
-    label: "Purchase" 
+  PURCHASE: {
+    icon: ShoppingBag,
+    color: "text-warning",
+    bgColor: "bg-warning/15",
+    label: "Purchase",
   },
-  FINE: { 
-    icon: AlertTriangle, 
-    color: "text-yellow-600 dark:text-yellow-400", 
-    bgColor: "bg-yellow-50 dark:bg-yellow-950",
-    label: "Fine" 
+  FINE: {
+    icon: AlertTriangle,
+    color: "text-destructive",
+    bgColor: "bg-destructive/10",
+    label: "Fine",
   },
-  WITHDRAWAL: { 
-    icon: TrendingDown, 
-    color: "text-red-600 dark:text-red-400", 
-    bgColor: "bg-red-50 dark:bg-red-950",
-    label: "Withdrawal" 
+  WITHDRAWAL: {
+    icon: TrendingDown,
+    color: "text-destructive",
+    bgColor: "bg-destructive/10",
+    label: "Withdrawal",
   },
-  EXPENSE: { 
-    icon: TrendingDown, 
-    color: "text-red-600 dark:text-red-400", 
-    bgColor: "bg-red-50 dark:bg-red-950",
-    label: "Expense" 
+  EXPENSE: {
+    icon: TrendingDown,
+    color: "text-destructive",
+    bgColor: "bg-destructive/10",
+    label: "Expense",
   },
-  TRANSFER: { 
-    icon: ArrowLeftRight, 
-    color: "text-gray-600 dark:text-gray-400", 
-    bgColor: "bg-gray-50 dark:bg-gray-950",
-    label: "Transfer" 
+  TRANSFER: {
+    icon: ArrowLeftRight,
+    color: "text-muted-foreground",
+    bgColor: "bg-muted",
+    label: "Transfer",
   },
-  ADJUSTMENT: { 
-    icon: RefreshCw, 
-    color: "text-gray-600 dark:text-gray-400", 
-    bgColor: "bg-gray-50 dark:bg-gray-950",
-    label: "Adjustment" 
+  ADJUSTMENT: {
+    icon: RefreshCw,
+    color: "text-muted-foreground",
+    bgColor: "bg-muted",
+    label: "Adjustment",
   },
 };
 
@@ -246,11 +246,11 @@ export default function MyActivityPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="page-stack">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">My Activity</h1>
-        <p className="text-muted-foreground">
+        <h1 className="page-title">My Activity</h1>
+        <p className="page-subtitle">
           View your complete transaction history
         </p>
       </div>
@@ -264,7 +264,7 @@ export default function MyActivityPage() {
       />
 
       {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 sm:gap-5 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">

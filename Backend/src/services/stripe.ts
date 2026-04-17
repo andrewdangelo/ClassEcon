@@ -1,10 +1,13 @@
 /**
- * Stripe Service - Subscription Management
+ * Stripe Service - DEPRECATED
  * 
- * Handles Stripe integration for subscription payments
- * Uses Stripe Test Mode for development/testing
+ * @deprecated This service is deprecated. Use PaymentService microservice instead.
+ * The Backend now proxies payment requests to the PaymentService which handles
+ * all Stripe integration. See src/services/payment-service.ts
  * 
- * Test Cards:
+ * This file is kept for reference and backward compatibility during migration.
+ * 
+ * Test Cards (for PaymentService):
  * - Success: 4242 4242 4242 4242
  * - Declined: 4000 0000 0000 0002
  * - 3D Secure: 4000 0025 0000 3155
@@ -14,11 +17,37 @@ import Stripe from 'stripe';
 import { User } from '../models/User';
 import { Types } from 'mongoose';
 
-// Initialize Stripe with test key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2025-09-30.clover',
-  typescript: true,
-});
+// Initialize Stripe - will be null if no key provided (expected in new architecture)
+const stripeKey = process.env.STRIPE_SECRET_KEY;
+let _stripeInstance: Stripe | null = null;
+
+// Lazy initialization to avoid crash at import time
+const getStripe = (): Stripe => {
+  if (!_stripeInstance) {
+    if (!stripeKey) {
+      throw new Error(
+        'DEPRECATED: StripeService is deprecated. Use PaymentService microservice instead. ' +
+        'Set PAYMENT_SERVICE_URL in .env and use PaymentServiceClient.'
+      );
+    }
+    _stripeInstance = new Stripe(stripeKey, {
+      apiVersion: '2025-09-30.clover',
+      typescript: true,
+    });
+  }
+  return _stripeInstance;
+};
+
+// Alias for backward compatibility
+const stripe = {
+  get customers() { return getStripe().customers; },
+  get checkout() { return getStripe().checkout; },
+  get billingPortal() { return getStripe().billingPortal; },
+  get subscriptions() { return getStripe().subscriptions; },
+  get paymentMethods() { return getStripe().paymentMethods; },
+  get invoices() { return getStripe().invoices; },
+  get webhooks() { return getStripe().webhooks; },
+};
 
 // Subscription tier to Stripe price mapping
 const TIER_PRICE_MAP = {
@@ -35,6 +64,7 @@ const FOUNDING_MEMBER_COUPON = process.env.STRIPE_COUPON_FOUNDING || 'FOUNDING50
 export class StripeService {
   /**
    * Create or retrieve Stripe customer for user
+   * @deprecated Use PaymentService instead
    */
   static async getOrCreateCustomer(userId: string | Types.ObjectId): Promise<string> {
     const user = await User.findById(userId);
@@ -271,6 +301,30 @@ export class StripeService {
     } catch (error) {
       console.error('Error retrieving upcoming invoice:', error);
       return null;
+    }
+  }
+
+  /**
+   * Get invoice history for a user
+   */
+  static async getInvoices(
+    userId: string | Types.ObjectId,
+    limit: number = 12
+  ): Promise<Stripe.Invoice[]> {
+    const user = await User.findById(userId);
+    if (!user?.stripeCustomerId) {
+      return [];
+    }
+
+    try {
+      const invoices = await stripe.invoices.list({
+        customer: user.stripeCustomerId,
+        limit: limit,
+      });
+      return invoices.data;
+    } catch (error) {
+      console.error('Error retrieving invoices:', error);
+      return [];
     }
   }
 

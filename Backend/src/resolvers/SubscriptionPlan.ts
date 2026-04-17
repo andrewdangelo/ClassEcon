@@ -5,29 +5,72 @@ import { PLAN_CONFIGS } from '../config/plans.js';
 interface Context {
   userId?: string | null;
   role?: string | null;
+  user?: {
+    userId?: string | null;
+  };
+}
+
+const TIER_MAP: Record<string, 'FREE' | 'TRIAL' | 'STARTER' | 'PROFESSIONAL' | 'SCHOOL'> = {
+  FREE_TRIAL: 'TRIAL',
+  BASIC: 'STARTER',
+  PREMIUM: 'PROFESSIONAL',
+  ENTERPRISE: 'SCHOOL',
+  FREE: 'FREE',
+  TRIAL: 'TRIAL',
+  STARTER: 'STARTER',
+  PROFESSIONAL: 'PROFESSIONAL',
+  SCHOOL: 'SCHOOL',
+};
+
+const STATUS_MAP: Record<string, 'ACTIVE' | 'TRIAL' | 'EXPIRED' | 'CANCELED' | 'PAST_DUE'> = {
+  ACTIVE: 'ACTIVE',
+  TRIAL: 'TRIAL',
+  EXPIRED: 'EXPIRED',
+  CANCELLED: 'CANCELED',
+  CANCELED: 'CANCELED',
+  PAST_DUE: 'PAST_DUE',
+};
+
+function getUserId(context: Context): string | null {
+  return context.userId || context.user?.userId || null;
+}
+
+function mapTier(tier: string): 'FREE' | 'TRIAL' | 'STARTER' | 'PROFESSIONAL' | 'SCHOOL' {
+  return TIER_MAP[tier] || 'FREE';
+}
+
+function mapStatus(status: string): 'ACTIVE' | 'TRIAL' | 'EXPIRED' | 'CANCELED' | 'PAST_DUE' {
+  return STATUS_MAP[status] || 'ACTIVE';
 }
 
 export const SubscriptionPlanResolvers = {
   Query: {
     // Get current user's subscription
     mySubscription: async (_: unknown, __: unknown, context: Context) => {
-      if (!context.userId) {
+      const userId = getUserId(context);
+      if (!userId) {
         throw new GraphQLError('Not authenticated', {
           extensions: { code: 'UNAUTHENTICATED' },
         });
       }
 
       try {
-        const subscription = await SubscriptionService.getOrCreateSubscription(context.userId);
-        return subscription;
+        const subscription = await SubscriptionService.getOrCreateSubscription(userId);
+        return {
+          ...subscription.toObject(),
+          planTier: mapTier(subscription.planTier),
+          status: mapStatus(subscription.status),
+          isFoundingMember: false,
+        };
       } catch (error) {
         console.error('Error fetching subscription:', error);
-        // Fail open - return a default FREE_TRIAL subscription
+        // Fail open - return a default TRIAL subscription
         return {
-          userId: context.userId,
-          planTier: 'FREE_TRIAL',
+          userId,
+          planTier: 'TRIAL',
           status: 'TRIAL',
           limits: PLAN_CONFIGS.FREE_TRIAL.limits,
+          isFoundingMember: false,
           cancelAtPeriodEnd: false,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -38,7 +81,7 @@ export const SubscriptionPlanResolvers = {
     // Get available plans
     availablePlans: async () => {
       return Object.entries(PLAN_CONFIGS).map(([tier, config]) => ({
-        tier,
+        tier: mapTier(tier),
         name: config.name,
         price: config.price.monthly,
         billingPeriod: 'monthly',
@@ -54,7 +97,8 @@ export const SubscriptionPlanResolvers = {
       { feature }: { feature: string },
       context: Context
     ) => {
-      if (!context.userId) {
+      const userId = getUserId(context);
+      if (!userId) {
         throw new GraphQLError('Not authenticated', {
           extensions: { code: 'UNAUTHENTICATED' },
         });
@@ -62,7 +106,7 @@ export const SubscriptionPlanResolvers = {
 
       try {
         // For boolean features, just check if they have it
-        const subscription = await SubscriptionService.getOrCreateSubscription(context.userId);
+        const subscription = await SubscriptionService.getOrCreateSubscription(userId);
         const plan = PLAN_CONFIGS[subscription.planTier];
         
         // Check if the feature is a boolean feature
@@ -92,14 +136,15 @@ export const SubscriptionPlanResolvers = {
 
     // Check if user can create a class
     canCreateClass: async (_: unknown, __: unknown, context: Context) => {
-      if (!context.userId) {
+      const userId = getUserId(context);
+      if (!userId) {
         throw new GraphQLError('Not authenticated', {
           extensions: { code: 'UNAUTHENTICATED' },
         });
       }
 
       try {
-        const result = await SubscriptionService.canCreateClass(context.userId);
+        const result = await SubscriptionService.canCreateClass(userId);
         return result;
       } catch (error) {
         console.error('Error checking class creation:', error);
@@ -117,14 +162,15 @@ export const SubscriptionPlanResolvers = {
       { classId }: { classId: string },
       context: Context
     ) => {
-      if (!context.userId) {
+      const userId = getUserId(context);
+      if (!userId) {
         throw new GraphQLError('Not authenticated', {
           extensions: { code: 'UNAUTHENTICATED' },
         });
       }
 
       try {
-        const result = await SubscriptionService.canAddStudent(context.userId, classId);
+        const result = await SubscriptionService.canAddStudent(userId, classId);
         return result;
       } catch (error) {
         console.error('Error checking student addition:', error);
@@ -144,7 +190,7 @@ export const SubscriptionPlanResolvers = {
       { planTier }: { planTier: string },
       context: Context
     ) => {
-      if (!context.userId) {
+      if (!getUserId(context)) {
         throw new GraphQLError('Not authenticated', {
           extensions: { code: 'UNAUTHENTICATED' },
         });
@@ -159,15 +205,21 @@ export const SubscriptionPlanResolvers = {
 
     // Cancel subscription
     cancelSubscription: async (_: unknown, __: unknown, context: Context) => {
-      if (!context.userId) {
+      const userId = getUserId(context);
+      if (!userId) {
         throw new GraphQLError('Not authenticated', {
           extensions: { code: 'UNAUTHENTICATED' },
         });
       }
 
       try {
-        const subscription = await SubscriptionService.cancelSubscription(context.userId);
-        return subscription;
+        const subscription = await SubscriptionService.cancelSubscription(userId);
+        return {
+          ...subscription.toObject(),
+          planTier: mapTier(subscription.planTier),
+          status: mapStatus(subscription.status),
+          isFoundingMember: false,
+        };
       } catch (error) {
         console.error('Error cancelling subscription:', error);
         throw new GraphQLError('Failed to cancel subscription');
@@ -176,15 +228,21 @@ export const SubscriptionPlanResolvers = {
 
     // Reactivate subscription
     reactivateSubscription: async (_: unknown, __: unknown, context: Context) => {
-      if (!context.userId) {
+      const userId = getUserId(context);
+      if (!userId) {
         throw new GraphQLError('Not authenticated', {
           extensions: { code: 'UNAUTHENTICATED' },
         });
       }
 
       try {
-        const subscription = await SubscriptionService.reactivateSubscription(context.userId);
-        return subscription;
+        const subscription = await SubscriptionService.reactivateSubscription(userId);
+        return {
+          ...subscription.toObject(),
+          planTier: mapTier(subscription.planTier),
+          status: mapStatus(subscription.status),
+          isFoundingMember: false,
+        };
       } catch (error) {
         console.error('Error reactivating subscription:', error);
         throw new GraphQLError('Failed to reactivate subscription');

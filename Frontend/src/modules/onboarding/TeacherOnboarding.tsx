@@ -132,14 +132,14 @@ export default function TeacherOnboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4 md:p-8">
+    <div className="onboarding-canvas">
       <div className="mx-auto max-w-4xl">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+        <div className="mb-8 text-center">
+          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary/15">
             <GraduationCap className="h-8 w-8 text-primary" />
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">
+          <h1 className="mb-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
             {prefill?.name ? `Welcome, ${prefill.name}!` : "Welcome to ClassEcon"}
           </h1>
           <p className="text-muted-foreground text-lg">
@@ -152,7 +152,7 @@ export default function TeacherOnboarding() {
           )}
         </div>
 
-        <Card className="shadow-xl border-2">
+        <Card className="border border-border/80 shadow-xl">
           <CardHeader className="space-y-1 pb-6">
             <CardTitle className="text-2xl">Class Setup</CardTitle>
             <CardDescription>

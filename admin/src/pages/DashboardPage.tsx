@@ -1,5 +1,5 @@
 import { useQuery } from '@apollo/client'
-import { GET_ADMIN_DASHBOARD_STATS, ADMIN_GET_USERS, ADMIN_GET_CLASSES, ADMIN_GET_AUDIT_LOGS } from '@/graphql/queries'
+import { GET_ADMIN_DASHBOARD_STATS, GET_ADMIN_SUBSCRIPTION_STATS, ADMIN_GET_USERS, ADMIN_GET_CLASSES, ADMIN_GET_AUDIT_LOGS } from '@/graphql/queries'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -13,6 +13,8 @@ import {
   BookOpen,
   Key,
   Clock,
+  CreditCard,
+  Crown,
 } from 'lucide-react'
 
 interface StatCardProps {
@@ -54,6 +56,10 @@ export function DashboardPage() {
     fetchPolicy: 'network-only',
   })
 
+  const { data: subscriptionData, loading: subscriptionLoading } = useQuery(GET_ADMIN_SUBSCRIPTION_STATS, {
+    fetchPolicy: 'network-only',
+  })
+
   const { data: usersData, loading: usersLoading } = useQuery(ADMIN_GET_USERS, {
     variables: { limit: 5, sortBy: 'createdAt', sortOrder: 'desc' },
     fetchPolicy: 'network-only',
@@ -70,6 +76,7 @@ export function DashboardPage() {
   })
 
   const stats = statsData?.adminDashboardStats
+  const subscriptionStats = subscriptionData?.adminSubscriptionStats
   const recentUsers = usersData?.adminUsers?.nodes || []
   const recentClasses = classesData?.adminClasses || []
   const auditLogs = auditData?.adminAuditLogs?.nodes || []
@@ -184,6 +191,42 @@ export function DashboardPage() {
           description={`${stats?.activeBetaCodes ?? 0} active, ${stats?.totalBetaCodeUses ?? 0} uses`}
           icon={Key}
           loading={statsLoading}
+        />
+      </div>
+
+      {/* Subscription Stats Grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Total Subscriptions"
+          value={subscriptionStats?.totalSubscriptions ?? 0}
+          description="All teacher accounts"
+          icon={CreditCard}
+          loading={subscriptionLoading}
+        />
+        <StatCard
+          title="Active Paid"
+          value={subscriptionStats?.activeSubscriptions ?? 0}
+          description={`${subscriptionStats?.trialSubscriptions ?? 0} on trial`}
+          icon={TrendingUp}
+          loading={subscriptionLoading}
+        />
+        <StatCard
+          title="Founding Members"
+          value={subscriptionStats?.foundingMembers ?? 0}
+          description="Lifetime 50% discount"
+          icon={Crown}
+          loading={subscriptionLoading}
+        />
+        <StatCard
+          title="Tier Breakdown"
+          value={
+            subscriptionStats?.tierBreakdown 
+              ? `${subscriptionStats.tierBreakdown.PROFESSIONAL || 0} Pro / ${subscriptionStats.tierBreakdown.STARTER || 0} Starter`
+              : '0 Pro / 0 Starter'
+          }
+          description={`${subscriptionStats?.expiredSubscriptions ?? 0} expired, ${subscriptionStats?.cancelledSubscriptions ?? 0} cancelled`}
+          icon={Activity}
+          loading={subscriptionLoading}
         />
       </div>
 

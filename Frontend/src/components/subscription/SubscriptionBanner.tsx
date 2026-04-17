@@ -1,4 +1,3 @@
-import React from 'react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -11,7 +10,7 @@ import { differenceInDays } from 'date-fns';
  * Shows trial ending warning, expired trial, or cancelled subscription alerts
  */
 export function SubscriptionBanner() {
-  const { subscription, isOnTrial, isActive } = useSubscription();
+  const { subscription, isOnTrial } = useSubscription();
 
   if (!subscription) return null;
 
@@ -98,7 +97,7 @@ export function SubscriptionBanner() {
   }
 
   // Subscription fully cancelled/expired
-  if (subscription.status === 'CANCELLED') {
+  if (subscription.status === 'CANCELED') {
     return (
       <Alert className="border-red-500 bg-red-50 mb-4">
         <AlertCircle className="h-5 w-5 text-red-600" />
@@ -149,10 +148,10 @@ export function SubscriptionBannerCompact() {
     }
   }
 
-  if (subscription.status === 'EXPIRED' || subscription.status === 'CANCELLED') {
+  if (subscription.status === 'EXPIRED' || subscription.status === 'CANCELED') {
     return (
       <div className="bg-red-500 text-white px-4 py-2 text-sm text-center">
-        Your subscription has {subscription.status === 'EXPIRED' ? 'expired' : 'been cancelled'}.{' '}
+        Your subscription has {subscription.status === 'EXPIRED' ? 'expired' : 'been canceled'}.{' '}
         <Link to="/settings/subscription" className="underline font-semibold">
           Upgrade now
         </Link>

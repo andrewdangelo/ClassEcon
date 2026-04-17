@@ -11,11 +11,23 @@ interface OAuthCallbackProps {
   provider: "google" | "microsoft";
 }
 
+interface OAuthLoginData {
+  oauthLogin?: {
+    user: any;
+    accessToken: string;
+  } | null;
+}
+
+interface OAuthLoginVars {
+  provider: string;
+  code: string;
+}
+
 export function OAuthCallback({ provider }: OAuthCallbackProps) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const [oauthLogin] = useMutation(OAUTH_LOGIN);
+  const [oauthLogin] = useMutation<OAuthLoginData, OAuthLoginVars>(OAUTH_LOGIN);
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -71,13 +83,13 @@ export function OAuthCallback({ provider }: OAuthCallbackProps) {
   }, [searchParams, navigate, dispatch, oauthLogin, provider]);
 
   return (
-    <div className="flex h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="auth-shell">
       <div className="text-center">
-        <Loader2 className="h-12 w-12 animate-spin text-indigo-600 mx-auto mb-4" />
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-          Completing authentication...
+        <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-primary" />
+        <h2 className="font-display text-xl font-semibold text-foreground">
+          Completing authentication…
         </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+        <p className="mt-2 text-sm text-muted-foreground">
           Please wait while we sign you in with {provider === "google" ? "Google" : "Microsoft"}
         </p>
       </div>

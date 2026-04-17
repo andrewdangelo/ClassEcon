@@ -311,7 +311,7 @@ export default function TeacherDashboard() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-8 md:gap-10">
       {/* Trial Banner */}
       <TrialBanner />
       
@@ -319,20 +319,20 @@ export default function TeacherDashboard() {
       <SubscriptionBanner />
       
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-3">
-            Teacher Dashboard
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 space-y-1">
+          <h1 className="flex flex-wrap items-center gap-2 font-display text-2xl font-bold tracking-tight md:gap-3 md:text-3xl">
+            <span>Teacher Dashboard</span>
             <TierBadge />
           </h1>
-          <p className="text-muted-foreground">
+          <p className="max-w-prose text-muted-foreground text-sm md:text-base">
             {isEditMode ? "Edit your dashboard - Add or remove widgets" : "Overview of all your classroom economies"}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
           {!isEditMode && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock className="h-4 w-4" />
+              <Clock className="h-4 w-4 shrink-0" />
               <span>Last updated: {new Date().toLocaleTimeString()}</span>
             </div>
           )}
@@ -385,9 +385,9 @@ export default function TeacherDashboard() {
 
       {/* Current Class Stats */}
       {currentClass && (
-        <div className="space-y-4">
-          <div>
-            <h2 className="text-xl font-semibold">{currentClass.name} Overview</h2>
+        <div className="flex flex-col gap-6">
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold tracking-tight md:text-2xl">{currentClass.name} Overview</h2>
             <p className="text-sm text-muted-foreground">
               {currentClass.subject && currentClass.period 
                 ? `${currentClass.subject} • Period ${currentClass.period}`
@@ -395,7 +395,7 @@ export default function TeacherDashboard() {
             </p>
           </div>
           
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-4">
             {getVisibleWidgets().map((widget) => {
               const Icon = widget.icon;
               const value = widget.getValue(stats, classes);
@@ -460,7 +460,7 @@ export default function TeacherDashboard() {
       <div className="space-y-4">
         <h2 className="text-lg font-semibold">Your Classes</h2>
         {loading ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map(i => (
               <Card key={i}>
                 <CardHeader>
@@ -491,7 +491,7 @@ export default function TeacherDashboard() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-3">
             {classes.map((cls: any) => (
               <Card key={cls.id} className={cn("hover:shadow-md transition-shadow", cls.isArchived && "opacity-60")}>
                 <CardHeader>

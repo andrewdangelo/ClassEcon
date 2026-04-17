@@ -228,15 +228,14 @@ cd Frontend && pnpm run dev
 ## 🧪 Testing
 
 ```bash
-# Backend tests
-cd Backend
-pnpm test
+# Contract tests
+node --test assessment/tests/*.mjs
 
-# Frontend tests
-cd Frontend
-pnpm test
-
-# E2E tests
+# E2E tests (assessment harness)
+cd assessment
+cp .env.e2e.example .env.e2e
+pnpm install
+pnpm run test:e2e:api
 pnpm run test:e2e
 ```
 

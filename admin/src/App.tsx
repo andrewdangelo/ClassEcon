@@ -8,6 +8,7 @@ import { ClassesPage } from './pages/ClassesPage'
 import { ClassroomsPage } from './pages/ClassroomsPage'
 import { BetaCodesPage } from './pages/BetaCodesPage'
 import { SubscriptionsPage } from './pages/SubscriptionsPage'
+import { SubscriptionManagementPage } from './pages/SubscriptionManagementPage'
 import { TransactionsPage } from './pages/TransactionsPage'
 import { AuditLogsPage } from './pages/AuditLogsPage'
 import { SettingsPage } from './pages/SettingsPage'
@@ -46,6 +47,7 @@ function App() {
                 <Route path="/classrooms" element={<ClassroomsPage />} />
                 <Route path="/beta-codes" element={<BetaCodesPage />} />
                 <Route path="/subscriptions" element={<SubscriptionsPage />} />
+                <Route path="/subscription-management" element={<SubscriptionManagementPage />} />
                 <Route path="/transactions" element={<TransactionsPage />} />
                 <Route path="/audit-logs" element={<AuditLogsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />

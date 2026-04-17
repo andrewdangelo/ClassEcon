@@ -1,5 +1,5 @@
-import { useQuery } from '@apollo/client/react';
 import { gql } from '@apollo/client';
+import { useQuery } from '@apollo/client/react';
 
 export const MY_SUBSCRIPTION_QUERY = gql`
   query MySubscription {
@@ -8,6 +8,7 @@ export const MY_SUBSCRIPTION_QUERY = gql`
       userId
       planTier
       status
+      isFoundingMember
       limits {
         maxClasses
         maxStudentsPerClass
@@ -88,20 +89,21 @@ export interface SubscriptionLimits {
 export interface Subscription {
   id: string;
   userId: string;
-  planTier: 'FREE_TRIAL' | 'BASIC' | 'PREMIUM' | 'ENTERPRISE';
-  status: 'ACTIVE' | 'TRIAL' | 'CANCELLED' | 'EXPIRED';
+  planTier: 'FREE' | 'TRIAL' | 'STARTER' | 'PROFESSIONAL' | 'SCHOOL';
+  status: 'ACTIVE' | 'TRIAL' | 'CANCELED' | 'EXPIRED' | 'PAST_DUE';
   limits: SubscriptionLimits;
-  currentPeriodStart?: string;
-  currentPeriodEnd?: string;
-  trialEndsAt?: string;
+  isFoundingMember: boolean;
+  currentPeriodStart?: string | null;
+  currentPeriodEnd?: string | null;
+  trialEndsAt?: string | null;
   cancelAtPeriodEnd: boolean;
-  cancelledAt?: string;
+  cancelledAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface PlanInfo {
-  tier: string;
+  tier: Subscription['planTier'];
   name: string;
   price: number;
   billingPeriod: string;
@@ -117,33 +119,63 @@ export interface FeatureCheckResult {
   reason?: string;
 }
 
+interface MySubscriptionData {
+  mySubscription: Subscription;
+}
+
+interface AvailablePlansData {
+  availablePlans: PlanInfo[];
+}
+
+interface CanCreateClassData {
+  canCreateClass: FeatureCheckResult;
+}
+
+interface CanAddStudentData {
+  canAddStudent: FeatureCheckResult;
+}
+
+function getDaysRemaining(trialEndsAt?: string | null): number | undefined {
+  if (!trialEndsAt) return undefined;
+  const end = new Date(trialEndsAt).getTime();
+  if (Number.isNaN(end)) return undefined;
+  const msLeft = end - Date.now();
+  return Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
+}
+
 /**
  * Hook to get the current user's subscription
  */
 export function useSubscription() {
-  const { data, loading, error, refetch } = useQuery(MY_SUBSCRIPTION_QUERY, {
+  const { data, loading, error, refetch } = useQuery<MySubscriptionData>(MY_SUBSCRIPTION_QUERY, {
     // Poll every 5 minutes to keep subscription status fresh
     pollInterval: 5 * 60 * 1000,
     // Use cache-and-network to show cached data while fetching fresh data
     fetchPolicy: 'cache-and-network',
   });
+  const subscription = data?.mySubscription;
+  const daysRemaining = getDaysRemaining(subscription?.trialEndsAt);
 
   return {
-    subscription: data?.mySubscription as Subscription | undefined,
+    subscription,
     loading,
     error,
     refetch,
     // Helper methods
-    isOnTrial: data?.mySubscription?.status === 'TRIAL',
-    isPremium: ['PREMIUM', 'ENTERPRISE'].includes(data?.mySubscription?.planTier),
-    isActive: ['ACTIVE', 'TRIAL'].includes(data?.mySubscription?.status),
+    isOnTrial: subscription?.status === 'TRIAL',
+    daysRemaining,
+    isPremium: ['PROFESSIONAL', 'SCHOOL'].includes(subscription?.planTier || ''),
+    isActive: ['ACTIVE', 'TRIAL'].includes(subscription?.status || ''),
     hasFeature: (feature: keyof SubscriptionLimits) => {
-      const limits = data?.mySubscription?.limits;
+      const limits = subscription?.limits;
       if (!limits) return false;
-      return limits[feature] === true || (typeof limits[feature] === 'number' && limits[feature] > 0);
+      return (
+        limits[feature] === true ||
+        (typeof limits[feature] === 'number' && (limits[feature] as number) > 0)
+      );
     },
     getLimit: (feature: keyof SubscriptionLimits) => {
-      return data?.mySubscription?.limits?.[feature];
+      return subscription?.limits?.[feature];
     },
   };
 }
@@ -152,7 +184,7 @@ export function useSubscription() {
  * Hook to get available subscription plans
  */
 export function useAvailablePlans() {
-  const { data, loading, error } = useQuery(AVAILABLE_PLANS_QUERY);
+  const { data, loading, error } = useQuery<AvailablePlansData>(AVAILABLE_PLANS_QUERY);
 
   return {
     plans: (data?.availablePlans || []) as PlanInfo[],
@@ -165,7 +197,7 @@ export function useAvailablePlans() {
  * Hook to check if user can create a class
  */
 export function useCanCreateClass() {
-  const { data, loading, error, refetch } = useQuery(CAN_CREATE_CLASS_QUERY);
+  const { data, loading, error, refetch } = useQuery<CanCreateClassData>(CAN_CREATE_CLASS_QUERY);
 
   return {
     canCreate: data?.canCreateClass?.allowed ?? true,
@@ -182,7 +214,7 @@ export function useCanCreateClass() {
  * Hook to check if user can add a student to a class
  */
 export function useCanAddStudent(classId?: string) {
-  const { data, loading, error, refetch } = useQuery(CAN_ADD_STUDENT_QUERY, {
+  const { data, loading, error, refetch } = useQuery<CanAddStudentData>(CAN_ADD_STUDENT_QUERY, {
     variables: { classId },
     skip: !classId,
   });

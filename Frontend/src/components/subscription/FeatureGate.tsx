@@ -1,4 +1,3 @@
-import React from 'react';
 import { useSubscription, SubscriptionLimits } from '@/hooks/useSubscription';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -164,14 +163,14 @@ export function PlanBadge() {
     return (
       <div className="inline-flex items-center px-2 py-1 rounded-md bg-amber-100 text-amber-700 text-xs font-medium">
         <Crown className="mr-1 h-3 w-3" />
-        {subscription.planTier === 'ENTERPRISE' ? 'Enterprise' : 'Premium'}
+        {subscription.planTier === 'SCHOOL' ? 'School' : 'Professional'}
       </div>
     );
   }
 
   return (
     <div className="inline-flex items-center px-2 py-1 rounded-md bg-gray-100 text-gray-700 text-xs font-medium">
-      {subscription.planTier === 'FREE_TRIAL' ? 'Free Trial' : 'Basic'}
+      {subscription.planTier === 'TRIAL' ? 'Free Trial' : 'Starter'}
     </div>
   );
 }

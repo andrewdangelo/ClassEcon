@@ -3,6 +3,7 @@ import { useMutation } from '@apollo/client/react';
 import { gql } from '@apollo/client';
 import { Shield, Plus, CheckCircle, AlertCircle } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { Button } from '@/components/ui/button';
 
 const CREATE_BETA_CODE = gql`
   mutation CreateBetaCode($code: String!, $description: String, $maxUses: Int, $expiresAt: DateTime) {
@@ -81,16 +82,16 @@ export default function BetaCodesManagement() {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <Shield className="w-8 h-8 text-primary-600" />
-          <h1 className="text-3xl font-bold text-gray-900">Beta Access Codes</h1>
+    <div className="page-stack mx-auto w-full max-w-4xl">
+      <header className="space-y-2">
+        <div className="flex items-center gap-3">
+          <Shield className="h-9 w-9 shrink-0 text-primary" aria-hidden />
+          <h1 className="page-title">Beta Access Codes</h1>
         </div>
-        <p className="text-gray-600">
+        <p className="page-subtitle !mt-0">
           Create and manage beta access codes for the closed beta period.
         </p>
-      </div>
+      </header>
 
       {/* Success Message */}
       {successMessage && (
@@ -114,15 +115,15 @@ export default function BetaCodesManagement() {
       )}
 
       {/* Create Form */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Plus className="w-5 h-5" />
+      <div className="rounded-xl border border-border bg-card p-6 shadow-md">
+        <h2 className="mb-4 flex items-center gap-2 font-display text-xl font-semibold tracking-tight">
+          <Plus className="h-5 w-5 text-primary" />
           Create New Beta Code
         </h2>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="code" className="mb-2 block text-sm font-medium text-foreground">
               Access Code *
             </label>
             <input
@@ -132,16 +133,16 @@ export default function BetaCodesManagement() {
               value={formData.code}
               onChange={handleChange}
               placeholder="e.g., BETA2024"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent uppercase font-mono"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm uppercase ring-offset-background transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               required
             />
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               The code will be converted to uppercase automatically
             </p>
           </div>
 
           <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="description" className="mb-2 block text-sm font-medium text-foreground">
               Description (Optional)
             </label>
             <textarea
@@ -151,13 +152,13 @@ export default function BetaCodesManagement() {
               onChange={handleChange}
               placeholder="e.g., Code for teachers at Spring Valley High"
               rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label htmlFor="maxUses" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="maxUses" className="mb-2 block text-sm font-medium text-foreground">
                 Maximum Uses
               </label>
               <input
@@ -167,15 +168,15 @@ export default function BetaCodesManagement() {
                 value={formData.maxUses}
                 onChange={handleChange}
                 min="1"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               />
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-muted-foreground">
                 How many people can use this code
               </p>
             </div>
 
             <div>
-              <label htmlFor="expiresAt" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="expiresAt" className="mb-2 block text-sm font-medium text-foreground">
                 Expiration Date (Optional)
               </label>
               <input
@@ -184,20 +185,16 @@ export default function BetaCodesManagement() {
                 name="expiresAt"
                 value={formData.expiresAt}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               />
             </div>
           </div>
 
-          <div className="flex justify-end pt-4">
-            <button
-              type="submit"
-              disabled={loading || !formData.code.trim()}
-              className="px-6 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-            >
+          <div className="flex justify-end pt-2">
+            <Button type="submit" size="lg" disabled={loading || !formData.code.trim()} className="gap-2">
               {loading ? (
                 <>
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                  <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
                     <circle
                       className="opacity-25"
                       cx="12"
@@ -217,19 +214,19 @@ export default function BetaCodesManagement() {
                 </>
               ) : (
                 <>
-                  <Plus className="w-5 h-5" />
+                  <Plus className="h-5 w-5" />
                   Create Beta Code
                 </>
               )}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
 
       {/* Info Box */}
-      <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <h3 className="font-semibold text-blue-900 mb-2">How Beta Codes Work</h3>
-        <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-5">
+        <h3 className="mb-2 font-display text-lg font-semibold text-foreground">How Beta Codes Work</h3>
+        <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
           <li>Users must enter a valid code on the landing page to access the application</li>
           <li>Once validated, the code is stored in the user's browser</li>
           <li>Each code can be used up to the specified maximum number of times</li>

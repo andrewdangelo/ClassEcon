@@ -1,3 +1,49 @@
+# Testing Guide
+
+## Automated Test Matrix
+
+### Contract checks (existing)
+```bash
+node --test assessment/tests/*.mjs
+```
+
+### End-to-end harness (new)
+```bash
+cd assessment
+cp .env.e2e.example .env.e2e
+pnpm install
+
+# API permission matrix (no browser requirement)
+pnpm run test:e2e:api
+
+# Full browser + API critical flows
+pnpm run test:e2e
+
+# Focused smoke path
+pnpm run test:e2e:smoke
+```
+
+### Billing profiles
+```bash
+# Phase 1 deterministic billing
+pnpm run test:e2e:billing:mock
+
+# Phase 2 Stripe test verification
+pnpm run test:e2e:billing:stripe
+```
+
+## E2E prerequisites
+- Services reachable: `Frontend` (`E2E_FRONTEND_URL`), `Backend` (`E2E_GRAPHQL_URL`), `PaymentService` (`E2E_PAYMENT_HEALTH_URL`)
+- `PaymentService` set to `BILLING_MODE=mock` for deterministic CI runs
+- For Stripe profile runs, provide Stripe test secrets and set `E2E_BILLING_MODE=stripe`
+- The E2E global setup performs service health checks before specs run
+
+## Artifacts and debugging
+- Playwright traces/screenshots/videos are written to `assessment/e2e/artifacts/test-results`
+- Use `npx playwright show-report` in `assessment` after runs to inspect failures
+
+---
+
 # Quick Testing Guide - Backpack & Student Details
 
 ## Setup

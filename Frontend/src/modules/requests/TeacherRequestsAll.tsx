@@ -108,10 +108,10 @@ export default function TeacherRequestsAll() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">All Requests</h2>
-        <div className="flex gap-2">
+    <div className="page-stack">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <h2 className="page-title text-2xl md:text-3xl">All Requests</h2>
+        <div className="flex flex-wrap gap-2">
           <Input placeholder="Search student, class, reason…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-sm" />
           <select
             className="rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -139,7 +139,7 @@ export default function TeacherRequestsAll() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid gap-6 md:grid-cols-5">
+      <div className="grid gap-4 sm:gap-5 md:grid-cols-5">
         <Card><CardHeader><CardTitle>Submitted</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{counts.SUBMITTED}</div></CardContent></Card>
         <Card><CardHeader><CardTitle>Approved</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{counts.APPROVED}</div></CardContent></Card>
         <Card><CardHeader><CardTitle>Rebuked</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{counts.REBUKED}</div></CardContent></Card>

@@ -1,0 +1,20 @@
+{
+  "name": "classecon-assessment",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test:contracts": "node --test tests/*.mjs",
+    "test:e2e": "playwright test -c e2e/playwright.config.ts",
+    "test:e2e:smoke": "playwright test -c e2e/playwright.config.ts --grep @smoke",
+    "test:e2e:ui": "playwright test -c e2e/playwright.config.ts e2e/specs/browser",
+    "test:e2e:api": "cross-env E2E_REQUIRE_FRONTEND=false playwright test -c e2e/playwright.config.ts e2e/specs/api",
+    "test:e2e:billing:mock": "cross-env E2E_BILLING_MODE=mock playwright test -c e2e/playwright.config.ts e2e/specs/billing/billing-mock.e2e.ts",
+    "test:e2e:billing:stripe": "cross-env E2E_BILLING_MODE=stripe playwright test -c e2e/playwright.config.ts e2e/specs/billing/billing-stripe-test.e2e.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2",
+    "cross-env": "^10.1.0",
+    "dotenv": "^17.2.3"
+  }
+}

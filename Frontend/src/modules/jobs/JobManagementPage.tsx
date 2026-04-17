@@ -9,7 +9,6 @@ import { Badge } from "../../components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { CreateEditJobDialog } from "./CreateEditJobDialog";
-import { JobApplicationDialog } from "./JobApplicationDialog";
 import { useToast } from "@/components/ui/toast";
 import { useClassContext } from "@/context/ClassContext";
 
@@ -108,13 +107,13 @@ export function JobManagementPage() {
   };
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Job Management</h1>
-          <p className="text-muted-foreground">Create and manage class jobs</p>
+    <div className="page-stack">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 space-y-1">
+          <h1 className="page-title">Job Management</h1>
+          <p className="page-subtitle !mt-0">Create and manage class jobs</p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
+        <Button onClick={() => setIsCreateDialogOpen(true)} className="shrink-0 self-start sm:self-center">
           <Plus className="mr-2 h-4 w-4" />
           Create Job
         </Button>

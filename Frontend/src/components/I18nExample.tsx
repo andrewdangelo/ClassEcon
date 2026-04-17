@@ -12,7 +12,7 @@ export function I18nExample() {
   const { t, language, setLanguage, availableLanguages } = useLanguage();
 
   return (
-    <div className="container py-8 space-y-6">
+    <div className="page-stack mx-auto w-full max-w-3xl">
       <Card>
         <CardHeader>
           <CardTitle>{t("common.welcome")}</CardTitle>

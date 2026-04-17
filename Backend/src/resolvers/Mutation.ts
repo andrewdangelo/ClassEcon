@@ -469,8 +469,11 @@ export const Mutation = {
   },
 
   async submitPayRequest(_: any, { id }: { id: string }, ctx: Ctx) {
+    requireAuth(ctx);
+
     const req = await PayRequest.findById(id).lean().exec();
     if (!req) throw new GraphQLError("Request not found");
+    await requireClassTeacher(ctx, req.classId.toString());
     if (req.status === "DENIED")
       throw new GraphQLError("Denied request cannot be paid");
     if (req.status === "PAID") return req;
@@ -491,7 +494,7 @@ export const Mutation = {
       type: mapPayToTxType(),
       amount: req.amount,
       memo: `One-time payment: ${req.reason}`,
-      createdByUserId: ctx.userId ? toId(ctx.userId) : req.studentId,
+      createdByUserId: toId(ctx.userId!),
     });
 
     const updated = await PayRequest.findByIdAndUpdate(

@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Loader2, Package, History, Wallet } from "lucide-react";
 import { useCurrentClass } from "@/hooks/useCurrentClass";
+import { formatClassMoney } from "@/lib/format";
 
 export default function StudentDetail() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -36,7 +37,7 @@ export default function StudentDetail() {
 
   if (!currentClassId) {
     return (
-      <div className="p-8 text-center">
+      <div className="page-state">
         <p className="text-muted-foreground">Please select a class</p>
       </div>
     );
@@ -44,7 +45,7 @@ export default function StudentDetail() {
 
   if (studentLoading) {
     return (
-      <div className="p-8 flex items-center justify-center">
+      <div className="page-state">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -52,9 +53,9 @@ export default function StudentDetail() {
 
   if (studentError) {
     return (
-      <div className="p-8 text-center text-destructive">
+      <div className="page-state text-destructive">
         <p>Failed to load student details</p>
-        <p className="text-sm mt-2">{studentError.message}</p>
+        <p className="mt-2 text-sm">{studentError.message}</p>
       </div>
     );
   }
@@ -93,32 +94,32 @@ export default function StudentDetail() {
   };
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/students")}>
+    <div className="flex flex-col gap-8 md:gap-10">
+      <div>
+        <Button variant="ghost" size="sm" onClick={() => navigate("/students")} className="-ml-2">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Students
         </Button>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Student Details</h1>
-          <p className="text-muted-foreground mt-1">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 space-y-1">
+          <h1 className="page-title">Student Details</h1>
+          <p className="page-subtitle !mt-0 max-w-prose md:text-base">
             View student's backpack, purchases, and transactions
           </p>
         </div>
         {account && (
-          <Card className="w-fit">
-            <CardHeader className="pb-3">
+          <Card className="w-full shrink-0 border bg-card lg:max-w-xs">
+            <CardHeader className="pb-3 pt-5 sm:pt-6">
               <CardDescription>Current Balance</CardDescription>
-              <CardTitle className="text-2xl">CE$ {account.balance || 0}</CardTitle>
+              <CardTitle className="text-2xl tabular-nums">{formatClassMoney(account.balance || 0)}</CardTitle>
             </CardHeader>
           </Card>
         )}
       </div>
 
-      <Tabs defaultValue="backpack" className="space-y-4">
+      <Tabs defaultValue="backpack" className="flex flex-col gap-6">
         <TabsList>
           <TabsTrigger value="backpack">
             <Package className="mr-2 h-4 w-4" />
@@ -138,7 +139,7 @@ export default function StudentDetail() {
         </TabsList>
 
         {/* Backpack Tab */}
-        <TabsContent value="backpack" className="space-y-4">
+        <TabsContent value="backpack" className="flex flex-col gap-5 pt-2">
           {backpack.length === 0 ? (
             <Card>
               <CardContent className="pt-6 text-center text-muted-foreground">
@@ -175,9 +176,9 @@ export default function StudentDetail() {
                     <p className="text-sm text-muted-foreground">
                       {purchase.storeItem?.description || "This item is no longer available"}
                     </p>
-                    <div className="flex items-center justify-between text-sm">
-                      <span>{purchase.quantity}x @ CE${purchase.unitPrice}</span>
-                      <span className="font-medium">CE${purchase.total}</span>
+                    <div className="flex items-center justify-between text-sm tabular-nums">
+                      <span>{purchase.quantity}x @ {formatClassMoney(purchase.unitPrice)}</span>
+                      <span className="font-medium">{formatClassMoney(purchase.total)}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Purchased: {new Date(purchase.createdAt).toLocaleDateString()}
@@ -190,7 +191,7 @@ export default function StudentDetail() {
         </TabsContent>
 
         {/* Purchase History Tab */}
-        <TabsContent value="purchases" className="space-y-4">
+        <TabsContent value="purchases" className="flex flex-col gap-5 pt-2">
           {purchaseHistory.length === 0 ? (
             <Card>
               <CardContent className="pt-6 text-center text-muted-foreground">
@@ -218,8 +219,8 @@ export default function StudentDetail() {
                         {purchase.storeItem?.title || "(Deleted Item)"}
                       </TableCell>
                       <TableCell>{purchase.quantity}</TableCell>
-                      <TableCell>CE${purchase.unitPrice}</TableCell>
-                      <TableCell className="font-medium">CE${purchase.total}</TableCell>
+                      <TableCell className="tabular-nums">{formatClassMoney(purchase.unitPrice)}</TableCell>
+                      <TableCell className="font-medium tabular-nums">{formatClassMoney(purchase.total)}</TableCell>
                       <TableCell>
                         <Badge variant={getStatusVariant(purchase.status)}>
                           {purchase.status}
@@ -237,7 +238,7 @@ export default function StudentDetail() {
         </TabsContent>
 
         {/* Transactions Tab */}
-        <TabsContent value="transactions" className="space-y-4">
+        <TabsContent value="transactions" className="flex flex-col gap-5 pt-2">
           {transactionLoading ? (
             <Card>
               <CardContent className="pt-6 text-center">
@@ -271,8 +272,9 @@ export default function StudentDetail() {
                       <TableCell className="max-w-md">
                         {transaction.memo || "—"}
                       </TableCell>
-                      <TableCell className={`text-right font-medium ${getTransactionTypeColor(transaction.type)}`}>
-                        {transaction.amount > 0 ? "+" : ""}CE${transaction.amount}
+                      <TableCell className={`text-right font-medium tabular-nums ${getTransactionTypeColor(transaction.type)}`}>
+                        {transaction.amount > 0 ? "+" : ""}
+                        {formatClassMoney(transaction.amount)}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {new Date(transaction.createdAt).toLocaleDateString()}

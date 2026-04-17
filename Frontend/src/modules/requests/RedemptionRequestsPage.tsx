@@ -86,10 +86,10 @@ export function RedemptionRequestsPage() {
 
   if (!currentClassId) {
     return (
-      <div className="p-8 text-center">
-        <Package className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-        <h2 className="text-2xl font-semibold mb-2">No Class Selected</h2>
-        <p className="text-muted-foreground">
+      <div className="page-state">
+        <Package className="mb-4 h-16 w-16 text-muted-foreground" />
+        <h2 className="mb-2 text-2xl font-semibold">No Class Selected</h2>
+        <p className="max-w-md text-muted-foreground">
           Please select a class to view redemption requests
         </p>
       </div>
@@ -98,7 +98,7 @@ export function RedemptionRequestsPage() {
 
   if (loading) {
     return (
-      <div className="p-8 flex items-center justify-center">
+      <div className="page-state py-20">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -106,9 +106,9 @@ export function RedemptionRequestsPage() {
 
   if (error) {
     return (
-      <div className="p-8 text-center text-destructive">
+      <div className="page-state text-destructive">
         <p>Failed to load redemption requests</p>
-        <p className="text-sm mt-2">{error.message}</p>
+        <p className="mt-2 text-sm">{error.message}</p>
       </div>
     );
   }
@@ -148,15 +148,15 @@ export function RedemptionRequestsPage() {
   };
 
   return (
-    <div className="p-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Redemption Requests</h1>
-        <p className="text-muted-foreground">
+    <div className="flex flex-col gap-8 md:gap-10">
+      <header className="space-y-2">
+        <h1 className="page-title">Redemption Requests</h1>
+        <p className="page-subtitle !mt-0 max-w-prose md:text-base">
           Review and manage student redemption requests
         </p>
-      </div>
+      </header>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col gap-6">
         <TabsList>
           <TabsTrigger value="pending">
             Pending <Badge className="ml-2" variant="secondary">{pendingCount}</Badge>
@@ -170,7 +170,7 @@ export function RedemptionRequestsPage() {
           <TabsTrigger value="all">All</TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="space-y-4 mt-6">
+        <TabsContent value={activeTab} className="mt-2 flex flex-col gap-4 md:gap-5">
           {requests.length === 0 ? (
             <Card>
               <CardContent className="pt-6 text-center text-muted-foreground">

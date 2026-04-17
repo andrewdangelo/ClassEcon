@@ -24,7 +24,7 @@ const StudentSchema = z.object({
 
 const JobSchema = z.object({
   title: z.string().min(1, "Job title is required"),
-  payPeriod: z.enum(jobPeriods, { required_error: "Pick a pay period" }),
+  payPeriod: z.enum(jobPeriods),
   salary: z.coerce.number().int().positive("Salary must be > 0"),
   slots: z.coerce.number().int().positive("Slots must be > 0"),
 });
@@ -72,14 +72,6 @@ export default function ClassCreate() {
 
   const [createClassMutation] = useMutation(CREATE_CLASS);
 
-  if (role !== "TEACHER") {
-    return (
-      <div className="text-sm text-muted-foreground">
-        This page is for teachers only.
-      </div>
-    );
-  }
-
   const {
     control,
     register,
@@ -88,7 +80,7 @@ export default function ClassCreate() {
     getValues,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
-    resolver: zodResolver(FormSchema),
+    resolver: zodResolver(FormSchema) as any,
     defaultValues: {
       name: "",
       period: "Fall",
@@ -106,6 +98,14 @@ export default function ClassCreate() {
   const studentsFA = useFieldArray({ control, name: "students" });
   const jobsFA = useFieldArray({ control, name: "jobs" });
   const storeFA = useFieldArray({ control, name: "storeItems" });
+
+  if (role !== "TEACHER") {
+    return (
+      <div className="text-sm text-muted-foreground">
+        This page is for teachers only.
+      </div>
+    );
+  }
 
   // ---- submit handler (final confirm) ----
   const onSubmit = async (data: FormValues) => {
@@ -187,26 +187,27 @@ export default function ClassCreate() {
         currentUsage={currentUsage || 0}
         showWarning={true}
       >
-        <div className="space-y-6 max-w-4xl mx-auto">
+        <div className="page-stack mx-auto w-full max-w-4xl">
           {/* Header */}
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
           <Button
             variant="outline"
             size="sm"
             onClick={() => navigate("/classes")}
+            className="shrink-0 self-start"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Classes
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Create New Class</h1>
-            <p className="text-muted-foreground">
+          <div className="min-w-0 space-y-1">
+            <h1 className="page-title">Create New Class</h1>
+            <p className="page-subtitle !mt-0">
               Set up your classroom economy with students, jobs, and store items
             </p>
           </div>
         </div>
 
-        <form className="grid gap-6" onSubmit={(e) => e.preventDefault()}>
+        <form className="flex flex-col gap-6 md:gap-8" onSubmit={(e) => e.preventDefault()}>
           {/* Basics */}
           <Card>
             <CardHeader>
@@ -477,7 +478,11 @@ export default function ClassCreate() {
   const cleanItems = vals.storeItems.filter((i) => i.name.trim() !== "");
 
   return (
-    <div className="grid gap-6">
+    <div className="page-stack mx-auto w-full max-w-4xl">
+      <div>
+        <h1 className="page-title">Review & confirm</h1>
+        <p className="page-subtitle">Double-check everything before creating your class.</p>
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>Review Class Details</CardTitle>
@@ -641,7 +646,7 @@ export default function ClassCreate() {
         </Button>
         <Button
           type="button"
-          onClick={handleSubmit(onSubmit)}
+          onClick={handleSubmit(onSubmit as any)}
           disabled={isSubmitting}
         >
           {isSubmitting ? "Creating…" : "Confirm & Create"}

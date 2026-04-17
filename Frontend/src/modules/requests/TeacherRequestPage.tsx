@@ -9,17 +9,19 @@ export default function TeacherRequestsPage() {
 
   if (!classId) {
     return (
-      <div className="p-4">
+      <div className="py-6">
         <div className="text-muted-foreground">Please select a class to view requests.</div>
       </div>
     )
   }
 
   return (
-    <div className="p-4">
-      <div className="border-b pb-2 mb-4">
-        <h1 className="text-2xl font-bold">Manage Payment Requests</h1>
-        <p className="text-muted-foreground">Review and approve student payment requests for {currentClass.name}</p>
+    <div className="page-stack-tight">
+      <div className="border-b border-border/80 pb-4">
+        <h1 className="page-title text-2xl md:text-3xl">Manage payment requests</h1>
+        <p className="page-subtitle !mt-1">
+          Review and approve student payment requests for {currentClass.name}
+        </p>
       </div>
       <TeacherRequests classId={classId} />
     </div>

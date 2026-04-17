@@ -26,6 +26,8 @@ RUN pnpm install --frozen-lockfile --prod
 
 # Copy built code
 COPY --from=builder /app/dist ./dist
+# Runtime loads GraphQL SDL from dist/graphql/schema.graphql
+COPY --from=builder /app/src/graphql/schema.graphql ./dist/graphql/schema.graphql
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs && \

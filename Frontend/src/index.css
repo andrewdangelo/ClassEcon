@@ -2,52 +2,207 @@
 @tailwind components;
 @tailwind utilities;
 
-/* shadcn theme tokens */
+/* shadcn theme tokens — neutrals tinted toward brand blue for cohesion (/colorize) */
 :root {
-  --background: 0 0% 100%;
-  --foreground: 222.2 47.4% 11.2%;
-  --card: 0 0% 100%;
-  --card-foreground: 222.2 47.4% 11.2%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222.2 47.4% 11.2%;
-  --primary: 221.2 83.2% 53.3%;
+  --background: 220 20% 99%;
+  --foreground: 222 47% 11%;
+  --card: 220 18% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 220 18% 100%;
+  --popover-foreground: 222 47% 11%;
+  --primary: 221 86% 52%;
   --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
-  --destructive: 0 84.2% 60.2%;
+  --secondary: 214 36% 95%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 214 32% 94%;
+  --muted-foreground: 215 18% 42%;
+  --accent: 214 40% 94%;
+  --accent-foreground: 222 47% 11%;
+  --destructive: 0 72% 51%;
   --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 221.2 83.2% 53.3%;
+  --success: 152 62% 36%;
+  --success-foreground: 144 100% 97%;
+  --warning: 32 96% 44%;
+  --warning-foreground: 26 90% 12%;
+  --border: 214 28% 88%;
+  --input: 214 28% 88%;
+  --ring: 221 86% 52%;
   --radius: 0.75rem;
 }
 .dark {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 217.2 91.2% 59.8%;
-  --primary-foreground: 222.2 47.4% 11.2%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
+  --background: 222 47% 6%;
+  --foreground: 210 36% 97%;
+  --card: 222 42% 9%;
+  --card-foreground: 210 36% 97%;
+  --popover: 222 42% 9%;
+  --popover-foreground: 210 36% 97%;
+  --primary: 217 90% 61%;
+  --primary-foreground: 222 47% 11%;
+  --secondary: 217 28% 16%;
+  --secondary-foreground: 210 36% 97%;
+  --muted: 217 26% 15%;
+  --muted-foreground: 215 18% 68%;
+  --accent: 217 28% 17%;
+  --accent-foreground: 210 36% 97%;
+  --destructive: 0 62% 42%;
   --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 224.3 76.3% 48%;
+  --success: 152 50% 40%;
+  --success-foreground: 152 90% 97%;
+  --warning: 36 92% 50%;
+  --warning-foreground: 26 90% 10%;
+  --border: 217 24% 18%;
+  --input: 217 24% 18%;
+  --ring: 224 76% 58%;
 }
 
 @layer base {
   * { @apply border-border; }
-  body { @apply bg-background text-foreground; }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "ss01" on, "cv11" on;
+  }
+  h1, h2 {
+    @apply font-display tracking-tight;
+  }
+}
+
+/**
+ * Main app content: horizontal padding + stronger bottom rhythm so pages
+ * do not need their own p-8 (avoids double-padding with legacy wrappers).
+ */
+@layer components {
+  /* Shared horizontal frame for header + main (keeps chrome aligned). */
+  .app-shell-x {
+    width: 100%;
+    max-width: min(100%, 92rem);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: clamp(1rem, 1.5vw + 0.5rem, 2rem);
+    padding-right: clamp(1rem, 1.5vw + 0.5rem, 2rem);
+  }
+
+  .app-page {
+    min-width: 0;
+    width: 100%;
+    max-width: min(100%, 92rem);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: clamp(1rem, 1.5vw + 0.5rem, 2rem);
+    padding-right: clamp(1rem, 1.5vw + 0.5rem, 2rem);
+    padding-top: clamp(1.25rem, 2vh + 0.5rem, 1.75rem);
+    padding-bottom: clamp(2.25rem, 5vh + 0.5rem, 4rem);
+  }
+
+  .page-state {
+    @apply flex flex-col items-center justify-center px-4 py-16 text-center;
+  }
+
+  /* Page rhythm (inside app-page main) */
+  .page-stack {
+    @apply flex flex-col gap-8 md:gap-10;
+  }
+
+  .page-stack-tight {
+    @apply flex flex-col gap-5 md:gap-6;
+  }
+
+  .page-title {
+    @apply font-display text-3xl font-bold tracking-tight md:text-4xl;
+  }
+
+  .page-subtitle {
+    @apply mt-1 max-w-prose text-sm text-muted-foreground md:text-base;
+  }
+
+  /* Subtle brand wash — single-hue (primary), not multi-stop “AI” gradients */
+  .app-surface {
+    min-height: 100vh;
+    background-color: hsl(var(--background));
+    background-image: radial-gradient(
+      ellipse 120% 75% at 50% -30%,
+      hsl(var(--primary) / 0.07),
+      transparent 52%
+    );
+  }
+
+  .dark .app-surface {
+    background-image: radial-gradient(
+      ellipse 120% 75% at 50% -35%,
+      hsl(var(--primary) / 0.14),
+      transparent 55%
+    );
+  }
+
+  /* Full-width marketing / guide blocks still inside the app shell */
+  .marketing-hero {
+    @apply relative overflow-hidden rounded-2xl border border-border/70 bg-card/80 px-6 py-10 shadow-md shadow-primary/5 md:px-10 md:py-12;
+  }
+
+  .marketing-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+      ellipse 85% 55% at 18% 0%,
+      hsl(var(--primary) / 0.12),
+      transparent 58%
+    );
+    pointer-events: none;
+  }
+
+  .dark .marketing-hero::before {
+    background: radial-gradient(
+      ellipse 85% 55% at 18% 0%,
+      hsl(var(--primary) / 0.18),
+      transparent 58%
+    );
+  }
+
+  .marketing-hero > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Auth / standalone screens: single-hue atmosphere, no purple–blue mesh */
+  .auth-shell {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background-color: hsl(var(--background));
+    background-image: radial-gradient(
+      ellipse 90% 70% at 50% 0%,
+      hsl(var(--primary) / 0.1),
+      transparent 55%
+    );
+  }
+
+  .dark .auth-shell {
+    background-image: radial-gradient(
+      ellipse 90% 70% at 50% 0%,
+      hsl(var(--primary) / 0.16),
+      transparent 58%
+    );
+  }
+
+  .onboarding-canvas {
+    min-height: 100vh;
+    padding: clamp(1rem, 3vw, 2rem);
+    background-color: hsl(var(--background));
+    background-image: radial-gradient(
+      ellipse 100% 55% at 50% -8%,
+      hsl(var(--primary) / 0.09),
+      transparent 52%
+    );
+  }
+
+  .dark .onboarding-canvas {
+    background-image: radial-gradient(
+      ellipse 100% 55% at 50% -10%,
+      hsl(var(--primary) / 0.15),
+      transparent 55%
+    );
+  }
 }

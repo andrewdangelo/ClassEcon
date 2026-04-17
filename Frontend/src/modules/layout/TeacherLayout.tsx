@@ -38,7 +38,7 @@ export function TeacherLayout() {
   const username = displayUser?.name || "—";
 
   return (
-    <div className="min-h-screen md:pl-72">
+    <div className="app-surface min-h-screen md:pl-72">
       {/* Teacher Sidebar - Full width for comprehensive tools */}
       <aside
         className={cn(
@@ -56,7 +56,7 @@ export function TeacherLayout() {
               {loading ? "…" : username}
             </span>
           </div>
-          <span className="rounded-md border px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 border-blue-200">
+          <span className="rounded-md border border-primary/25 bg-primary/12 px-2 py-1 text-xs font-medium text-primary">
             Teacher
           </span>
         </div>
@@ -74,10 +74,10 @@ export function TeacherLayout() {
                 to={item.to}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200",
                     isActive
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      ? "bg-primary/12 text-primary shadow-sm"
+                      : "text-muted-foreground hover:bg-primary/8 hover:text-foreground"
                   )
                 }
                 onClick={() => setSidebarOpen(false)}
@@ -100,10 +100,10 @@ export function TeacherLayout() {
                 to={`/classes/${currentClassId}/fines`}
                 className={({ isActive }) =>
                   cn(
-                    "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                    "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-200",
                     isActive
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      ? "bg-primary/12 text-primary"
+                      : "text-muted-foreground hover:bg-primary/8 hover:text-foreground"
                   )
                 }
                 onClick={() => setSidebarOpen(false)}
@@ -112,11 +112,11 @@ export function TeacherLayout() {
                 <span>{t("fines.manageFines")}</span>
               </NavLink>
             )}
-            <button className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
+            <button className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors duration-200 hover:bg-primary/8 hover:text-foreground">
               <GraduationCap className="h-4 w-4" />
               <span>Class Analytics</span>
             </button>
-            <button className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
+            <button className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors duration-200 hover:bg-primary/8 hover:text-foreground">
               <Users className="h-4 w-4" />
               <span>Grade Reports</span>
             </button>
@@ -126,7 +126,7 @@ export function TeacherLayout() {
 
       {/* Top bar */}
       <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur">
-        <div className="container flex h-16 items-center justify-between">
+        <div className="app-shell-x flex h-16 items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               className="-ml-1 inline-flex items-center justify-center rounded-md p-2 md:hidden"
@@ -149,7 +149,7 @@ export function TeacherLayout() {
                 to={item.to}
                 className={({ isActive }) =>
                   cn(
-                    "text-sm font-medium transition-colors",
+                    "text-sm font-medium transition-colors duration-200",
                     isActive
                       ? "text-primary"
                       : "text-muted-foreground hover:text-foreground"
@@ -169,8 +169,8 @@ export function TeacherLayout() {
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="container py-6">
+      {/* Main content — app-page supplies horizontal inset + vertical rhythm */}
+      <main className="app-page">
         <Outlet />
       </main>
     </div>

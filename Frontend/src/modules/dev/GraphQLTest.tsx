@@ -8,8 +8,8 @@ export default function GraphQLTest() {
   if (error) return <div className="text-sm text-destructive">Error: {error.message}</div>
 
   return (
-    <div className="space-y-2">
-      <h2 className="text-xl font-semibold">Classes (GraphQL)</h2>
+    <div className="page-stack-tight">
+      <h2 className="page-title text-2xl md:text-3xl">Classes (GraphQL)</h2>
       <ul className="list-disc pl-6">
         {data?.classes?.map((c: any) => (
           <li key={c.id}>{c.name} {c.term ? `· ${c.term}` : ""}</li>

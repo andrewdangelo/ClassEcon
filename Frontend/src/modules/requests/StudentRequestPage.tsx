@@ -18,15 +18,17 @@ export default function StudentRequestsPage() {
 
   if (meLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">Loading...</div>
+      <div className="flex h-64 items-center justify-center">
+        <p className="text-sm text-muted-foreground">
+          Checking your class and account…
+        </p>
       </div>
     )
   }
 
   if (!classId) {
     return (
-      <div className="p-4">
+      <div className="py-6">
         <div className="text-muted-foreground">Please select a class to view requests.</div>
       </div>
     )
@@ -34,17 +36,17 @@ export default function StudentRequestsPage() {
 
   if (!studentId) {
     return (
-      <div className="p-4">
+      <div className="py-6">
         <div className="text-muted-foreground">Unable to identify current user.</div>
       </div>
     )
   }
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="border-b pb-2">
-        <h1 className="text-2xl font-bold">Payment Requests</h1>
-        <p className="text-muted-foreground">Submit and track your payment requests</p>
+    <div className="page-stack-tight">
+      <div className="border-b border-border/80 pb-4">
+        <h1 className="page-title text-2xl md:text-3xl">Payment requests</h1>
+        <p className="page-subtitle !mt-1">Submit and track your payment requests</p>
       </div>
       <StudentRequestForm classId={classId} studentId={studentId} />
       <StudentRequestsList classId={classId} studentId={studentId} />

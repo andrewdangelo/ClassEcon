@@ -41,9 +41,9 @@ export default function Students() {
   );
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Students</h2>
+    <div className="page-stack-tight">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="page-title text-2xl md:text-3xl">Students</h2>
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}

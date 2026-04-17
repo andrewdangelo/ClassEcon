@@ -25,8 +25,6 @@ export default function Classes() {
 
   const userId = meData?.me?.id;
 
-  console.log(userId)
-
   // 2) Get classes for that userId
   const { data, loading, error, refetch } = useQuery<ClassesByUserQuery>(GET_CLASSES_BY_USER, {
     variables: {
@@ -41,14 +39,16 @@ export default function Classes() {
   // Loading states (ME or classes)
   if (meLoading || (!userId && loading)) {
     return (
-      <div className="p-6 text-sm text-muted-foreground">Loading classes…</div>
+      <div className="py-10 text-sm text-muted-foreground">
+        Fetching your classes and enrollment…
+      </div>
     );
   }
 
   // Error states
   if (meError) {
     return (
-      <div className="p-6">
+      <div className="py-6">
         <p className="text-sm text-destructive">
           Failed to load user: {meError.message}
         </p>
@@ -58,7 +58,7 @@ export default function Classes() {
 
   if (error) {
     return (
-      <div className="p-6">
+      <div className="py-6">
         <p className="text-sm text-destructive">
           Failed to load classes: {error.message}
         </p>
@@ -73,12 +73,12 @@ export default function Classes() {
   console.log(data)
 
   return (
-    <div className="space-y-6">
+    <div className="page-stack">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Classes</h1>
-          <p className="text-muted-foreground">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 space-y-1">
+          <h1 className="page-title">Classes</h1>
+          <p className="page-subtitle">
             Manage your classroom economies
           </p>
         </div>
@@ -112,7 +112,7 @@ export default function Classes() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {classes.map((c: any) => (
             <Card key={c.id} className="hover:shadow-md transition-shadow">
               <CardHeader>

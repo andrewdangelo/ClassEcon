@@ -8,6 +8,7 @@ import { Student } from "./Student";
 import { Fine } from "./Fine";
 import { SubscriptionPlanResolvers } from "./SubscriptionPlan";
 import { AdminQuery, AdminMutation, AuditLogResolvers } from "./Admin";
+import { paymentResolvers } from "./payment";
 import { pickId } from "./helpers";
 import { StoreItem, Purchase, User, RedemptionRequest, Job, JobApplication } from "../models";
 
@@ -17,11 +18,13 @@ export const resolvers = {
     ...Query,
     ...SubscriptionPlanResolvers.Query,
     ...AdminQuery,
+    ...paymentResolvers.Query,
   },
   Mutation: {
     ...Mutation,
     ...SubscriptionPlanResolvers.Mutation,
     ...AdminMutation,
+    ...paymentResolvers.Mutation,
   },
   Subscription,
   SubscriptionPlan: SubscriptionPlanResolvers.SubscriptionPlan,

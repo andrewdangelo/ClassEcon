@@ -27,9 +27,14 @@ export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
         accessToken: "", 
         user: {
           id: data.me.id,
-          name: data.me.name,
+          name: data.me.name || "",
           email: data.me.email || "",
-          role: data.me.role as "TEACHER" | "STUDENT" | "PARENT",
+          role:
+            data.me.role === "TEACHER" ||
+            data.me.role === "STUDENT" ||
+            data.me.role === "PARENT"
+              ? data.me.role
+              : "STUDENT",
         },
       }));
     }
@@ -38,7 +43,9 @@ export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
   if (loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center p-4">
-        <div className="text-center text-muted-foreground">Loading...</div>
+        <div className="text-center text-sm text-muted-foreground">
+          Verifying your session…
+        </div>
       </div>
     );
   }

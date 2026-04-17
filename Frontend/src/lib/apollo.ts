@@ -54,10 +54,11 @@ const responseLink = new ApolloLink((operation, forward) => {
 
 // REPLACE your old errorLink implementation with this:
 const errorLink = onError(
-  ({ graphQLErrors, networkError, operation, forward }) => {
+  (errorResponse: any) => {
+    const { graphQLErrors, networkError, operation, forward } = errorResponse;
     const isAuthError =
       (graphQLErrors &&
-        graphQLErrors.some((e) => /unauthorized|forbidden/i.test(e.message))) ||
+        graphQLErrors.some((e: any) => /unauthorized|forbidden/i.test(e.message))) ||
       // @ts-ignore
       (networkError &&
         (networkError.statusCode === 401 ||
@@ -99,14 +100,14 @@ const errorLink = onError(
 
           // Retry original operation
           const sub = forward(operation).subscribe({
-            next: (val) => observer.next(val),
-            error: (err) => observer.error(err),
+            next: (val: any) => observer.next(val),
+            error: (err: any) => observer.error(err),
             complete: () => observer.complete(),
           });
 
           // Cleanup
           return () => sub.unsubscribe();
-        } catch (e) {
+        } catch (e: any) {
           store.dispatch(clearAuth());
           observer.error(e);
         }

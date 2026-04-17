@@ -116,12 +116,12 @@ export default function TeacherOverview({ klass }: Props) {
   const currency = c.defaultCurrency ?? "CE$";
 
   return (
-    <div className="space-y-6">
+    <div className="page-stack">
       {/* Class Header with Settings */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">{c.name}</h2>
-          <p className="text-muted-foreground">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 space-y-1">
+          <h2 className="font-display text-3xl font-bold tracking-tight">{c.name}</h2>
+          <p className="page-subtitle !mt-0">
             {[c.subject, c.period].filter(Boolean).join(" • ") || "Class Dashboard"}
           </p>
         </div>
@@ -181,7 +181,7 @@ export default function TeacherOverview({ klass }: Props) {
       )}
 
       {/* Main Overview Grid */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
       <Card>
         <CardHeader>
           <CardTitle>Students</CardTitle>

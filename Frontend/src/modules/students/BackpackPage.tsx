@@ -63,18 +63,16 @@ export default function BackpackPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="flex items-center justify-center">
-          <Package className="h-8 w-8 animate-pulse text-muted-foreground" />
-          <span className="ml-2">Loading your backpack...</span>
-        </div>
+      <div className="flex items-center justify-center gap-3 px-4 py-20 text-muted-foreground">
+        <Package className="h-8 w-8 shrink-0 animate-pulse" />
+        <span>Loading your backpack…</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-8">
+      <div className="mx-auto w-full max-w-lg py-8">
         <Card>
           <CardContent className="pt-6">
             <p className="text-destructive">Error loading backpack: {error.message}</p>
@@ -117,16 +115,16 @@ export default function BackpackPage() {
   const uniqueItems = Object.values(groupedPurchases);
 
   return (
-    <div className="p-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Package className="h-8 w-8" />
+    <div className="flex flex-col gap-8 md:gap-10">
+      <header className="space-y-2">
+        <h1 className="page-title flex flex-wrap items-center gap-2">
+          <Package className="h-8 w-8 shrink-0 text-muted-foreground" aria-hidden />
           My Backpack
         </h1>
-        <p className="text-muted-foreground mt-2">
+        <p className="max-w-prose text-muted-foreground">
           View and redeem your purchased items
         </p>
-      </div>
+      </header>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
