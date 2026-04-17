@@ -11,6 +11,7 @@ export default function Header() {
   const navigation = [
     { name: 'For Students', href: '/for-students' },
     { name: 'For Teachers', href: '/for-teachers' },
+    { name: 'For Families', href: '/#for-families' },
     { name: 'Pricing', href: '/pricing' },
     { name: 'Contact', href: '/contact' },
   ];
@@ -58,7 +59,7 @@ export default function Header() {
               to="/waitlist"
               className="px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 text-white text-sm font-medium rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-sm hover:shadow-md"
             >
-              Join Waitlist
+              Join Early Access
             </Link>
           </div>
 
@@ -109,7 +110,7 @@ export default function Header() {
                 className="block px-3 py-2 bg-gradient-to-r from-primary-600 to-primary-700 text-white text-base font-medium rounded-md text-center"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Join Waitlist
+                Join Early Access
               </Link>
             </div>
           </div>

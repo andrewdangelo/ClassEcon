@@ -1,74 +1,128 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useSpring, useTrail, animated, config } from '@react-spring/web';
 import { useInView } from 'react-intersection-observer';
 import {
-  DollarSign,
+  ShieldCheck,
   TrendingUp,
   Users,
-  Award,
+  ClipboardCheck,
   ShoppingBag,
   Briefcase,
   BarChart3,
   Check,
   Sparkles,
   ArrowRight,
-  Zap,
-  Target,
-  Coins,
   GraduationCap,
+  HeartHandshake,
+  Clock,
+  Building2,
+  BookOpen,
+  CreditCard,
 } from 'lucide-react';
 
-const features = [
+const platformPillars = [
   {
     icon: Briefcase,
-    title: 'Classroom Jobs',
-    description: 'Students compete for real roles with real rewards. Watch them take ownership like never before.',
-    gradient: 'from-blue-500 to-cyan-500',
+    title: 'Classroom Reward System',
+    description: 'Create structured rewards, consequences, and incentives that reinforce expectations and positive habits.',
+    gradient: 'from-sky-500 to-blue-600',
   },
   {
     icon: ShoppingBag,
-    title: 'Virtual Store',
-    description: 'Transform learning into earning. Students shop, budget, and make choices that matter.',
-    gradient: 'from-purple-500 to-pink-500',
-  },
-  {
-    icon: TrendingUp,
-    title: 'Live Economy',
-    description: 'Real-time balances that respond to real actions. Economics becomes tangible, not theoretical.',
-    gradient: 'from-emerald-500 to-teal-500',
-  },
-  {
-    icon: Coins,
-    title: 'Smart Transactions',
-    description: 'Every dollar has a story. Track income, expenses, and watch financial literacy bloom.',
-    gradient: 'from-amber-500 to-orange-500',
+    title: 'Behavior Meets Responsibility',
+    description: 'Connect student choices to outcomes through jobs, store access, and spending decisions that require accountability.',
+    gradient: 'from-violet-500 to-fuchsia-500',
   },
   {
     icon: BarChart3,
-    title: 'Insights That Matter',
-    description: 'See what works. Data-driven dashboards reveal patterns you never knew existed.',
-    gradient: 'from-red-500 to-pink-500',
+    title: 'Live Visibility',
+    description: 'Teachers and students track balances, trends, and participation with real-time dashboards and activity history.',
+    gradient: 'from-emerald-500 to-teal-500',
   },
   {
-    icon: Target,
-    title: 'Engagement Supercharged',
-    description: 'Leaderboards, achievements, and rewards. Students don\'t just participate—they compete to excel.',
-    gradient: 'from-indigo-500 to-purple-500',
+    icon: ClipboardCheck,
+    title: 'Easy Economic Management',
+    description: 'Automate recurring pay and approvals so teachers can run a consistent system without extra admin burden.',
+    gradient: 'from-amber-500 to-orange-500',
   },
 ];
 
-const benefits = [
-  'Skyrocket student engagement overnight',
-  'Financial literacy that actually sticks',
-  'Setup in minutes, not hours',
-  'Customize everything to your style',
-  'Classroom management on autopilot',
-  'Accountability built into the DNA',
-  'See what\'s working with real data',
-  'Standards-aligned, teacher-approved',
+const audienceCards = [
+  {
+    title: 'Students',
+    description:
+      'Practice responsibility through a consistent reward system where effort, choices, and follow-through all matter.',
+    icon: GraduationCap,
+    cta: 'Explore Student Experience',
+    to: '/for-students',
+    accent: 'from-sky-500 to-indigo-600',
+    highlights: ['Earn rewards through actions', 'Track progress and choices', 'Build habits through consistency'],
+  },
+  {
+    title: 'Teachers',
+    description:
+      'Run a clear classroom management system with incentives and economic tools that support behavior and engagement.',
+    icon: Users,
+    cta: 'Explore Teacher Tools',
+    to: '/for-teachers',
+    accent: 'from-emerald-500 to-teal-600',
+    highlights: ['Set clear expectations', 'Reward positive behavior', 'Teach practical finance principles'],
+  },
+  {
+    title: 'Parents',
+    description:
+      'See the responsibility skills your child is practicing and reinforce those habits with aligned language at home.',
+    icon: HeartHandshake,
+    cta: 'Join Parent Interest List',
+    to: '/waitlist',
+    accent: 'from-violet-500 to-pink-600',
+    highlights: ['Visibility into classroom growth', 'Home-school alignment', 'Support for responsibility habits'],
+  },
 ];
 
-function AnimatedSection({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
+const launchChecklist = [
+  {
+    title: 'Set Up Your Classroom',
+    description: 'Define classroom expectations, reward pathways, and economy settings in a guided setup flow.',
+    icon: Building2,
+  },
+  {
+    title: 'Activate Jobs and Store',
+    description: 'Launch jobs, approvals, and store incentives that make positive behavior visible and meaningful.',
+    icon: Briefcase,
+  },
+  {
+    title: 'Guide Daily Participation',
+    description: 'Students earn and spend daily while teachers coach responsibility, decision-making, and financial habits.',
+    icon: BookOpen,
+  },
+  {
+    title: 'Track Progress and Adjust',
+    description: 'Use dashboards and transaction histories to reinforce growth and improve routines over time.',
+    icon: TrendingUp,
+  },
+];
+
+const trustPoints = [
+  {
+    title: 'Secure Billing and Access',
+    description: 'Built with authenticated workflows, webhook validation, and managed subscription infrastructure.',
+    icon: ShieldCheck,
+  },
+  {
+    title: 'Teacher-Ready Onboarding',
+    description: 'Clear getting-started guidance helps educators configure classes without technical overhead.',
+    icon: Clock,
+  },
+  {
+    title: 'Transparent Plans',
+    description: 'Straightforward pricing options, billing portal support, and invoice visibility keep purchasing clear.',
+    icon: CreditCard,
+  },
+];
+
+function AnimatedSection({ children, delay = 0 }: { children: ReactNode; delay?: number }) {
   const [ref, inView] = useInView({
     threshold: 0.1,
     triggerOnce: true,
@@ -93,12 +147,12 @@ function AnimatedSection({ children, delay = 0 }: { children: React.ReactNode; d
 
 export default function HomePage() {
   const heroSpring = useSpring({
-    from: { opacity: 0, transform: 'scale(0.9)' },
-    to: { opacity: 1, transform: 'scale(1)' },
-    config: config.slow,
+    from: { opacity: 0, transform: 'translateY(24px)' },
+    to: { opacity: 1, transform: 'translateY(0px)' },
+    config: config.gentle,
   });
 
-  const trail = useTrail(features.length, {
+  const pillarTrail = useTrail(platformPillars.length, {
     from: { opacity: 0, transform: 'translateY(40px)' },
     to: { opacity: 1, transform: 'translateY(0px)' },
     config: config.gentle,
@@ -106,108 +160,95 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen overflow-hidden">
-      {/* Hero Section */}
-      <section className="relative pt-32 pb-24 overflow-hidden">
-        {/* Animated Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-          <div className="absolute inset-0 opacity-30">
-            <div className="absolute top-20 left-20 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl animate-blob"></div>
-            <div className="absolute top-40 right-20 w-72 h-72 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"></div>
-            <div className="absolute bottom-20 left-40 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"></div>
+      <section className="relative pt-28 pb-20 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-violet-50">
+          <div className="absolute inset-0 opacity-40">
+            <div className="absolute top-16 left-16 w-72 h-72 bg-sky-200 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
+            <div className="absolute top-32 right-16 w-72 h-72 bg-violet-200 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
+            <div className="absolute bottom-8 left-1/3 w-72 h-72 bg-fuchsia-200 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000"></div>
           </div>
         </div>
-        
+
         <div className="container relative z-10">
           <animated.div style={heroSpring} className="max-w-5xl mx-auto text-center">
-            {/* Beta Badge */}
-            <div className="inline-flex items-center px-6 py-3 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-sm font-bold mb-8 shadow-2xl hover:shadow-violet-500/50 transition-shadow cursor-default">
-              <Zap className="w-4 h-4 mr-2 animate-pulse" />
-              EARLY ACCESS — LIMITED BETA SPOTS
+            <div className="inline-flex items-center px-5 py-2 rounded-full bg-primary-100 text-primary-800 text-sm font-semibold mb-8 border border-primary-200">
+              Reward systems, responsibility, and practical economics in one platform
             </div>
 
-            <h1 className="text-6xl md:text-7xl font-black text-gray-900 mb-8 leading-tight">
-              Your Classroom.
-              <br />
-              <span className="bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 bg-clip-text text-transparent">
-                A Living Economy.
-              </span>
+            <h1 className="text-4xl md:text-6xl font-black tracking-tight text-gray-900 mb-6 leading-tight">
+              Build the classroom reward system
+              <span className="block text-primary-700">that also teaches responsibility and economics.</span>
             </h1>
-            
-            <p className="text-2xl text-gray-700 mb-12 max-w-3xl mx-auto font-medium leading-relaxed">
-              Stop teaching financial literacy from a textbook. 
-              <span className="text-violet-600 font-bold"> Make it real.</span> 
-              {' '}Students earn, spend, save, and learn—all within your classroom.
+
+            <p className="text-xl text-gray-700 mb-10 max-w-3xl mx-auto leading-relaxed">
+              ClassEcon helps teachers create a consistent incentive framework where students learn accountability,
+              practice finance principles, and build real-world decision-making skills.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-6 justify-center mb-16">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
               <Link
                 to="/waitlist"
-                className="group px-10 py-5 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-lg font-bold rounded-xl hover:from-violet-700 hover:to-fuchsia-700 transition-all shadow-2xl hover:shadow-violet-500/50 hover:scale-105 flex items-center justify-center"
+                className="group px-8 py-4 bg-primary-600 text-white text-lg font-semibold rounded-xl hover:bg-primary-700 transition-colors shadow-lg flex items-center justify-center"
               >
-                Get Early Access
-                <ArrowRight className="w-6 h-6 ml-2 group-hover:translate-x-2 transition-transform" />
+                Join Early Access
+                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Link>
               <Link
-                to="/for-teachers"
-                className="px-10 py-5 bg-white text-violet-700 text-lg font-bold rounded-xl border-3 border-violet-300 hover:bg-violet-50 transition-all shadow-xl hover:scale-105 flex items-center justify-center"
+                to="/pricing"
+                className="px-8 py-4 bg-white text-gray-900 text-lg font-semibold rounded-xl border border-gray-300 hover:bg-gray-50 transition-colors shadow-sm flex items-center justify-center"
               >
-                See It In Action
+                View Plans
               </Link>
             </div>
 
-            {/* Special Offer */}
-            <div className="relative bg-gradient-to-r from-amber-50 to-orange-50 border-3 border-amber-300 rounded-2xl p-8 max-w-2xl mx-auto shadow-2xl hover:shadow-amber-200 transition-shadow">
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg">
-                  🎉 FOUNDING MEMBER BONUS
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto text-left">
+              <div className="bg-white/90 border border-gray-200 rounded-xl p-4">
+                <p className="text-sm font-semibold text-primary-700 mb-1">Student Impact</p>
+                <p className="text-sm text-gray-700">Ownership grows when daily choices have clear outcomes.</p>
               </div>
-              <div className="mt-4">
-                <div className="text-3xl font-black text-gray-900 mb-3">
-                  50% OFF For Life + Exclusive Perks
-                </div>
-                <p className="text-gray-700 text-lg">
-                  First 100 teachers lock in <span className="font-bold text-amber-600">lifetime pricing</span> + 
-                  priority support + early feature access. No tricks, just rewards for being early.
-                </p>
+              <div className="bg-white/90 border border-gray-200 rounded-xl p-4">
+                <p className="text-sm font-semibold text-primary-700 mb-1">Teacher Efficiency</p>
+                <p className="text-sm text-gray-700">Consistent systems and automation reduce behavior overhead.</p>
+              </div>
+              <div className="bg-white/90 border border-gray-200 rounded-xl p-4">
+                <p className="text-sm font-semibold text-primary-700 mb-1">Family Alignment</p>
+                <p className="text-sm text-gray-700">Shared language around responsibility, effort, and progress.</p>
               </div>
             </div>
           </animated.div>
         </div>
       </section>
 
-      {/* Key Features */}
-      <section className="py-24 bg-white">
+      <section className="py-20 bg-white">
         <div className="container">
           <AnimatedSection>
-            <div className="text-center mb-20">
-              <h2 className="text-5xl font-black text-gray-900 mb-6">
-                Not Just Another Ed-Tech Tool
+            <div className="text-center mb-14">
+              <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-4">
+                Platform Highlights
               </h2>
-              <p className="text-2xl text-gray-600 max-w-3xl mx-auto">
-                This is the classroom economy platform built by teachers who get it. 
-                Every feature solves a real problem.
+              <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+                Every workflow is built to support behavior systems first, while naturally reinforcing finance and economic management.
               </p>
             </div>
           </AnimatedSection>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {trail.map((style, index) => {
-              const feature = features[index];
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {pillarTrail.map((style, index) => {
+              const pillar = platformPillars[index];
               return (
                 <animated.div
                   key={index}
                   style={style}
-                  className="group relative bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all border border-gray-100 hover:border-transparent hover:-translate-y-2"
+                  className="group relative bg-white rounded-2xl p-7 shadow-sm transition-all border border-gray-200 hover:shadow-lg hover:-translate-y-1"
                 >
-                  <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 rounded-2xl transition-opacity`}></div>
-                  
-                  <div className={`w-16 h-16 bg-gradient-to-br ${feature.gradient} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg`}>
-                    <feature.icon className="w-8 h-8 text-white" />
+                  <div className={`absolute inset-0 bg-gradient-to-br ${pillar.gradient} opacity-0 group-hover:opacity-10 rounded-2xl transition-opacity`}></div>
+
+                  <div className={`w-12 h-12 bg-gradient-to-br ${pillar.gradient} rounded-xl flex items-center justify-center mb-5 shadow`}>
+                    <pillar.icon className="w-6 h-6 text-white" />
                   </div>
-                  
-                  <h3 className="text-2xl font-bold text-gray-900 mb-4">{feature.title}</h3>
-                  <p className="text-gray-600 text-lg leading-relaxed">{feature.description}</p>
+
+                  <h3 className="text-2xl font-bold text-gray-900 mb-3">{pillar.title}</h3>
+                  <p className="text-gray-600 leading-relaxed">{pillar.description}</p>
                 </animated.div>
               );
             })}
@@ -215,88 +256,40 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* For Students/Teachers Split */}
-      <section className="py-24 bg-gradient-to-br from-gray-50 to-gray-100">
+      <section id="for-families" className="py-20 bg-gradient-to-b from-gray-50 to-white">
         <div className="container">
           <AnimatedSection>
-            <div className="text-center mb-16">
-              <h2 className="text-5xl font-black text-gray-900 mb-4">
-                Built For Both Sides of the Desk
+            <div className="text-center mb-14">
+              <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-4">
+                Designed for Every Stakeholder
               </h2>
-            </div>
-          </AnimatedSection>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-            {/* For Students */}
-            <AnimatedSection delay={100}>
-              <Link
-                to="/for-students"
-                className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-12 text-white hover:scale-105 transition-all shadow-2xl hover:shadow-purple-500/50 h-full flex flex-col justify-between min-h-[400px]"
-              >
-                <div className="relative z-10">
-                  <GraduationCap className="w-16 h-16 mb-6 group-hover:scale-110 transition-transform" />
-                  <h3 className="text-4xl font-black mb-6">For Students</h3>
-                  <p className="text-blue-50 text-xl mb-8 leading-relaxed">
-                    This isn't school—it's your economy. Earn real money (well, classroom money). 
-                    Build your empire. Make choices that matter. Learn what adults wish they knew at your age.
-                  </p>
-                  <div className="flex items-center text-white font-bold text-lg">
-                    Discover Your Economy
-                    <ArrowRight className="w-6 h-6 ml-3 group-hover:translate-x-3 transition-transform" />
-                  </div>
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-700 via-purple-700 to-pink-700 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              </Link>
-            </AnimatedSection>
-
-            {/* For Teachers */}
-            <AnimatedSection delay={200}>
-              <Link
-                to="/for-teachers"
-                className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-600 p-12 text-white hover:scale-105 transition-all shadow-2xl hover:shadow-emerald-500/50 h-full flex flex-col justify-between min-h-[400px]"
-              >
-                <div className="relative z-10">
-                  <Users className="w-16 h-16 mb-6 group-hover:scale-110 transition-transform" />
-                  <h3 className="text-4xl font-black mb-6">For Teachers</h3>
-                  <p className="text-emerald-50 text-xl mb-8 leading-relaxed">
-                    Stop fighting for attention. ClassEcon does the heavy lifting. 
-                    Students stay engaged, behavior improves, and you actually get to teach. 
-                    It's like having a TA who never calls in sick.
-                  </p>
-                  <div className="flex items-center text-white font-bold text-lg">
-                    See Teacher Tools
-                    <ArrowRight className="w-6 h-6 ml-3 group-hover:translate-x-3 transition-transform" />
-                  </div>
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-700 via-teal-700 to-cyan-700 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              </Link>
-            </AnimatedSection>
-          </div>
-        </div>
-      </section>
-
-      {/* Benefits */}
-      <section className="py-24 bg-white">
-        <div className="container">
-          <AnimatedSection>
-            <div className="text-center mb-16">
-              <h2 className="text-5xl font-black text-gray-900 mb-6">
-                Why Teachers Can't Stop Talking About It
-              </h2>
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                Real results from real classrooms. These aren't promises—they're patterns.
+              <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+                One platform, audience-specific experiences. Everyone sees what matters to their role.
               </p>
             </div>
           </AnimatedSection>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            {benefits.map((benefit, index) => (
-              <AnimatedSection key={index} delay={index * 50}>
-                <div className="flex items-start group hover:bg-gradient-to-r hover:from-violet-50 hover:to-fuchsia-50 p-4 rounded-xl transition-all">
-                  <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
-                    <Check className="w-5 h-5 text-white stroke-[3]" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {audienceCards.map((audience, index) => (
+              <AnimatedSection key={audience.title} delay={index * 100}>
+                <div className="h-full rounded-2xl border border-gray-200 bg-white p-7 shadow-sm hover:shadow-lg transition-shadow">
+                  <div className={`inline-flex w-12 h-12 items-center justify-center rounded-xl bg-gradient-to-br ${audience.accent} mb-5`}>
+                    <audience.icon className="h-6 w-6 text-white" />
                   </div>
-                  <span className="text-xl text-gray-700 font-medium leading-relaxed">{benefit}</span>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-3">{audience.title}</h3>
+                  <p className="text-gray-600 leading-relaxed mb-5">{audience.description}</p>
+                  <ul className="space-y-2 mb-6">
+                    {audience.highlights.map((item) => (
+                      <li key={item} className="flex items-start text-sm text-gray-700">
+                        <Check className="w-4 h-4 text-emerald-500 mt-0.5 mr-2 flex-shrink-0" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link to={audience.to} className="inline-flex items-center text-primary-700 font-semibold hover:text-primary-800">
+                    {audience.cta}
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Link>
                 </div>
               </AnimatedSection>
             ))}
@@ -304,41 +297,96 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="py-24 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 text-white relative overflow-hidden">
-        {/* Animated background elements */}
+      <section className="py-20 bg-white">
+        <div className="container">
+          <AnimatedSection>
+            <div className="text-center mb-14">
+              <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-4">
+                How ClassEcon Works
+              </h2>
+              <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+                A practical sequence to launch your classroom economy and sustain student engagement.
+              </p>
+            </div>
+          </AnimatedSection>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+            {launchChecklist.map((step, index) => (
+              <AnimatedSection key={step.title} delay={index * 75}>
+                <div className="h-full rounded-2xl border border-gray-200 p-6 bg-gray-50/70">
+                  <div className="w-10 h-10 rounded-lg bg-primary-100 text-primary-700 flex items-center justify-center mb-4">
+                    <step.icon className="w-5 h-5" />
+                  </div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-primary-700 mb-2">Step {index + 1}</p>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{step.title}</h3>
+                  <p className="text-sm text-gray-600 leading-relaxed">{step.description}</p>
+                </div>
+              </AnimatedSection>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20 bg-gray-50 border-y border-gray-200">
+        <div className="container">
+          <AnimatedSection>
+            <div className="max-w-5xl mx-auto text-center mb-12">
+              <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-4">
+                Built on a Platform Schools Can Trust
+              </h2>
+              <p className="text-lg text-gray-600">
+                ClassEcon aligns practical classroom workflows with secure infrastructure and transparent subscription management.
+              </p>
+            </div>
+          </AnimatedSection>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {trustPoints.map((point, index) => (
+              <AnimatedSection key={point.title} delay={index * 80}>
+                <div className="h-full bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-11 h-11 rounded-lg bg-primary-100 text-primary-700 flex items-center justify-center mb-4">
+                    <point.icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">{point.title}</h3>
+                  <p className="text-gray-600 leading-relaxed">{point.description}</p>
+                </div>
+              </AnimatedSection>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20 bg-gradient-to-r from-primary-700 to-violet-700 text-white relative overflow-hidden">
         <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl animate-blob"></div>
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl animate-blob animation-delay-2000"></div>
+          <div className="absolute top-0 left-0 w-80 h-80 bg-white rounded-full mix-blend-overlay filter blur-3xl animate-blob"></div>
+          <div className="absolute bottom-0 right-0 w-80 h-80 bg-white rounded-full mix-blend-overlay filter blur-3xl animate-blob animation-delay-2000"></div>
         </div>
 
-        <div className="container text-center relative z-10">
+        <div className="container relative z-10 text-center">
           <AnimatedSection>
-            <Sparkles className="w-16 h-16 mx-auto mb-6 animate-pulse" />
-            <h2 className="text-5xl md:text-6xl font-black mb-6">
-              Ready to Change Everything?
+            <Sparkles className="w-14 h-14 mx-auto mb-5" />
+            <h2 className="text-4xl md:text-5xl font-black mb-5">
+              Turn Classroom Management Into Meaningful Growth
             </h2>
-            <p className="text-2xl text-purple-100 mb-12 max-w-3xl mx-auto leading-relaxed">
-              Join the movement of educators who aren't just teaching about money—
-              they're creating financial geniuses, one classroom at a time.
+            <p className="text-lg text-violet-100 mb-9 max-w-3xl mx-auto leading-relaxed">
+              Join early access to launch a consistent reward system that improves behavior while teaching finance principles and responsibility.
             </p>
-            <div className="flex flex-col sm:flex-row gap-6 justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 to="/waitlist"
-                className="group px-12 py-6 bg-white text-violet-700 text-xl font-black rounded-xl hover:bg-gray-100 transition-all shadow-2xl hover:shadow-white/50 hover:scale-105"
+                className="group px-8 py-4 bg-white text-primary-700 text-lg font-semibold rounded-xl hover:bg-gray-100 transition-colors shadow-lg"
               >
-                Claim Your Spot Now
-                <span className="inline-block ml-2 group-hover:translate-x-2 transition-transform">→</span>
+                Join the Waitlist
+                <span className="inline-block ml-2 group-hover:translate-x-1 transition-transform">→</span>
               </Link>
               <Link
-                to="/pricing"
-                className="px-12 py-6 bg-violet-800/50 backdrop-blur text-white text-xl font-black rounded-xl border-3 border-white/30 hover:bg-violet-800/70 transition-all hover:scale-105"
+                to="/contact"
+                className="px-8 py-4 bg-transparent text-white text-lg font-semibold rounded-xl border border-white/40 hover:bg-white/10 transition-colors"
               >
-                See Pricing
+                Talk With Our Team
               </Link>
             </div>
-            <p className="mt-8 text-purple-200 text-sm">
-              🔒 No credit card required • 🎯 Cancel anytime • ✨ 50+ teachers already in
+            <p className="mt-6 text-violet-100 text-sm">
+              No credit card required for waitlist access. Early cohort includes educator onboarding support.
             </p>
           </AnimatedSection>
         </div>
