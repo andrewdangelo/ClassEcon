@@ -94,11 +94,13 @@ jobs:
             --outDir ${{ steps.vars.outputs.vite_outdir }}
 
       # ------------------------------------------------------------------
-      # Install wrangler globally (pinned to the same major the repo uses
-      # locally). Node 22 satisfies wrangler's engine requirement.
+      # Install the cloudflare/ package so wrangler can bundle the Worker
+      # scripts that import @cloudflare/containers. Also installs the
+      # wrangler version pinned in cloudflare/package.json.
       # ------------------------------------------------------------------
-      - name: Install wrangler
-        run: npm install -g wrangler@4
+      - name: Install cloudflare/ dependencies
+        working-directory: cloudflare
+        run: npm ci
 
       # ------------------------------------------------------------------
       # Deploy all eight Workers. Backend containers first (they take the
@@ -112,7 +114,7 @@ jobs:
           FLAG="${{ steps.vars.outputs.wrangler_env_flag }}"
           for cfg in auth-service backend payment-service email-service email-service-worker; do
             echo "::group::wrangler deploy $cfg ($FLAG)"
-            wrangler deploy $FLAG --config "$cfg/wrangler.jsonc"
+            npx wrangler deploy $FLAG --config "$cfg/wrangler.jsonc"
             echo "::endgroup::"
           done
 
@@ -123,7 +125,7 @@ jobs:
           FLAG="${{ steps.vars.outputs.wrangler_env_flag }}"
           for cfg in landing-page frontend admin; do
             echo "::group::wrangler deploy $cfg ($FLAG)"
-            wrangler deploy $FLAG --config "$cfg/wrangler.jsonc"
+            npx wrangler deploy $FLAG --config "$cfg/wrangler.jsonc"
             echo "::endgroup::"
           done
 
