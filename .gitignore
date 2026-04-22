@@ -69,6 +69,10 @@ web_modules/
 .env
 .env.*
 !.env.example
+# Frontend Vite env files for deployed environments contain only public
+# URLs + feature flags (no secrets) and are required by CI at build time.
+!.env.production
+!.env.staging
 
 # Keys and local secrets (never commit)
 *.pem
@@ -87,6 +91,7 @@ out
 # Nuxt.js build / generate output
 .nuxt
 dist
+dist-staging
 
 # Gatsby files
 .cache/
