@@ -36,6 +36,7 @@ USER emailservice
 
 EXPOSE 4000
 
-# Default to running the API server
-# For worker: override with CMD ["pnpm", "worker"]
-CMD ["pnpm", "start"]
+# ROLE=api runs the GraphQL server (default); ROLE=worker runs the async processor.
+# Used by Cloudflare Containers to run the same image as two workloads.
+ENV ROLE=api
+CMD ["sh", "-c", "if [ \"$ROLE\" = \"worker\" ]; then node dist/worker/index.js; else node dist/server/index.js; fi"]

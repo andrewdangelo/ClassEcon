@@ -35,12 +35,17 @@ export function verifyRefreshToken(token: string): JWTPayload {
   return jwt.verify(token, env.REFRESH_JWT_SECRET) as JWTPayload;
 }
 
+const isProd = process.env.NODE_ENV === "production";
+const cookieOptions = {
+  httpOnly: true,
+  secure: isProd,
+  sameSite: (isProd ? "none" : "lax") as "none" | "lax",
+  path: "/graphql",
+} as const;
+
 export function setRefreshCookie(res: Response, token: string) {
   res.cookie("refresh_token", token, {
-    httpOnly: true,
-    secure: false, // true in prod with HTTPS
-    sameSite: "lax",
-    path: "/graphql",
+    ...cookieOptions,
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 }

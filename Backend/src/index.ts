@@ -16,22 +16,17 @@ import internalRoutes from "./routes/internal";
 // stripeRoutes removed - see PaymentService for webhook handling
 
 async function main() {
-  console.log("[Startup] Connecting to MongoDB...");
-  await connectMongo(env.DATABASE_URL);
-  console.log("[Startup] MongoDB connected successfully");
-  
-  // Initialize salary payment cron jobs
-  console.log("[Startup] Initializing cron jobs...");
-  initSalaryCronJobs();
-
   console.log("[Startup] Starting Apollo Server...");
   const server = new ApolloServer({ typeDefs, resolvers });
   await server.start();
   console.log("[Startup] Apollo Server started successfully");
 
   const app = express();
-  
-  // Health check endpoint for Railway (no auth, no CORS needed)
+  // Cloudflare Containers (and any reverse proxy) terminates TLS upstream; trust
+  // the X-Forwarded-* headers so secure cookies and req.ip work correctly.
+  app.set("trust proxy", 1);
+
+  // Health check endpoint (no auth, no CORS needed)
   app.get("/health", (req, res) => {
     res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
   });
@@ -122,6 +117,19 @@ async function main() {
     console.log(`🚀 GraphQL ready at http://0.0.0.0:${env.PORT}/graphql`);
     console.log(`✓ Health check available at http://0.0.0.0:${env.PORT}/health`);
   });
+
+  // Connect to MongoDB in the background so the HTTP listener comes up
+  // immediately (Cloudflare Containers expects the TCP port to open before
+  // it will forward traffic). Cron jobs start after Mongo is ready.
+  connectMongo(env.DATABASE_URL)
+    .then(() => {
+      console.log("[Startup] MongoDB connected successfully");
+      console.log("[Startup] Initializing cron jobs...");
+      initSalaryCronJobs();
+    })
+    .catch((err) => {
+      console.error("[Startup] MongoDB connection failed:", err);
+    });
 }
 main().catch((err) => {
   console.error(err);

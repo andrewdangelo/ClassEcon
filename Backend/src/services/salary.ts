@@ -1,15 +1,23 @@
 import cron from "node-cron";
-import { Employment, Job, User, Transaction } from "../models";
+import { Employment, Transaction } from "../models";
 import { addToBalance } from "./balance";
 import { Types } from "mongoose";
 
-// Map of cron schedules for each pay period
-const CRON_SCHEDULES = {
-  WEEKLY: "0 9 * * 1", // Every Monday at 9 AM
-  BIWEEKLY: "0 9 */14 * *", // Every 14 days at 9 AM
-  MONTHLY: "0 9 1 * *", // First day of month at 9 AM
-  SEMESTER: "0 9 1 1,6 *", // Jan 1 and June 1 at 9 AM
-};
+let salaryProcessingInProgress = false;
+
+async function runSalaryPaymentsSafely(trigger: string) {
+  if (salaryProcessingInProgress) {
+    console.log(`[Salary Cron] Skipping ${trigger}: previous run still in progress`);
+    return;
+  }
+
+  salaryProcessingInProgress = true;
+  try {
+    await processSalaryPayments();
+  } finally {
+    salaryProcessingInProgress = false;
+  }
+}
 
 /**
  * Process salary payments for all active employments
@@ -90,10 +98,15 @@ function isPaymentDue(employment: any, period: string, now: Date): boolean {
  */
 async function processEmploymentPayment(employment: any, job: any, student: any) {
   const amount = job.salary.amount;
-  const studentId = new Types.ObjectId(employment.studentId);
-  const classId = new Types.ObjectId(employment.classId);
+  const studentId = toObjectId(
+    student?._id ?? employment.studentId,
+    "studentId"
+  );
+  const classId = toObjectId(employment.classId, "classId");
 
-  console.log(`[Salary Cron] Processing payment: $${amount} to ${student.name} for ${job.title}`);
+  console.log(
+    `[Salary Cron] Processing payment: $${amount} to ${student.name} for ${job.title}`
+  );
 
   // Get or create account
   const account = await addToBalance({
@@ -114,7 +127,7 @@ async function processEmploymentPayment(employment: any, job: any, student: any)
     accountId: account._id,
     classId: classId,
     classroomId: classDoc.classroomId,
-    type: "INCOME",
+    type: "PAYROLL",
     amount: amount,
     memo: `Salary payment for ${job.title}`,
     createdByUserId: studentId, // System transaction, but we need a user ID
@@ -137,13 +150,13 @@ export function initSalaryCronJobs() {
   // Run daily check at 9 AM - this will check all periods
   const dailyJob = cron.schedule("0 9 * * *", async () => {
     console.log("[Salary Cron] Daily salary check triggered");
-    await processSalaryPayments();
+    await runSalaryPaymentsSafely("daily salary check");
   });
 
   // Also run a check every hour for more frequent payments (optional)
   const hourlyJob = cron.schedule("0 * * * *", async () => {
     console.log("[Salary Cron] Hourly salary check triggered");
-    await processSalaryPayments();
+    await runSalaryPaymentsSafely("hourly salary check");
   });
 
   console.log("[Salary Cron] Cron jobs initialized successfully");
@@ -152,7 +165,7 @@ export function initSalaryCronJobs() {
 
   // Run immediately on startup for testing
   console.log("[Salary Cron] Running initial payment check...");
-  processSalaryPayments().catch(error => {
+  runSalaryPaymentsSafely("startup payment check").catch(error => {
     console.error("[Salary Cron] Error in initial payment check:", error);
   });
 
@@ -188,4 +201,20 @@ export async function manualPayEmployment(employmentId: string) {
     studentName: student.name,
     jobTitle: job.title,
   };
+}
+
+function toObjectId(value: unknown, fieldName: string): Types.ObjectId {
+  if (value instanceof Types.ObjectId) {
+    return value;
+  }
+
+  const rawValue =
+    value && typeof value === "object" ? (value as any)._id ?? value : value;
+  const normalized = String(rawValue ?? "");
+
+  if (Types.ObjectId.isValid(normalized)) {
+    return new Types.ObjectId(normalized);
+  }
+
+  throw new Error(`[Salary Cron] Invalid ${fieldName}: ${normalized}`);
 }

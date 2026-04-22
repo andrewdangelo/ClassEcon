@@ -10,13 +10,8 @@ import { connectDatabase } from "./db/connection.js";
 
 async function main() {
   const app = express();
-
-  // Connect to database if URL provided
-  if (env.DATABASE_URL) {
-    console.log("[Startup] Connecting to MongoDB...");
-    await connectDatabase();
-    console.log("[Startup] MongoDB connected successfully");
-  }
+  // Cloudflare Containers terminates TLS upstream; trust forwarded headers.
+  app.set("trust proxy", 1);
 
   // Health check endpoint (no auth needed)
   app.get("/health", (_req, res) => {
@@ -79,11 +74,18 @@ async function main() {
     });
   });
 
-  // Start server
+  // Start server before connecting to Mongo so the TCP port opens immediately
+  // (Cloudflare Containers requires the port to be listening to route traffic).
   const host = env.IS_PRODUCTION ? "0.0.0.0" : "localhost";
   app.listen(env.PORT, host, () => {
     console.log(`💳 Payment Service ready at http://${host}:${env.PORT}`);
   });
+
+  if (env.DATABASE_URL) {
+    connectDatabase()
+      .then(() => console.log("[Startup] MongoDB connected successfully"))
+      .catch((err) => console.error("[Startup] MongoDB connection failed:", err));
+  }
 }
 
 main().catch((err) => {

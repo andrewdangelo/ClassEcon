@@ -52,8 +52,9 @@ COPY nginx.conf /etc/nginx/templates/default.conf.template
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
-# Expose dynamic port
-EXPOSE ${PORT:-80}
+# Cloudflare Containers routes by ExposedPorts metadata; keep it fixed to 8080
+# and let the entrypoint honor PORT at runtime.
+EXPOSE 8080
 
 # Use custom entrypoint to substitute PORT and start nginx
 ENTRYPOINT ["/docker-entrypoint.sh"]

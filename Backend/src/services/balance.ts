@@ -18,7 +18,7 @@ export async function computeAccountBalance(accountId: Types.ObjectId) {
                   case: {
                     $in: [
                       "$type",
-                      ["DEPOSIT", "REFUND", "PAYROLL", "TRANSFER_CREDIT"],
+                      ["DEPOSIT", "REFUND", "PAYROLL", "INCOME", "TRANSFER_CREDIT"],
                     ],
                   },
                   then: "$amount",
@@ -27,7 +27,7 @@ export async function computeAccountBalance(accountId: Types.ObjectId) {
                   case: {
                     $in: [
                       "$type",
-                      ["WITHDRAWAL", "PURCHASE", "FINE", "TRANSFER_DEBIT"],
+                      ["WITHDRAWAL", "PURCHASE", "FINE", "EXPENSE", "TRANSFER_DEBIT"],
                     ],
                   },
                   then: { $multiply: [-1, "$amount"] },

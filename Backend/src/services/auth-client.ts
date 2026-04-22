@@ -103,10 +103,11 @@ export class AuthServiceClient {
 
   // Helper to set refresh cookie (mirroring auth service behavior)
   setRefreshCookie(res: Response, token: string): void {
+    const isProd = process.env.NODE_ENV === "production";
     res.cookie("refresh_token", token, {
       httpOnly: true,
-      secure: false, // true in prod with HTTPS
-      sameSite: "lax",
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
       path: "/graphql",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });

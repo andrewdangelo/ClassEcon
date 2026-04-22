@@ -1,0 +1,53 @@
+{
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  "name": "classecon-email-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-04-21",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "workers_dev": false,
+  "triggers": {
+    "crons": ["*/5 * * * *"]
+  },
+  "containers": [
+    {
+      "class_name": "EmailWorkerContainer",
+      "image": "../../EmailService/Dockerfile",
+      "max_instances": 1,
+      "instance_type": "basic"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "EMAIL_WORKER_CONTAINER", "class_name": "EmailWorkerContainer" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["EmailWorkerContainer"] }
+  ],
+  "env": {
+    "staging": {
+      "name": "classecon-email-worker-staging",
+      "workers_dev": false,
+      "triggers": {
+        "crons": ["*/5 * * * *"]
+      },
+      "containers": [
+        {
+          "class_name": "EmailWorkerContainer",
+          "image": "../../EmailService/Dockerfile",
+          "max_instances": 1,
+          "instance_type": "basic"
+        }
+      ],
+      "durable_objects": {
+        "bindings": [
+          { "name": "EMAIL_WORKER_CONTAINER", "class_name": "EmailWorkerContainer" }
+        ]
+      },
+      "migrations": [
+        { "tag": "v1", "new_sqlite_classes": ["EmailWorkerContainer"] }
+      ]
+    }
+  }
+}

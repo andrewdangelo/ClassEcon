@@ -18,11 +18,10 @@ import { webhookRouter } from '../webhooks/resendWebhook';
 const main = async () => {
   logger.info('Email Service starting...');
 
-  // Connect to MongoDB
-  await connectMongo();
-
   // Create Express app
   const app = express();
+  // Cloudflare Containers terminates TLS upstream; trust forwarded headers.
+  app.set('trust proxy', 1);
 
   // Middleware
   app.use(cors());
@@ -90,7 +89,9 @@ const main = async () => {
     res.status(500).json({ error: 'Internal server error' });
   });
 
-  // Start server
+  // Start server first so the TCP port opens immediately (Cloudflare
+  // Containers routes traffic only once the port is listening), then
+  // connect to Mongo in the background.
   const port = parseInt(env.PORT, 10);
   app.listen(port, '0.0.0.0', () => {
     logger.info(`Server running on http://0.0.0.0:${port}`);
@@ -99,6 +100,10 @@ const main = async () => {
     logger.info(`Webhook endpoint: http://0.0.0.0:${port}/webhooks/resend`);
     logger.info({ transport: getMailTransport() }, 'Outbound email transport');
   });
+
+  connectMongo()
+    .then(() => logger.info('MongoDB connected'))
+    .catch((error) => logger.error({ error }, 'MongoDB connection failed'));
 };
 
 // Handle uncaught errors

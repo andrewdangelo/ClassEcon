@@ -9,6 +9,9 @@ import { errorHandler } from "./middleware";
 
 async function main() {
   const app = express();
+  // Cloudflare Containers terminates TLS upstream; trust forwarded headers so
+  // secure cookies and req.ip work correctly.
+  app.set("trust proxy", 1);
 
   // Middleware
   app.use(cors({ 

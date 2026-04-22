@@ -1,0 +1,53 @@
+{
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  "name": "classecon-backend",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-04-21",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "workers_dev": true,
+  "preview_urls": true,
+  "routes": [
+    { "pattern": "api.classecon.net", "custom_domain": true }
+  ],
+  "containers": [
+    {
+      "class_name": "BackendContainer",
+      "image": "../../Backend/Dockerfile",
+      "max_instances": 2,
+      "instance_type": "standard-1"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "BACKEND_CONTAINER", "class_name": "BackendContainer" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["BackendContainer"] }
+  ],
+  "env": {
+    "staging": {
+      "name": "classecon-backend-staging",
+      "workers_dev": true,
+      "preview_urls": true,
+      "routes": [],
+      "containers": [
+        {
+          "class_name": "BackendContainer",
+          "image": "../../Backend/Dockerfile",
+          "max_instances": 1,
+          "instance_type": "standard-1"
+        }
+      ],
+      "durable_objects": {
+        "bindings": [
+          { "name": "BACKEND_CONTAINER", "class_name": "BackendContainer" }
+        ]
+      },
+      "migrations": [
+        { "tag": "v1", "new_sqlite_classes": ["BackendContainer"] }
+      ]
+    }
+  }
+}

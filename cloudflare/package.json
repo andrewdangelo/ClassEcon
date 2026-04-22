@@ -1,0 +1,28 @@
+{
+  "name": "classecon-cloudflare",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloudflare Containers deployment wrappers for the ClassEcon monorepo. One Worker + Durable-Object-backed Container per service.",
+  "type": "module",
+  "scripts": {
+    "deploy:auth": "wrangler deploy --config auth-service/wrangler.jsonc",
+    "deploy:email": "wrangler deploy --config email-service/wrangler.jsonc",
+    "deploy:email-worker": "wrangler deploy --config email-service-worker/wrangler.jsonc",
+    "deploy:payment": "wrangler deploy --config payment-service/wrangler.jsonc",
+    "deploy:backend": "wrangler deploy --config backend/wrangler.jsonc",
+    "deploy:frontend": "wrangler deploy --config frontend/wrangler.jsonc",
+    "deploy:landing": "wrangler deploy --config landing-page/wrangler.jsonc",
+    "deploy:admin": "wrangler deploy --config admin/wrangler.jsonc",
+    "deploy:all-backends": "pnpm deploy:auth && pnpm deploy:email && pnpm deploy:email-worker && pnpm deploy:payment && pnpm deploy:backend",
+    "deploy:all-frontends": "pnpm deploy:frontend && pnpm deploy:landing && pnpm deploy:admin",
+    "deploy:all": "pnpm deploy:all-backends && pnpm deploy:all-frontends"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "^0.3.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251210.0",
+    "typescript": "^5.6.2",
+    "wrangler": "^4.74.0"
+  }
+}
