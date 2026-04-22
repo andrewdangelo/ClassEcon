@@ -1,38 +1,29 @@
 /**
- * Resend Client Wrapper
- * Provides typed interface to Resend SDK
+ * Resend API delivery (optional; use when EMAIL_TRANSPORT=resend or auto without SMTP)
  */
 
 import { Resend } from 'resend';
 import { env } from './env';
 import { logger } from './logger';
+import type { SendEmailParams, SendEmailResult } from './emailTypes';
 
-// Initialize Resend client
-export const resend = new Resend(env.RESEND_API_KEY);
+let resendClient: Resend | null = null;
 
-export interface SendEmailParams {
-  to: string;
-  from?: string;
-  subject: string;
-  html: string;
-  text?: string;
-  replyTo?: string;
-  tags?: { name: string; value: string }[];
-}
+const getResend = (): Resend => {
+  if (!env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY is not configured');
+  }
+  if (!resendClient) {
+    resendClient = new Resend(env.RESEND_API_KEY);
+  }
+  return resendClient;
+};
 
-export interface SendEmailResult {
-  success: boolean;
-  messageId?: string;
-  error?: string;
-}
-
-/**
- * Send an email via Resend
- */
-export const sendEmail = async (params: SendEmailParams): Promise<SendEmailResult> => {
+export const sendViaResend = async (params: SendEmailParams): Promise<SendEmailResult> => {
   const fromEmail = params.from || env.FROM_EMAIL;
 
   try {
+    const resend = getResend();
     const result = await resend.emails.send({
       from: fromEmail,
       to: params.to,
@@ -51,7 +42,7 @@ export const sendEmail = async (params: SendEmailParams): Promise<SendEmailResul
       };
     }
 
-    logger.debug({ messageId: result.data?.id, to: params.to }, 'Email sent successfully');
+    logger.debug({ messageId: result.data?.id, to: params.to }, 'Resend email sent');
 
     return {
       success: true,
@@ -59,27 +50,10 @@ export const sendEmail = async (params: SendEmailParams): Promise<SendEmailResul
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error({ error, to: params.to }, 'Failed to send email');
+    logger.error({ error, to: params.to }, 'Resend send failed');
     return {
       success: false,
       error: errorMessage,
     };
   }
-};
-
-/**
- * Batch send emails (for bulk operations)
- * Note: Resend has rate limits, so this should be called carefully
- */
-export const sendBatchEmails = async (
-  emails: SendEmailParams[]
-): Promise<SendEmailResult[]> => {
-  const results: SendEmailResult[] = [];
-
-  for (const email of emails) {
-    const result = await sendEmail(email);
-    results.push(result);
-  }
-
-  return results;
 };

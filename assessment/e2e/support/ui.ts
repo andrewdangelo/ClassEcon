@@ -38,3 +38,9 @@ export async function expectRoute(page: Page, fragment: string) {
     })
     .toContain(fragment);
 }
+
+/** Log in an existing account and wait for the post-auth shell (dashboard). */
+export async function loginAndLandDashboard(page: Page, persona: Persona) {
+  await loginThroughAuthPage(page, persona);
+  await expectRoute(page, "/");
+}

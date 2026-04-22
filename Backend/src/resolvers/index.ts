@@ -34,7 +34,10 @@ export const resolvers = {
   ...AuditLogResolvers,
   // generic ID pickers
   Classroom: { id: pickId },
-  User: { id: pickId },
+  User: {
+    id: pickId,
+    emailVerified: (parent: { emailVerified?: boolean }) => parent.emailVerified !== false,
+  },
   Membership: { id: pickId },
   Account: { id: pickId },
   Transaction: { id: pickId },

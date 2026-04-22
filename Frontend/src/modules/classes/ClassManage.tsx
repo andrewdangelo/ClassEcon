@@ -42,6 +42,11 @@ import {
   X
 } from "lucide-react";
 import { REASONS_BY_CLASS, SET_REASONS } from "@/graphql/queries/reasons";
+import { CoTeachersPanel, type TeacherRow } from "@/components/classes/CoTeachersPanel";
+import { ME } from "@/graphql/queries/me";
+import type { MeQuery } from "@/graphql/__generated__/graphql";
+import { useAppSelector } from "@/redux/store/store";
+import { selectUser } from "@/redux/authSlice";
 
 // GraphQL Queries and Mutations
 const GET_CLASS_DETAILS = gql`
@@ -62,6 +67,12 @@ const GET_CLASS_DETAILS = gql`
       payPeriodDefault
       startingBalance
       isArchived
+      teacherIds
+      teachers {
+        id
+        name
+        email
+      }
       storeSettings
       reasons {
         id
@@ -125,6 +136,9 @@ export default function ClassManage() {
   const { classId } = useParams<{ classId: string }>();
   const navigate = useNavigate();
   const { push } = useToast();
+  const authUser = useAppSelector(selectUser);
+  const { data: meData } = useQuery<MeQuery>(ME, { fetchPolicy: "cache-first" });
+  const meId = meData?.me?.id ?? authUser?.id;
   
   const [formData, setFormData] = React.useState<ClassFormData>({
     name: "",
@@ -150,6 +164,7 @@ export default function ClassManage() {
   const [deleteConfirmText, setDeleteConfirmText] = React.useState("");
   const [isSaving, setIsSaving] = React.useState(false);
   const [newReason, setNewReason] = React.useState("");
+  const [teacherRows, setTeacherRows] = React.useState<TeacherRow[]>([]);
 
   // Fetch class details
   const { data, loading, error } = useQuery(GET_CLASS_DETAILS, {
@@ -181,6 +196,14 @@ export default function ClassManage() {
         isArchived: !!cls.isArchived,
         reasons: cls.reasons?.map((r: any) => r.label) || [],
       });
+      const teachers = (cls.teachers ?? []) as TeacherRow[];
+      const byId = new Map(teachers.map((t) => [t.id, t]));
+      setTeacherRows(
+        (cls.teacherIds ?? []).map((id: string) => {
+          const row = byId.get(id);
+          return row ?? { id, name: null, email: null };
+        })
+      );
     }
   }, [data]);
 
@@ -269,7 +292,17 @@ export default function ClassManage() {
 
   const handleSave = async () => {
     if (!classId) return;
-    
+
+    const teacherIds = teacherRows.map((r) => r.id);
+    if (teacherIds.length === 0) {
+      push({
+        title: "Cannot save",
+        description: "At least one teacher is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSaving(true);
     try {
       // Clean the form data to handle empty strings properly
@@ -287,6 +320,7 @@ export default function ClassManage() {
         slug: formData.slug || undefined,
         status: formData.status || undefined,
         isArchived: formData.isArchived,
+        teacherIds,
         storeSettings: {
           allowNegative: formData.allowNegative,
           requireFineReason: formData.requireFineReason,
@@ -454,7 +488,7 @@ export default function ClassManage() {
                 max="12"
                 value={formData.gradeLevel}
                 onChange={(e) => handleInputChange("gradeLevel", e.target.value)}
-                placeholder="e.g., 5, 9, 12"
+                placeholder="0 = K, or 1–12"
               />
             </div>
             
@@ -580,6 +614,15 @@ export default function ClassManage() {
               rows={3}
             />
           </div>
+
+          <CoTeachersPanel
+            classId={classId!}
+            teacherRows={teacherRows}
+            setTeacherRows={setTeacherRows}
+            meId={meId}
+            emailInputId="coTeacherEmailManage"
+            description="Other teachers can manage this class with you. They must already have a teacher account. Click Save Changes at the top to apply."
+          />
 
           {/* Policies */}
           <div className="space-y-4 border-t pt-4">

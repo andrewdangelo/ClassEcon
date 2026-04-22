@@ -36,6 +36,20 @@ jobs:
       - name: Run API permission matrix
         run: pnpm --dir assessment run test:e2e:api
 
+      - name: Validation summary
+        if: always()
+        run: pnpm --dir assessment run report:e2e:summary
+
+      - name: Upload JUnit and summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-api-reports
+          path: |
+            assessment/e2e/artifacts/junit/results.xml
+            assessment/e2e/artifacts/validation-summary.md
+          if-no-files-found: ignore
+
       - name: Teardown stack
         if: always()
         run: docker compose down -v
@@ -69,12 +83,27 @@ jobs:
       - name: Run browser smoke E2E
         run: pnpm --dir assessment run test:e2e:smoke
 
+      - name: Validation summary
+        if: always()
+        run: pnpm --dir assessment run report:e2e:summary
+
       - name: Upload Playwright artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-artifacts-smoke
           path: assessment/e2e/artifacts/test-results
+          if-no-files-found: ignore
+
+      - name: Upload HTML report and JUnit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-reports-smoke
+          path: |
+            assessment/e2e/artifacts/html-report
+            assessment/e2e/artifacts/junit/results.xml
+            assessment/e2e/artifacts/validation-summary.md
           if-no-files-found: ignore
 
       - name: Teardown stack

@@ -8,6 +8,8 @@ export type User = {
   id: string;
   name: string;
   email?: string;
+  emailVerified?: boolean;
+  oauthProvider?: string | null;
   role: Role;
   subscriptionTier?: SubscriptionTier;
   subscriptionStatus?: SubscriptionStatus;

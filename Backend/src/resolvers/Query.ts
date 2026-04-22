@@ -31,6 +31,7 @@ import {
   assertSelfOrTeacherForStudent,
   Ctx,
 } from "./helpers";
+import { buildPersonalDataExport } from "../services/personal-data";
 import { Types } from "mongoose";
 
 export const Query = {
@@ -251,6 +252,11 @@ export const Query = {
 
   me: (_: any, __: any, ctx: any) =>
     ctx.userId ? User.findById(ctx.userId).lean().exec() : null,
+
+  myPersonalDataExport: async (_: any, __: any, ctx: Ctx) => {
+    requireAuth(ctx);
+    return buildPersonalDataExport(ctx.userId!);
+  },
 
   classesByUser: async (
     _: any,
@@ -786,6 +792,36 @@ export const Query = {
       averageBalance: Math.round(averageBalance * 100) / 100,
       totalCirculation: Math.round(totalCirculation * 100) / 100,
     };
+  },
+
+  teacherByEmailForClass: async (
+    _: any,
+    { classId, email }: { classId: string; email: string },
+    ctx: Ctx
+  ) => {
+    requireAuth(ctx);
+    await requireClassTeacher(ctx, classId);
+    const normalized = (email || "").trim().toLowerCase();
+    if (!normalized) {
+      throw new GraphQLError("Email is required.");
+    }
+    const klass = await ClassModel.findById(classId).select("teacherIds").lean();
+    if (!klass) {
+      throw new GraphQLError("Class not found.");
+    }
+    const u = await User.findOne({ email: normalized }).lean();
+    if (!u) {
+      throw new GraphQLError("No user found with that email address.");
+    }
+    if (u.role !== "TEACHER" && u.role !== "ADMIN") {
+      throw new GraphQLError("That account is not a teacher.");
+    }
+    const tid = u._id.toString();
+    const existing = (klass.teacherIds ?? []).map((x) => x.toString());
+    if (existing.includes(tid)) {
+      throw new GraphQLError("That teacher is already on this class.");
+    }
+    return u;
   },
 
   // Fine queries

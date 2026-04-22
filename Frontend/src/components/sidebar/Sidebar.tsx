@@ -51,7 +51,7 @@ export function Sidebar({
   onClose: () => void;
 }) {
   const { role: contextRole } = useClassContext();
-  const { data, loading } = useQuery<MeQuery>(ME, {
+  const { data, loading, error } = useQuery<MeQuery>(ME, {
     fetchPolicy: "cache-and-network",
   });
 

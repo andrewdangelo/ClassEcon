@@ -1,11 +1,11 @@
 /**
  * Worker Processor
- * Polls MongoDB for queued jobs and sends emails via Resend
+ * Polls MongoDB for queued jobs and sends emails (SMTP or Resend)
  * Uses atomic claiming to prevent duplicate sends
  */
 
 import { DeliveryJob, type IDeliveryJob } from '../models';
-import { sendEmail } from '../config/resend';
+import { sendEmail } from '../config/mailer';
 import { env, workerLogger } from '../config';
 import { updateCampaignStatusFromJobs } from '../services/campaign';
 import crypto from 'crypto';
@@ -136,7 +136,7 @@ const processJob = async (job: IDeliveryJob): Promise<void> => {
     // Wait for rate limit slot
     await waitForRateLimit();
 
-    // Send email via Resend
+    // Send email (SMTP or Resend)
     const result = await sendEmail({
       to: job.toEmail,
       from: job.fromEmail,

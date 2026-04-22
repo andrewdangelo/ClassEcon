@@ -2,10 +2,52 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ClassEcon marketing — OKLCH tokens, blue-violet brand hue (tinted neutrals) */
+:root {
+  --ce-hue: 252;
+  --ce-canvas: oklch(0.985 0.008 var(--ce-hue));
+  --ce-surface: oklch(0.998 0.004 var(--ce-hue));
+  --ce-muted: oklch(0.955 0.018 var(--ce-hue));
+  --ce-elevated: oklch(0.94 0.022 var(--ce-hue));
+  --ce-border: oklch(0.88 0.028 var(--ce-hue));
+  --ce-ink: oklch(0.3 0.045 var(--ce-hue));
+  --ce-ink-muted: oklch(0.46 0.035 var(--ce-hue));
+  --ce-accent: oklch(0.5 0.14 var(--ce-hue));
+  --ce-accent-hover: oklch(0.44 0.14 var(--ce-hue));
+  --ce-ink-on-accent: oklch(0.99 0.01 var(--ce-hue));
+  --ce-secondary: oklch(0.48 0.11 195);
+  --ce-positive: oklch(0.52 0.12 155);
+  --ce-warm: oklch(0.58 0.12 65);
+  --ce-warm-soft: oklch(0.96 0.04 65);
+  --ce-footer-bg: oklch(0.22 0.035 var(--ce-hue));
+  --ce-footer-text: oklch(0.82 0.02 var(--ce-hue));
+  --ce-footer-muted: oklch(0.62 0.03 var(--ce-hue));
+  --ce-glow: oklch(0.78 0.12 var(--ce-hue) / 0.35);
+}
+
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
   body {
-    @apply bg-white text-gray-900;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    @apply font-sans antialiased;
+    background: var(--ce-canvas);
+    color: var(--ce-ink);
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: "Bricolage Grotesque", system-ui, sans-serif;
   }
 }
 
@@ -13,39 +55,48 @@
   .container {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
+
+  .ce-focus {
+    @apply outline-none ring-2 ring-offset-2 ring-[var(--ce-accent)] ring-offset-[var(--ce-canvas)];
+  }
 }
 
 @layer utilities {
-  .animation-delay-2000 {
-    animation-delay: 2s;
+  .ce-fade-up {
+    animation: ce-fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
-  .animation-delay-4000 {
-    animation-delay: 4s;
+
+  .ce-delay-1 {
+    animation-delay: 0.08s;
   }
-  .border-3 {
-    border-width: 3px;
+
+  .ce-delay-2 {
+    animation-delay: 0.16s;
+  }
+
+  .ce-delay-3 {
+    animation-delay: 0.24s;
   }
 }
 
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
-}
-
-/* Gradient animations */
-@keyframes gradient {
-  0% {
-    background-position: 0% 50%;
+@keyframes ce-fade-up {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
   }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
   }
 }
 
-.animate-gradient {
-  background-size: 200% 200%;
-  animation: gradient 15s ease infinite;
+@media (prefers-reduced-motion: reduce) {
+  .ce-fade-up,
+  .ce-delay-1,
+  .ce-delay-2,
+  .ce-delay-3 {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }

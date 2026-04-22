@@ -48,11 +48,32 @@ import { PricingPage } from "./pages/PricingPage";
 import { SubscriptionSuccessPage } from "./pages/SubscriptionSuccessPage";
 import { GettingStartedPage } from "./pages/GettingStartedPage";
 import TierTestingPage from "./pages/TierTestingPage";
+import { EmailVerificationGuard } from "@/components/auth/EmailVerificationGuard";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import PrivacyPage from "./pages/PrivacyPage";
+import TermsPage from "./pages/TermsPage";
 
 const client = createApolloClient();
 
 const router = createBrowserRouter([
+  { path: "/privacy", element: <PrivacyPage /> },
+  { path: "/terms", element: <TermsPage /> },
   // Public auth page - wrapped in BetaAccessGuard
+  {
+    path: "/auth/reset-password",
+    element: <ResetPasswordPage />,
+  },
+
+  {
+    path: "/auth/verify-email",
+    element: (
+      <BetaAccessGuard>
+        <VerifyEmailPage />
+      </BetaAccessGuard>
+    ),
+  },
+
   { 
     path: "/auth", 
     element: (
@@ -86,9 +107,11 @@ const router = createBrowserRouter([
     element: (
       <BetaAccessGuard>
         <ProtectedRoute>
-          <RequireClassGuard>
-            <TeacherOnboarding />
-          </RequireClassGuard>
+          <EmailVerificationGuard>
+            <RequireClassGuard>
+              <TeacherOnboarding />
+            </RequireClassGuard>
+          </EmailVerificationGuard>
         </ProtectedRoute>
       </BetaAccessGuard>
     ),
@@ -100,9 +123,11 @@ const router = createBrowserRouter([
     element: (
       <BetaAccessGuard>
         <ProtectedRoute>
-          <RequireClassGuard>
-            <RoleBasedLayout />
-          </RequireClassGuard>
+          <EmailVerificationGuard>
+            <RequireClassGuard>
+              <RoleBasedLayout />
+            </RequireClassGuard>
+          </EmailVerificationGuard>
         </ProtectedRoute>
       </BetaAccessGuard>
     ),

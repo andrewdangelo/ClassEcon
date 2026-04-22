@@ -36,9 +36,23 @@ import {
   createFineWaivedNotification,
 } from "../services/notifications";
 import { authClient } from "../services/auth-client";
+import { env } from "../config";
+import {
+  isEmailServiceConfigured,
+  sendEmail2FA,
+  verifyEmail2FA,
+  subscribeMailingList,
+  sendPasswordResetEmail,
+  consumePasswordResetToken,
+} from "../services/email-service-client";
 import { TransactionType } from "../utils/enums";
 import { Types } from "mongoose";
 import { pubsub, PAY_REQUEST_EVENTS } from "../pubsub";
+import {
+  addUserToClassByRole,
+  removeUserFromClassByRole,
+} from "../utils/membership.helpers";
+import { performSelfServiceAccountDeletion } from "../services/personal-data";
 
 export const Mutation = {
   async createClass(_: any, { input }: any, ctx: Ctx) {
@@ -73,6 +87,33 @@ export const Mutation = {
       classroomId = classroom._id;
     }
 
+    const creatorId = new Types.ObjectId(ctx.userId!);
+    const fromInput = Array.isArray(input.teacherIds) && input.teacherIds.length
+      ? input.teacherIds.map((id: string) => new Types.ObjectId(id))
+      : [];
+    const teacherObjectIds: Types.ObjectId[] = [
+      ...new Map(
+        [creatorId, ...fromInput].map((id) => [id.toString(), id])
+      ).values(),
+    ];
+
+    const teacherUsers = await User.find({ _id: { $in: teacherObjectIds } })
+      .select("_id role")
+      .lean()
+      .exec();
+    if (teacherUsers.length !== teacherObjectIds.length) {
+      throw new GraphQLError("One or more teacher IDs are invalid.");
+    }
+    if (
+      teacherUsers.some(
+        (u: { role?: string }) => u.role !== "TEACHER" && u.role !== "ADMIN"
+      )
+    ) {
+      throw new GraphQLError(
+        "All assigned class teachers must have the teacher or admin role."
+      );
+    }
+
     // Create the Class
     const cls = await ClassModel.create({
       classroomId,
@@ -88,22 +129,15 @@ export const Mutation = {
       startingBalance: input.startingBalance ?? null,
       defaultCurrency: input.defaultCurrency ?? "CE$",
       slug: input.slug ?? null,
-      teacherIds: input.teacherIds?.map(
-        (id: string) => new Types.ObjectId(id)
-      ) ?? [new Types.ObjectId(ctx.userId!)],
+      teacherIds: teacherObjectIds,
       storeSettings: input.storeSettings ?? undefined,
       status: "ACTIVE",
       isArchived: false,
     });
 
-    await Membership.updateOne(
-      { userId: toId(ctx.userId!), role: "TEACHER" },
-      {
-        $setOnInsert: { status: "ACTIVE" },
-        $addToSet: { classIds: cls._id },
-      },
-      { upsert: true }
-    ).exec();
+    for (const tid of teacherObjectIds) {
+      await addUserToClassByRole(tid, "TEACHER", cls._id);
+    }
 
     // Reasons (skip duplicates)
     if (Array.isArray(input.reasons) && input.reasons.length) {
@@ -244,10 +278,43 @@ export const Mutation = {
     ]) {
       if (k in input) update[k] = input[k];
     }
+    let teacherMembershipSync: { old: string[]; next: string[] } | null = null;
     if (Array.isArray(input.teacherIds)) {
-      update.teacherIds = input.teacherIds.map(
+      if (input.teacherIds.length === 0) {
+        throw new GraphQLError("At least one teacher is required.");
+      }
+      const newTeacherIds = input.teacherIds.map(
         (x: string) => new Types.ObjectId(x)
       );
+      const nextStrings = newTeacherIds.map((x: Types.ObjectId) =>
+        x.toString()
+      );
+      if (ctx.role !== "ADMIN" && !nextStrings.includes(ctx.userId!)) {
+        throw new GraphQLError(
+          "You cannot remove yourself from this class's teacher list."
+        );
+      }
+      const listedUsers = await User.find({ _id: { $in: newTeacherIds } })
+        .select("_id role")
+        .lean()
+        .exec();
+      if (listedUsers.length !== newTeacherIds.length) {
+        throw new GraphQLError("One or more teacher IDs are invalid.");
+      }
+      if (
+        listedUsers.some(
+          (u: { role?: string }) => u.role !== "TEACHER" && u.role !== "ADMIN"
+        )
+      ) {
+        throw new GraphQLError(
+          "All assigned class teachers must have the teacher or admin role."
+        );
+      }
+      update.teacherIds = newTeacherIds;
+      teacherMembershipSync = {
+        old: (klass.teacherIds ?? []).map((t) => t.toString()),
+        next: nextStrings,
+      };
     }
 
     const updated = await ClassModel.findByIdAndUpdate(
@@ -257,6 +324,21 @@ export const Mutation = {
     )
       .lean()
       .exec();
+
+    if (teacherMembershipSync) {
+      const classOid = toId(id);
+      for (const oid of teacherMembershipSync.old) {
+        if (!teacherMembershipSync.next.includes(oid)) {
+          await removeUserFromClassByRole(oid, "TEACHER", classOid);
+        }
+      }
+      for (const nid of teacherMembershipSync.next) {
+        if (!teacherMembershipSync.old.includes(nid)) {
+          await addUserToClassByRole(nid, "TEACHER", classOid);
+        }
+      }
+    }
+
     return updated;
   },
 
@@ -302,6 +384,13 @@ export const Mutation = {
       },
       { upsert: true }
     ).exec();
+
+    // Co-teachers must appear on Class.teacherIds for requireClassTeacher and guards.
+    if (role === "TEACHER") {
+      await ClassModel.findByIdAndUpdate(cls._id, {
+        $addToSet: { teacherIds: userId },
+      }).exec();
+    }
 
     // If this is a student, create their account with starting balance
     if (role === "STUDENT") {
@@ -592,7 +681,14 @@ export const Mutation = {
       email: email.toLowerCase(),
       passwordHash,
       role,
+      emailVerified: false,
     });
+
+    if (user.email && isEmailServiceConfigured()) {
+      sendEmail2FA({ userId: user._id.toString(), email: user.email }).catch((err) =>
+        console.error("[email] signup verification send failed:", err)
+      );
+    }
 
     const tokens = await authClient.signTokens(user._id.toString(), role, ctx.res);
     const accessToken = tokens.accessToken;
@@ -612,6 +708,12 @@ export const Mutation = {
             },
             { upsert: true }
           ).exec();
+
+          if (role === "TEACHER") {
+            await ClassModel.findByIdAndUpdate(cls._id, {
+              $addToSet: { teacherIds: user._id },
+            }).exec();
+          }
 
           // If this is a student, create their account with starting balance
           if (role === "STUDENT") {
@@ -699,6 +801,7 @@ export const Mutation = {
           oauthProvider: userInfo.provider,
           oauthProviderId: userInfo.id,
           profilePicture: userInfo.picture,
+          emailVerified: true,
         });
       } else {
         // Update existing user's OAuth info if not already set
@@ -733,6 +836,188 @@ export const Mutation = {
   async logout(_: any, __: any, ctx: any) {
     authClient.clearRefreshCookie(ctx.res);
     return true;
+  },
+
+  async deleteMyAccount(
+    _: any,
+    { confirmationPhrase }: { confirmationPhrase: string },
+    ctx: any
+  ) {
+    requireAuth(ctx);
+    try {
+      await performSelfServiceAccountDeletion(ctx.userId!, confirmationPhrase);
+      authClient.clearRefreshCookie(ctx.res);
+      return {
+        success: true,
+        message: "Your account and associated personal data have been deleted.",
+      };
+    } catch (e: unknown) {
+      const msg =
+        e instanceof GraphQLError
+          ? e.message
+          : "Could not complete account deletion.";
+      return { success: false, message: msg };
+    }
+  },
+
+  async joinWaitlist(_: any, { input }: any) {
+    const email = String(input?.email || "")
+      .toLowerCase()
+      .trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return { success: false, message: "Please enter a valid email address." };
+    }
+
+    const tags = ["waitlist"];
+    if (input?.name) tags.push(`name:${String(input.name).slice(0, 80)}`);
+    if (input?.role) tags.push(`role:${String(input.role).slice(0, 40)}`);
+    if (input?.school) tags.push(`school:${String(input.school).slice(0, 80)}`);
+    if (input?.approximateStudents) {
+      tags.push(`students:${String(input.approximateStudents).slice(0, 40)}`);
+    }
+
+    if (!isEmailServiceConfigured()) {
+      console.warn("[joinWaitlist] Email service not configured");
+      return { success: false, message: "Waitlist is temporarily unavailable." };
+    }
+
+    try {
+      await subscribeMailingList({ email, tags });
+      return { success: true, message: "You are on the list." };
+    } catch (err) {
+      console.error("[joinWaitlist]", err);
+      return { success: false, message: "Could not complete signup. Please try again later." };
+    }
+  },
+
+  async requestPasswordReset(_: any, { email }: { email: string }) {
+    const normalized = String(email || "")
+      .toLowerCase()
+      .trim();
+    const generic = {
+      success: true,
+      message: "If an account exists for this email, we sent reset instructions.",
+    };
+
+    if (!normalized) return generic;
+
+    const user = await User.findOne({ email: normalized }).exec();
+    if (!user?.passwordHash) return generic;
+
+    if (!isEmailServiceConfigured()) {
+      return {
+        success: false,
+        message: "Password reset is temporarily unavailable. Try again later.",
+      };
+    }
+
+    const redirectBase = (env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
+    const redirectUrl = `${redirectBase}/auth/reset-password`;
+
+    try {
+      await sendPasswordResetEmail({
+        userId: user._id.toString(),
+        email: normalized,
+        redirectUrl,
+      });
+    } catch (err) {
+      console.error("[requestPasswordReset]", err);
+      return {
+        success: false,
+        message: "Could not send reset email. Try again in a few minutes.",
+      };
+    }
+
+    return generic;
+  },
+
+  async resetPassword(
+    _: any,
+    { email, token, newPassword }: { email: string; token: string; newPassword: string }
+  ) {
+    const normalizedEmail = String(email || "")
+      .toLowerCase()
+      .trim();
+    const rawToken = String(token || "").trim();
+    if (!normalizedEmail || !rawToken || !newPassword || newPassword.length < 6) {
+      return { success: false, message: "Invalid request." };
+    }
+
+    if (!isEmailServiceConfigured()) {
+      return { success: false, message: "Password reset is temporarily unavailable." };
+    }
+
+    try {
+      await consumePasswordResetToken({ email: normalizedEmail, token: rawToken });
+    } catch (err: any) {
+      return { success: false, message: err?.message || "Invalid or expired reset link." };
+    }
+
+    const user = await User.findOne({ email: normalizedEmail }).exec();
+    if (!user) {
+      return { success: false, message: "Invalid or expired reset link." };
+    }
+
+    try {
+      const passwordHash = await authClient.hashPassword(newPassword);
+      user.passwordHash = passwordHash;
+      user.emailVerified = true;
+      await user.save();
+    } catch (err) {
+      console.error("[resetPassword] password update failed", err);
+      return { success: false, message: "Could not update password. Request a new reset link." };
+    }
+
+    return { success: true, message: "Password updated. You can sign in now." };
+  },
+
+  async verifyEmailWithCode(_: any, { code }: { code: string }, ctx: Ctx) {
+    requireAuth(ctx);
+    const user = await User.findById(ctx.userId).exec();
+    if (!user?.email) {
+      return { success: false, message: "No email on this account." };
+    }
+    if (user.oauthProvider) {
+      return { success: true, message: "Email already verified." };
+    }
+    if (user.emailVerified) {
+      return { success: true, message: "Email already verified." };
+    }
+    if (!isEmailServiceConfigured()) {
+      return { success: false, message: "Verification is temporarily unavailable." };
+    }
+    try {
+      await verifyEmail2FA({
+        userId: user._id.toString(),
+        email: user.email,
+        code: String(code || "").trim(),
+      });
+    } catch (err: any) {
+      return { success: false, message: err?.message || "Invalid code." };
+    }
+    user.emailVerified = true;
+    await user.save();
+    return { success: true, message: "Email verified." };
+  },
+
+  async resendEmailVerificationCode(_: any, __: any, ctx: Ctx) {
+    requireAuth(ctx);
+    const user = await User.findById(ctx.userId).exec();
+    if (!user?.email) {
+      return { success: false, message: "No email on this account." };
+    }
+    if (user.oauthProvider || user.emailVerified) {
+      return { success: true, message: "Nothing to send." };
+    }
+    if (!isEmailServiceConfigured()) {
+      return { success: false, message: "Verification is temporarily unavailable." };
+    }
+    try {
+      await sendEmail2FA({ userId: user._id.toString(), email: user.email });
+      return { success: true, message: "We sent a new code to your email." };
+    } catch (err: any) {
+      return { success: false, message: err?.message || "Could not send code." };
+    }
   },
 
   // Store item management
@@ -1060,11 +1345,11 @@ export const Mutation = {
 
     // Get storeItem and teacher IDs for notifications
     const storeItem = await StoreItem.findById(purchase.storeItemId).exec();
-    const teacherMemberships = await Membership.find({
-      classId: purchase.classId,
-      role: "teacher",
-    }).exec();
-    const teacherIds = teacherMemberships.map((m) => m.userId);
+    const clsForNotify = await ClassModel.findById(purchase.classId)
+      .select("teacherIds")
+      .lean()
+      .exec();
+    const teacherIds = clsForNotify?.teacherIds ?? [];
 
     // Notify teachers
     await createRedemptionNotification(

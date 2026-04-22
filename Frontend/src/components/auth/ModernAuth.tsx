@@ -2,15 +2,25 @@ import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation } from "@apollo/client/react";
 import { LOGIN, SIGN_UP } from "../../graphql/operations";
+import { REQUEST_PASSWORD_RESET } from "../../graphql/mutations/auth";
 import { useAppDispatch } from "../../redux/store/store";
 import { setCredentials } from "../../redux/authSlice";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/Label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Eye, EyeOff, GraduationCap, Mail, Lock, User, Code } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter as DialogFooterUI,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 const roles = ["TEACHER", "STUDENT", "PARENT"] as const;
@@ -36,6 +46,8 @@ export const ModernAuth: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   // Login form
   const {
@@ -65,6 +77,8 @@ export const ModernAuth: React.FC = () => {
     { input: any }
   >(SIGN_UP);
 
+  const [requestReset, { loading: resetLoading }] = useMutation(REQUEST_PASSWORD_RESET);
+
   const onLogin = async (data: LoginForm) => {
     const res = await doLogin({
       variables: { email: data.email, password: data.password },
@@ -77,6 +91,8 @@ export const ModernAuth: React.FC = () => {
           user: {
             ...payload.user,
             role: payload.user.role as "TEACHER" | "STUDENT" | "PARENT",
+            emailVerified: payload.user.emailVerified,
+            oauthProvider: payload.user.oauthProvider,
           },
         })
       );
@@ -111,9 +127,17 @@ export const ModernAuth: React.FC = () => {
           user: {
             ...payload.user,
             role: payload.user.role as "TEACHER" | "STUDENT" | "PARENT",
+            emailVerified: payload.user.emailVerified,
+            oauthProvider: payload.user.oauthProvider,
           },
         })
       );
+
+      if (payload.user.emailVerified === false && !payload.user.oauthProvider) {
+        navigate("/auth/verify-email", { replace: true });
+        resetSignup();
+        return;
+      }
 
       const isTeacher = (payload.user.role ?? data.role) === "TEACHER";
       if (isTeacher) {
@@ -129,6 +153,22 @@ export const ModernAuth: React.FC = () => {
         navigate("/");
       }
       resetSignup();
+    }
+  };
+
+  const onRequestPasswordReset = async () => {
+    setResetMessage(null);
+    const email = resetEmail.trim().toLowerCase();
+    if (!email) {
+      setResetMessage("Enter the email you use to sign in.");
+      return;
+    }
+    try {
+      const { data } = await requestReset({ variables: { email } });
+      const row = (data as any)?.requestPasswordReset;
+      setResetMessage(row?.message || "Check your inbox.");
+    } catch (e: any) {
+      setResetMessage(e?.message || "Request failed.");
     }
   };
 
@@ -252,6 +292,52 @@ export const ModernAuth: React.FC = () => {
                   <Button type="submit" disabled={isLoggingIn} className="w-full h-11">
                     {isLoggingIn ? "Signing in..." : "Sign in"}
                   </Button>
+
+                  <div className="flex justify-center pt-1">
+                    <Dialog
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          setResetEmail("");
+                          setResetMessage(null);
+                        }
+                      }}
+                    >
+                      <DialogTrigger asChild>
+                        <Button type="button" variant="link" className="h-auto p-0 text-sm text-muted-foreground">
+                          Forgot password?
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Reset password</DialogTitle>
+                          <DialogDescription>
+                            We will email you a link to choose a new password if an account exists for this address.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-3 py-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="reset-email">Email</Label>
+                            <Input
+                              id="reset-email"
+                              type="email"
+                              value={resetEmail}
+                              onChange={(e) => setResetEmail(e.target.value)}
+                              placeholder="you@example.com"
+                              className="h-11"
+                            />
+                          </div>
+                          {resetMessage && (
+                            <p className="text-sm text-muted-foreground">{resetMessage}</p>
+                          )}
+                        </div>
+                        <DialogFooterUI>
+                          <Button type="button" onClick={onRequestPasswordReset} disabled={resetLoading}>
+                            {resetLoading ? "Sending…" : "Send reset link"}
+                          </Button>
+                        </DialogFooterUI>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </form>
               </TabsContent>
 
@@ -469,13 +555,13 @@ export const ModernAuth: React.FC = () => {
             {/* Terms & Privacy */}
             <p className="mt-6 text-center text-xs text-muted-foreground">
               By signing in, you agree to our{" "}
-              <a href="#" className="underline underline-offset-4 hover:text-primary">
+              <Link to="/terms" className="underline underline-offset-4 hover:text-primary">
                 Terms of Service
-              </a>{" "}
+              </Link>{" "}
               and{" "}
-              <a href="#" className="underline underline-offset-4 hover:text-primary">
+              <Link to="/privacy" className="underline underline-offset-4 hover:text-primary">
                 Privacy Policy
-              </a>
+              </Link>
               .
             </p>
           </CardContent>

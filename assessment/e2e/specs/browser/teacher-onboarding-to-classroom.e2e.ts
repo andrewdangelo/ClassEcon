@@ -20,6 +20,9 @@ test.describe("Teacher onboarding to classroom", () => {
     await expect.poll(() => page.url()).toContain("/");
     await expect(page.getByText("Dashboard")).toBeVisible();
 
+    await page.goto("/classes");
+    await expect(page.getByText("Teacher UI Flow Class")).toBeVisible();
+
     await context.close();
   });
 });

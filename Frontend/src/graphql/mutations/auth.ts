@@ -4,7 +4,7 @@ export const LOGIN = gql`
   mutation Login($email: String!, $password: String!) {
     login(email: $email, password: $password) {
       accessToken
-      user { id name email role }
+      user { id name email role emailVerified oauthProvider }
     }
   }
 `;
@@ -13,7 +13,7 @@ export const SIGN_UP = gql`
   mutation SignUp($input: SignUpInput!) {
     signUp(input: $input) {
       accessToken
-      user { id name email role }
+      user { id name email role emailVerified oauthProvider }
     }
   }
 `;
@@ -39,6 +39,7 @@ export const OAUTH_LOGIN = gql`
         name
         email
         status
+        emailVerified
         oauthProvider
         oauthProviderId
         profilePicture
@@ -46,6 +47,15 @@ export const OAUTH_LOGIN = gql`
         updatedAt
       }
       accessToken
+    }
+  }
+`;
+
+export const REQUEST_PASSWORD_RESET = gql`
+  mutation RequestPasswordReset($email: String!) {
+    requestPasswordReset(email: $email) {
+      success
+      message
     }
   }
 `;

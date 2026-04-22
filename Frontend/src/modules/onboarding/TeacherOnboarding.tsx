@@ -20,6 +20,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { GRADE_LEVEL_SELECT_OPTIONS } from "@/lib/gradeLevels";
 
 const CLASSES_FOR_GUARD = gql`
   query RequireClass_Classes {
@@ -233,9 +234,9 @@ export default function TeacherOnboarding() {
                         <SelectValue placeholder="Select grade" />
                       </SelectTrigger>
                       <SelectContent>
-                        {[6, 7, 8, 9, 10, 11, 12].map((g) => (
-                          <SelectItem key={g} value={String(g)}>
-                            Grade {g}
+                        {GRADE_LEVEL_SELECT_OPTIONS.map(({ value, label }) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
                           </SelectItem>
                         ))}
                       </SelectContent>

@@ -5,149 +5,146 @@ export default function PricingPage() {
   const plans = [
     {
       name: 'Starter',
-      price: '$9',
+      usdMonthly: 9,
       period: '/month',
-      description: 'Perfect for individual teachers just getting started',
+      description: 'Individual teachers getting started',
       features: [
         'Up to 30 students',
         '1 classroom',
-        'Basic job system',
+        'Job system',
         'Classroom store',
-        'Transaction tracking',
+        'Transaction history',
         'Email support',
       ],
-      cta: 'Start Free Trial',
+      cta: 'Start free trial',
       highlighted: false,
     },
     {
       name: 'Professional',
-      price: '$19',
+      usdMonthly: 19,
       period: '/month',
-      description: 'Best for teachers who want the full experience',
+      description: 'Full classroom economy for growing programs',
       features: [
         'Unlimited students',
         'Up to 5 classrooms',
-        'Advanced job system',
+        'Advanced jobs & approvals',
         'Custom store items',
-        'Analytics dashboard',
-        'Fine management',
+        'Analytics overview',
+        'Fine workflows',
         'Priority support',
-        'Custom currency names',
+        'Custom currency labels',
       ],
-      cta: 'Start Free Trial',
+      cta: 'Start free trial',
       highlighted: true,
-      badge: 'Most Popular',
+      badge: 'Most popular',
     },
     {
       name: 'School',
-      price: 'Custom',
+      usdMonthly: null as number | null,
       period: '',
-      description: 'For schools and districts with multiple teachers',
+      description: 'Districts and multi-teacher deployments',
       features: [
         'Unlimited classrooms',
         'Unlimited students',
-        'All Professional features',
-        'Admin dashboard',
-        'Bulk student management',
-        'Training sessions',
+        'Everything in Professional',
+        'Admin reporting',
+        'Bulk roster tools',
+        'Training session',
         'Dedicated support',
         'Custom integrations',
       ],
-      cta: 'Contact Sales',
+      cta: 'Contact sales',
       highlighted: false,
     },
   ];
 
   return (
-    <div className="min-h-screen pt-16">
-      {/* Hero */}
-      <section className="pt-20 pb-16 bg-gradient-to-br from-primary-50 to-purple-50">
-        <div className="container">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-5xl font-bold text-gray-900 mb-6">
-              Simple, Transparent Pricing
-            </h1>
-            <p className="text-xl text-gray-600 mb-8">
-              Choose the plan that's right for you. All plans include a 14-day free trial, no credit card required.
+    <div className="bg-ce-canvas pt-16">
+      <section className="border-b border-ce-border pb-14 pt-12 sm:pb-16 sm:pt-16">
+        <div className="container max-w-3xl">
+          <h1 className="font-display text-hero font-bold text-ce-ink">Straightforward pricing</h1>
+          <p className="mt-5 text-lg leading-relaxed text-ce-ink-muted">
+            Every plan includes a 14-day trial. No card required to explore—upgrade when you are ready to run with your
+            full roster.
+          </p>
+          <p className="mt-3 text-sm text-ce-ink-muted">Listed amounts are in United States dollars (USD).</p>
+        </div>
+      </section>
+
+      <section className="border-y border-ce-border bg-ce-warm-soft py-10 text-ce-ink">
+        <div className="container flex flex-col items-center gap-3 text-center sm:flex-row sm:justify-center sm:gap-6 sm:text-left">
+          <Sparkles className="h-8 w-8 shrink-0 text-ce-warm" strokeWidth={1.75} />
+          <div>
+            <h2 className="font-display text-xl font-bold text-ce-ink sm:text-2xl">Founding member offer</h2>
+            <p className="mt-1 text-sm leading-relaxed text-ce-ink-muted sm:text-base">
+              <strong className="text-ce-warm">50% off for life</strong> for the first 100 teachers on the waitlist—
+              pricing locks when you join the cohort.
             </p>
           </div>
         </div>
       </section>
 
-      {/* Founding Member Special */}
-      <section className="py-12 bg-gradient-to-r from-amber-500 to-orange-500">
+      <section className="py-16 sm:py-20">
         <div className="container">
-          <div className="max-w-4xl mx-auto text-center text-white">
-            <div className="flex items-center justify-center mb-4">
-              <Sparkles className="w-8 h-8 mr-2" />
-              <h2 className="text-3xl font-bold">Founding Member Special</h2>
-            </div>
-            <p className="text-xl mb-2">
-              <strong>50% OFF LIFETIME</strong> for the first 100 teachers who join!
-            </p>
-            <p className="text-amber-100">
-              Lock in these prices forever + get exclusive early access to new features
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Cards */}
-      <section className="py-20 bg-white">
-        <div className="container">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {plans.map((plan, index) => (
+          <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-3 lg:items-stretch">
+            {plans.map((plan) => (
               <div
-                key={index}
-                className={`relative rounded-2xl p-8 ${
+                key={plan.name}
+                className={`relative flex flex-col rounded-3xl p-8 ring-1 ${
                   plan.highlighted
-                    ? 'bg-gradient-to-br from-primary-600 to-purple-600 text-white shadow-2xl scale-105'
-                    : 'bg-white border-2 border-gray-200 shadow-lg'
+                    ? 'bg-ce-accent text-ce-on-accent ring-ce-accent lg:-translate-y-1 lg:shadow-[0_24px_80px_-32px_oklch(0.35_0.08_252/0.35)]'
+                    : 'bg-ce-surface text-ce-ink ring-ce-border'
                 }`}
               >
                 {plan.badge && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 px-4 py-1 bg-amber-500 text-white text-sm font-bold rounded-full">
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-ce-warm px-4 py-1 text-xs font-bold uppercase tracking-wide text-ce-on-accent">
                     {plan.badge}
-                  </div>
+                  </span>
                 )}
-                
-                <div className="text-center mb-6">
-                  <h3 className={`text-2xl font-bold mb-2 ${plan.highlighted ? 'text-white' : 'text-gray-900'}`}>
-                    {plan.name}
-                  </h3>
-                  <div className="flex items-baseline justify-center mb-2">
-                    <span className={`text-5xl font-bold ${plan.highlighted ? 'text-white' : 'text-gray-900'}`}>
-                      {plan.price}
-                    </span>
-                    <span className={`text-xl ml-1 ${plan.highlighted ? 'text-blue-100' : 'text-gray-600'}`}>
-                      {plan.period}
-                    </span>
-                  </div>
-                  <p className={`text-sm ${plan.highlighted ? 'text-blue-100' : 'text-gray-600'}`}>
-                    {plan.description}
-                  </p>
-                </div>
-
-                <ul className="space-y-3 mb-8">
-                  {plan.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-start">
-                      <Check className={`w-5 h-5 flex-shrink-0 mr-3 ${plan.highlighted ? 'text-blue-200' : 'text-green-500'}`} />
-                      <span className={`text-sm ${plan.highlighted ? 'text-blue-50' : 'text-gray-700'}`}>
-                        {feature}
+                <h3 className={`font-display text-2xl font-bold ${plan.highlighted ? '' : 'text-ce-ink'}`}>
+                  {plan.name}
+                </h3>
+                <div className="mt-4 flex flex-wrap items-baseline gap-x-1 gap-y-0">
+                  {plan.usdMonthly != null ? (
+                    <>
+                      <span
+                        className={`text-sm font-semibold uppercase tracking-wide ${plan.highlighted ? 'text-ce-on-accent/85' : 'text-ce-ink-muted'}`}
+                      >
+                        USD
                       </span>
+                      <span className="font-display text-5xl font-bold tabular-nums">{plan.usdMonthly}</span>
+                      <span className={`text-lg ${plan.highlighted ? 'text-ce-on-accent/80' : 'text-ce-ink-muted'}`}>
+                        {plan.period}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="font-display text-5xl font-bold tabular-nums">Custom</span>
+                  )}
+                </div>
+                <p className={`mt-2 text-sm ${plan.highlighted ? 'text-ce-on-accent/85' : 'text-ce-ink-muted'}`}>
+                  {plan.description}
+                </p>
+                <ul className="mt-8 flex-1 space-y-3">
+                  {plan.features.map((f) => (
+                    <li key={f} className="flex gap-2 text-sm">
+                      <Check
+                        className={`mt-0.5 h-5 w-5 shrink-0 ${plan.highlighted ? 'text-ce-on-accent' : 'text-ce-positive'}`}
+                        strokeWidth={2.5}
+                      />
+                      <span className={plan.highlighted ? 'text-ce-on-accent/95' : 'text-ce-ink'}>{f}</span>
                     </li>
                   ))}
                 </ul>
-
                 <Link
-                  to="/waitlist"
-                  className={`w-full block text-center px-6 py-3 rounded-lg font-semibold transition-all ${
+                  to={plan.name === 'School' ? '/contact' : '/waitlist'}
+                  className={`mt-10 inline-flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-center text-sm font-semibold transition focus-visible:ce-focus ${
                     plan.highlighted
-                      ? 'bg-white text-primary-600 hover:bg-gray-100'
-                      : 'bg-gradient-to-r from-primary-600 to-purple-600 text-white hover:from-primary-700 hover:to-purple-700'
+                      ? 'bg-ce-surface text-ce-accent hover:bg-ce-canvas'
+                      : 'bg-ce-canvas text-ce-accent ring-1 ring-ce-accent hover:bg-ce-muted'
                   }`}
                 >
                   {plan.cta}
+                  <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
             ))}
@@ -155,75 +152,50 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* FAQ */}
-      <section className="py-20 bg-gray-50">
-        <div className="container">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Frequently Asked Questions
-            </h2>
-          </div>
-
-          <div className="max-w-3xl mx-auto space-y-6">
+      <section className="border-t border-ce-border bg-ce-muted/40 py-16 sm:py-20">
+        <div className="container max-w-3xl">
+          <h2 className="font-display text-center text-display font-bold text-ce-ink">FAQ</h2>
+          <div className="mt-10 space-y-4">
             {[
               {
                 q: 'Is there really a free trial?',
-                a: 'Yes! All plans come with a 14-day free trial, and you don\'t need to enter a credit card to get started.',
+                a: 'Yes. All plans include 14 days with full access. No credit card required to start.',
               },
               {
-                q: 'What happens after my trial ends?',
-                a: 'After your trial, you can choose to upgrade to a paid plan. Your data will be saved, so you can pick up right where you left off.',
+                q: 'What happens when the trial ends?',
+                a: 'Choose a paid plan to continue. Your classes and history stay intact.',
               },
               {
-                q: 'Can I switch plans later?',
-                a: 'Absolutely! You can upgrade or downgrade your plan at any time. Changes take effect immediately.',
+                q: 'Can we switch plans later?',
+                a: 'Upgrade or downgrade anytime. Proration is handled in the billing portal.',
               },
               {
-                q: 'What payment methods do you accept?',
-                a: 'We accept all major credit cards (Visa, Mastercard, American Express) and PayPal.',
+                q: 'Do you invoice schools?',
+                a: 'School and district plans include invoicing options and dedicated onboarding.',
               },
-              {
-                q: 'Do you offer discounts for schools?',
-                a: 'Yes! We offer special pricing for schools and districts with multiple teachers. Contact us for a custom quote.',
-              },
-              {
-                q: 'Is my data secure?',
-                a: 'Yes, we take security seriously. All data is encrypted, backed up daily, and stored on secure servers.',
-              },
-            ].map((faq, index) => (
-              <div key={index} className="bg-white rounded-lg p-6 shadow-sm">
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{faq.q}</h3>
-                <p className="text-gray-600">{faq.a}</p>
+            ].map((faq) => (
+              <div key={faq.q} className="rounded-2xl bg-ce-surface p-6 ring-1 ring-ce-border">
+                <h3 className="font-display font-bold text-ce-ink">{faq.q}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-ce-ink-muted">{faq.a}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-20 bg-gradient-to-r from-primary-600 to-purple-600 text-white">
-        <div className="container text-center">
-          <h2 className="text-4xl font-bold mb-4">
-            Still Have Questions?
-          </h2>
-          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-            Our team is here to help you choose the right plan for your classroom.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              to="/contact"
-              className="inline-flex items-center px-8 py-4 bg-white text-primary-600 font-semibold rounded-lg hover:bg-gray-100 transition-all shadow-lg"
-            >
-              Contact Us
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Link>
-            <Link
-              to="/waitlist"
-              className="inline-flex items-center px-8 py-4 bg-primary-700 text-white font-semibold rounded-lg border-2 border-white hover:bg-primary-800 transition-all"
-            >
-              Start Free Trial
-            </Link>
+      <section className="bg-ce-ink py-16 text-ce-on-accent">
+        <div className="container flex flex-col items-center justify-between gap-6 text-center sm:flex-row sm:text-left">
+          <div>
+            <h2 className="font-display text-2xl font-bold">Still comparing?</h2>
+            <p className="mt-2 max-w-lg text-sm text-ce-footer-text">Tell us your roster size and we will recommend a lane.</p>
           </div>
+          <Link
+            to="/contact"
+            className="inline-flex items-center gap-2 rounded-2xl bg-ce-accent px-6 py-3 font-semibold text-ce-on-accent hover:bg-ce-accent-hover focus-visible:ce-focus"
+          >
+            Contact
+            <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
       </section>
     </div>

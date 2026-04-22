@@ -1,7 +1,7 @@
 {
   "name": "email-service",
   "version": "1.0.0",
-  "description": "Production-grade Email Service microservice with GraphQL API and Resend integration",
+  "description": "Email microservice with GraphQL API — SMTP (Nodemailer) or Resend",
   "main": "dist/server/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server/index.ts",
@@ -10,7 +10,8 @@
     "start": "node dist/server/index.js",
     "worker": "node dist/worker/index.js",
     "lint": "eslint src --ext .ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "smoke": "node scripts/smoke.mjs"
   },
   "keywords": [
     "email",
@@ -30,6 +31,7 @@
     "express": "^4.21.0",
     "graphql": "^16.9.0",
     "mongoose": "^8.7.0",
+    "nodemailer": "^8.0.5",
     "pino": "^9.4.0",
     "pino-pretty": "^11.2.2",
     "resend": "^4.0.0",
@@ -39,6 +41,7 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/node": "^22.7.0",
+    "@types/nodemailer": "^8.0.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.6.2"
   },

@@ -112,14 +112,6 @@ export function TeacherLayout() {
                 <span>{t("fines.manageFines")}</span>
               </NavLink>
             )}
-            <button className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors duration-200 hover:bg-primary/8 hover:text-foreground">
-              <GraduationCap className="h-4 w-4" />
-              <span>Class Analytics</span>
-            </button>
-            <button className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors duration-200 hover:bg-primary/8 hover:text-foreground">
-              <Users className="h-4 w-4" />
-              <span>Grade Reports</span>
-            </button>
           </div>
         </div>
       </aside>

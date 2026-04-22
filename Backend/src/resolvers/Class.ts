@@ -50,4 +50,17 @@ export const Class = {
     PayRequest.find({ classId: p._id }).sort({ createdAt: -1 }).lean().exec(),
   reasons: (p: any) =>
     ClassReason.find({ classId: p._id }).sort({ label: 1 }).lean().exec(),
+
+  teachers: async (p: any) => {
+    const ids = p.teacherIds ?? [];
+    if (!ids.length) return [];
+    const idStrings = ids.map((id: { toString: () => string }) => id.toString());
+    const users = await User.find({ _id: { $in: ids } })
+      .lean()
+      .exec();
+    const byId = new Map(users.map((u) => [u._id.toString(), u]));
+    return idStrings
+      .map((id: string) => byId.get(id))
+      .filter(Boolean) as typeof users;
+  },
 };

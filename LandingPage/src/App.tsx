@@ -11,7 +11,7 @@ import ContactPage from './pages/ContactPage';
 export default function App() {
   return (
     <Router>
-      <div className="min-h-screen flex flex-col">
+      <div className="flex min-h-screen flex-col bg-ce-canvas">
         <Header />
         <main className="flex-1">
           <Routes>

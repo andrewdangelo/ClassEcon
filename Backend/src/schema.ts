@@ -126,6 +126,24 @@ export const typeDefs = [
       accessToken: String!
     }
 
+    type PublicActionResult {
+      success: Boolean!
+      message: String
+    }
+
+    type JoinWaitlistResult {
+      success: Boolean!
+      message: String
+    }
+
+    input JoinWaitlistInput {
+      email: String!
+      name: String
+      role: String
+      school: String
+      approximateStudents: String
+    }
+
     type User {
       id: ID!
       role: Role!
@@ -135,6 +153,7 @@ export const typeDefs = [
       oauthProvider: OAuthProvider
       oauthProviderId: String
       profilePicture: String
+      emailVerified: Boolean!
       createdAt: DateTime!
       updatedAt: DateTime!
       hasBetaAccess: Boolean!
@@ -254,6 +273,7 @@ export const typeDefs = [
       payPeriodDefault: PayPeriod
       startingBalance: Int
       teacherIds: [ID!]!
+      teachers: [User!]!
       defaultCurrency: String
       status: String
   # Arbitrary JSON configuration for store / economy policies (e.g. allowNegative, requireFineReason, perItemPurchaseLimit)
@@ -679,6 +699,10 @@ export const typeDefs = [
     # --------- Queries ----------
     type Query {
       me: User
+      """
+      Machine-readable export of the signed-in user’s data (GDPR data portability / FERPA access support).
+      """
+      myPersonalDataExport: JSON!
       classrooms: [Classroom!]!
       classroom(id: ID!): Classroom
       membershipsByClass(classId: ID!, role: Role): [Membership!]!
@@ -748,6 +772,9 @@ export const typeDefs = [
       
       # Class statistics (teacher only)
       classStatistics(classId: ID!): ClassStatistics!
+
+      # Look up a teacher by email to add as co-teacher (caller must be a class teacher)
+      teacherByEmailForClass(classId: ID!, email: String!): User!
       
       # Fines
       finesByClass(classId: ID!, status: FineStatus): [Fine!]!
@@ -882,8 +909,23 @@ export const typeDefs = [
       signUp(input: SignUpInput!): AuthPayload!
       login(email: String!, password: String!): AuthPayload!
       oauthLogin(provider: OAuthProvider!, code: String!): AuthPayload!
+
+      # Public / email microservice
+      joinWaitlist(input: JoinWaitlistInput!): JoinWaitlistResult!
+      requestPasswordReset(email: String!): PublicActionResult!
+      resetPassword(email: String!, token: String!, newPassword: String!): PublicActionResult!
+
+      # Logged-in email verification (password signups)
+      verifyEmailWithCode(code: String!): PublicActionResult!
+      resendEmailVerificationCode: PublicActionResult!
       refreshAccessToken: String!
       logout: Boolean!
+
+      """
+      Permanently delete the signed-in user’s account when the confirmation phrase matches.
+      Teachers and parents with active class or ownership assignments must resolve those first.
+      """
+      deleteMyAccount(confirmationPhrase: String!): PublicActionResult!
 
       # class CRUD
       createClass(input: CreateClassInput!): Class!

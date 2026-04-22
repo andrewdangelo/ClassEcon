@@ -32,4 +32,8 @@ export const env = {
   // PaymentService URL for subscription/payment operations
   PAYMENT_SERVICE_URL: process.env.PAYMENT_SERVICE_URL || "http://localhost:4003",
   PAYMENT_SERVICE_API_KEY: process.env.PAYMENT_SERVICE_API_KEY || "dev-internal-key",
+
+  /** Email microservice (GraphQL). Optional locally; set in Docker Compose. */
+  EMAIL_SERVICE_URL: process.env.EMAIL_SERVICE_URL || "",
+  EMAIL_SERVICE_TOKEN: process.env.EMAIL_SERVICE_TOKEN || "",
 };

@@ -1,0 +1,10 @@
+query MyPersonalDataExport {
+  myPersonalDataExport
+}
+
+mutation DeleteMyAccount($confirmationPhrase: String!) {
+  deleteMyAccount(confirmationPhrase: $confirmationPhrase) {
+    success
+    message
+  }
+}

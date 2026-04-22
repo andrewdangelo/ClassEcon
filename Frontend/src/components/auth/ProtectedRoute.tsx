@@ -29,6 +29,8 @@ export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
           id: data.me.id,
           name: data.me.name || "",
           email: data.me.email || "",
+          emailVerified: data.me.emailVerified,
+          oauthProvider: data.me.oauthProvider,
           role:
             data.me.role === "TEACHER" ||
             data.me.role === "STUDENT" ||

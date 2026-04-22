@@ -1,7 +1,7 @@
 import React from "react";
 import { useForm } from "react-hook-form";
 import { useMutation } from "@apollo/client/react";
-import { LOGIN, SIGN_UP } from "../../graphql/operations";
+import { LOGIN, SIGN_UP, REQUEST_PASSWORD_RESET } from "../../graphql/operations";
 import { useAppDispatch } from "../../redux/store/store";
 import { setCredentials } from "../../redux/authSlice";
 import { useNavigate } from "react-router-dom";
@@ -53,6 +53,8 @@ type SignupPayload = {
 export const LoginSignupCard: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const [resetEmail, setResetEmail] = React.useState("");
+  const [resetMessage, setResetMessage] = React.useState<string | null>(null);
 
   // --- Login form ---
   const {
@@ -84,6 +86,8 @@ export const LoginSignupCard: React.FC = () => {
     { input: { name: string; email: string; password: string; role: string; joinCode?: string } }
   >(SIGN_UP);
 
+  const [requestReset, { loading: resetLoading }] = useMutation(REQUEST_PASSWORD_RESET);
+
   const onLogin = async (data: LoginForm) => {
     const res = await doLogin({
       variables: { email: data.email, password: data.password },
@@ -94,11 +98,29 @@ export const LoginSignupCard: React.FC = () => {
         accessToken: payload.accessToken,
         user: {
           ...payload.user,
-          role: payload.user.role as "TEACHER" | "STUDENT" | "PARENT"
+          role: payload.user.role as "TEACHER" | "STUDENT" | "PARENT",
+          emailVerified: (payload.user as any).emailVerified,
+          oauthProvider: (payload.user as any).oauthProvider,
         }
       }));
       // Navigate to root after successful login
       navigate("/");
+    }
+  };
+
+  const onRequestPasswordReset = async () => {
+    setResetMessage(null);
+    const email = resetEmail.trim().toLowerCase();
+    if (!email) {
+      setResetMessage("Enter your email.");
+      return;
+    }
+    try {
+      const { data } = await requestReset({ variables: { email } });
+      const row = (data as any)?.requestPasswordReset;
+      setResetMessage(row?.message || "Check your inbox.");
+    } catch (e: any) {
+      setResetMessage(e?.message || "Request failed.");
     }
   };
 
@@ -128,9 +150,18 @@ export const LoginSignupCard: React.FC = () => {
         accessToken: payload.accessToken,
         user: {
           ...payload.user,
-          role: payload.user.role as "TEACHER" | "STUDENT" | "PARENT"
+          role: payload.user.role as "TEACHER" | "STUDENT" | "PARENT",
+          emailVerified: (payload.user as any).emailVerified,
+          oauthProvider: (payload.user as any).oauthProvider,
         }
       }));
+
+      if ((payload.user as any).emailVerified === false && !(payload.user as any).oauthProvider) {
+        navigate("/auth/verify-email", { replace: true });
+        resetSignup();
+        return;
+      }
+
       // preserve info for onboarding
       const isTeacher = (payload.user.role ?? data.role) === "TEACHER";
       if (isTeacher) {
@@ -200,6 +231,47 @@ export const LoginSignupCard: React.FC = () => {
             <Button type="submit" disabled={isLoggingIn}>
               {isLoggingIn ? "Logging in..." : "Log in"}
             </Button>
+            <Dialog
+              onOpenChange={(open) => {
+                if (!open) {
+                  setResetEmail("");
+                  setResetMessage(null);
+                }
+              }}
+            >
+              <div className="text-center">
+                <DialogTrigger asChild>
+                  <Button type="button" variant="link" className="text-sm text-muted-foreground">
+                    Forgot password?
+                  </Button>
+                </DialogTrigger>
+              </div>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Reset password</DialogTitle>
+                  <DialogDescription>
+                    We will email a reset link if an account exists for this address.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3 py-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="card-reset-email">Email</Label>
+                    <Input
+                      id="card-reset-email"
+                      type="email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                    />
+                  </div>
+                  {resetMessage && <p className="text-sm text-muted-foreground">{resetMessage}</p>}
+                </div>
+                <DialogFooterUI>
+                  <Button type="button" onClick={onRequestPasswordReset} disabled={resetLoading}>
+                    {resetLoading ? "Sending…" : "Send reset link"}
+                  </Button>
+                </DialogFooterUI>
+              </DialogContent>
+            </Dialog>
           </CardFooter>
         </form>
 

@@ -20,6 +20,8 @@ export interface IUser {
   isFoundingMember: boolean;
   stripeCustomerId?: string | null;
   stripeSubscriptionId?: string | null;
+  /** When false, password users must verify via email OTP before full app access. */
+  emailVerified?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -60,6 +62,7 @@ const UserSchema = new Schema<IUser>(
     isFoundingMember: { type: Boolean, default: false },
     stripeCustomerId: { type: String, default: null },
     stripeSubscriptionId: { type: String, default: null },
+    emailVerified: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

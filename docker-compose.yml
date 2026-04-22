@@ -17,6 +17,17 @@ services:
       timeout: 5s
       retries: 5
 
+  # Local SMTP sink: web UI http://localhost:8025 — captures mail from EmailService in dev
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: classecon-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - classecon-network
+    restart: unless-stopped
+
   auth-service:
     build:
       context: ./AuthService
@@ -59,12 +70,18 @@ services:
       DATABASE_URL: mongodb://mongodb:27017/classecon
       PAYMENT_SERVICE_URL: http://payment-service:4003
       PAYMENT_SERVICE_API_KEY: ${PAYMENT_SERVICE_API_KEY:-dev-internal-key}
+      # Used by /api/internal (e.g. subscription tier updates in E2E). Override in real deployments.
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-e2e-dev-internal-key}
+      EMAIL_SERVICE_URL: http://email-service:4004
+      EMAIL_SERVICE_TOKEN: ${EMAIL_SERVICE_TOKEN:-docker-dev-service-token-32-chars}
     depends_on:
       auth-service:
         condition: service_healthy
       mongodb:
         condition: service_healthy
       payment-service:
+        condition: service_healthy
+      email-service:
         condition: service_healthy
     restart: unless-stopped
     networks:
@@ -199,8 +216,15 @@ services:
       NODE_ENV: production
       MONGODB_URI: mongodb://mongodb:27017
       MONGODB_DB_NAME: email_service
-      RESEND_API_KEY: ${RESEND_API_KEY:-re_placeholder_key}
-      FROM_EMAIL: ${FROM_EMAIL:-noreply@classecon.local}
+      EMAIL_TRANSPORT: ${EMAIL_TRANSPORT:-auto}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_REJECT_UNAUTHORIZED: ${SMTP_REJECT_UNAUTHORIZED:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      FROM_EMAIL: ${FROM_EMAIL:-noreply@example.com}
       APP_URL: http://localhost:5173
       ADMIN_TOKEN: ${EMAIL_ADMIN_TOKEN:-docker-dev-admin-token-32-chars-min}
       SERVICE_TOKEN: ${EMAIL_SERVICE_TOKEN:-docker-dev-service-token-32-chars}
@@ -210,6 +234,8 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     restart: unless-stopped
     networks:
       - classecon-network
@@ -218,6 +244,40 @@ services:
       interval: 20s
       timeout: 5s
       retries: 5
+
+  email-service-worker:
+    build:
+      context: ./EmailService
+      dockerfile: Dockerfile
+    environment:
+      PORT: "4004"
+      NODE_ENV: production
+      MONGODB_URI: mongodb://mongodb:27017
+      MONGODB_DB_NAME: email_service
+      EMAIL_TRANSPORT: ${EMAIL_TRANSPORT:-auto}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_REJECT_UNAUTHORIZED: ${SMTP_REJECT_UNAUTHORIZED:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      FROM_EMAIL: ${FROM_EMAIL:-noreply@example.com}
+      APP_URL: http://localhost:5173
+      ADMIN_TOKEN: ${EMAIL_ADMIN_TOKEN:-docker-dev-admin-token-32-chars-min}
+      SERVICE_TOKEN: ${EMAIL_SERVICE_TOKEN:-docker-dev-service-token-32-chars}
+      WEBHOOK_SECRET: ${EMAIL_WEBHOOK_SECRET:-docker-webhook-sec}
+      UNSUBSCRIBE_HMAC_SECRET: ${UNSUBSCRIBE_HMAC_SECRET:-docker-dev-unsubscribe-token-32ch}
+      ALLOWED_REDIRECT_ORIGINS: http://localhost:5173,http://localhost:5174,http://localhost:5175
+    command: ["pnpm", "worker"]
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - classecon-network
 
 networks:
   classecon-network:

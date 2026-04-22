@@ -7,6 +7,8 @@ export const ME = gql`
       name
       email
       role
+      emailVerified
+      oauthProvider
     }
   }
 `;

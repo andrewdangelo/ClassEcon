@@ -10,7 +10,7 @@ import { expressMiddleware } from '@apollo/server/express4';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-import { env, connectMongo, logger } from '../config';
+import { env, connectMongo, logger, getMailTransport } from '../config';
 import { createContext } from '../graphql/context';
 import { resolvers } from '../graphql/resolvers';
 import { webhookRouter } from '../webhooks/resendWebhook';
@@ -97,6 +97,7 @@ const main = async () => {
     logger.info(`GraphQL endpoint: http://0.0.0.0:${port}/graphql`);
     logger.info(`Health check: http://0.0.0.0:${port}/health`);
     logger.info(`Webhook endpoint: http://0.0.0.0:${port}/webhooks/resend`);
+    logger.info({ transport: getMailTransport() }, 'Outbound email transport');
   });
 };
 

@@ -1,4 +1,5 @@
-export { env, getAllowedRedirectOrigins } from './env';
+export { env, getAllowedRedirectOrigins, getMailTransport } from './env';
 export { connectMongo, disconnectMongo } from './mongo';
-export { resend, sendEmail, sendBatchEmails } from './resend';
+export { sendEmail, sendBatchEmails } from './mailer';
+export type { SendEmailParams, SendEmailResult } from './mailer';
 export { logger, dbLogger, workerLogger, webhookLogger, authLogger, campaignLogger } from './logger';

@@ -15,6 +15,8 @@ type ClassSeed = {
   joinCode: string;
 };
 
+export type ClassSeedWithStudent = ClassSeed & { student: AuthPayload };
+
 const SIGN_UP_MUTATION = `
   mutation SignUp($input: SignUpInput!) {
     signUp(input: $input) {
@@ -114,6 +116,17 @@ export async function loginPersona(
     }
   );
   return data.login;
+}
+
+/** Teacher-owned class plus one student already enrolled via join code. */
+export async function seedTeacherClassWithStudent(
+  request: APIRequestContext,
+  teacherPersona: Persona = "teacherA",
+  studentPersona: Persona = "studentA"
+): Promise<ClassSeedWithStudent> {
+  const seeded = await seedTeacherClass(request, teacherPersona);
+  const student = await seedAuthPersona(request, studentPersona, "STUDENT", seeded.joinCode);
+  return { ...seeded, student };
 }
 
 export async function seedTeacherClass(

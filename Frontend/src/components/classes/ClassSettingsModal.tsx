@@ -23,6 +23,12 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/toast";
 import { UPDATE_CLASS, ROTATE_JOIN_CODE } from "@/graphql/mutations/createClass";
+import { GRADE_LEVEL_SELECT_OPTIONS } from "@/lib/gradeLevels";
+import { useAppSelector } from "@/redux/store/store";
+import { selectUser } from "@/redux/authSlice";
+import { ME } from "@/graphql/queries/me";
+import type { MeQuery } from "@/graphql/__generated__/graphql";
+import { CoTeachersPanel, type TeacherRow } from "@/components/classes/CoTeachersPanel";
 
 const GET_CLASS_SETTINGS = gql`
   query GetClassSettings($id: ID!) {
@@ -40,6 +46,12 @@ const GET_CLASS_SETTINGS = gql`
       startingBalance
       defaultCurrency
       isArchived
+      teacherIds
+      teachers {
+        id
+        name
+        email
+      }
     }
   }
 `;
@@ -61,6 +73,8 @@ interface ClassSettingsData {
     startingBalance?: number | null;
     defaultCurrency?: string | null;
     isArchived: boolean;
+    teacherIds: string[];
+    teachers: TeacherRow[];
   } | null;
 }
 
@@ -86,7 +100,6 @@ interface FormData {
 }
 
 const SUBJECTS = ["Math", "Science", "English", "History", "Language Arts", "Social Studies", "Art", "Music", "Physical Education", "Other"];
-const GRADES = [6, 7, 8, 9, 10, 11, 12];
 const PAY_PERIODS: { value: PayPeriod; label: string }[] = [
   { value: "WEEKLY", label: "Weekly" },
   { value: "BIWEEKLY", label: "Bi-weekly" },
@@ -101,7 +114,10 @@ export function ClassSettingsModal({
   onUpdated,
 }: ClassSettingsModalProps) {
   const { push } = useToast();
-  
+  const authUser = useAppSelector(selectUser);
+  const { data: meData } = useQuery<MeQuery>(ME, { fetchPolicy: "cache-first" });
+  const meId = meData?.me?.id ?? authUser?.id;
+
   const { data, loading: queryLoading, refetch } = useQuery<ClassSettingsData>(GET_CLASS_SETTINGS, {
     variables: { id: classId },
     skip: !classId || !open,
@@ -122,6 +138,8 @@ export function ClassSettingsModal({
     isArchived: false,
   });
 
+  const [teacherRows, setTeacherRows] = useState<TeacherRow[]>([]);
+
   // Populate form when data loads
   useEffect(() => {
     if (data?.class) {
@@ -139,6 +157,13 @@ export function ClassSettingsModal({
         defaultCurrency: c.defaultCurrency || "CE$",
         isArchived: c.isArchived || false,
       });
+      const byId = new Map(c.teachers.map((t) => [t.id, t]));
+      setTeacherRows(
+        (c.teacherIds ?? []).map((id) => {
+          const row = byId.get(id);
+          return row ?? { id, name: null, email: null };
+        })
+      );
     }
   }, [data]);
 
@@ -171,6 +196,12 @@ export function ClassSettingsModal({
       return;
     }
 
+    const teacherIds = teacherRows.map((r) => r.id);
+    if (teacherIds.length === 0) {
+      push({ title: "Error", description: "At least one teacher is required", variant: "destructive" });
+      return;
+    }
+
     const input: Record<string, unknown> = {
       name: formData.name.trim(),
       description: formData.description.trim() || null,
@@ -183,6 +214,7 @@ export function ClassSettingsModal({
       startingBalance: formData.startingBalance ? parseInt(formData.startingBalance, 10) : null,
       defaultCurrency: formData.defaultCurrency.trim() || "CE$",
       isArchived: formData.isArchived,
+      teacherIds,
     };
 
     await updateClass({ variables: { id: classId, input } });
@@ -277,9 +309,9 @@ export function ClassSettingsModal({
                       <SelectValue placeholder="Select grade" />
                     </SelectTrigger>
                     <SelectContent>
-                      {GRADES.map((g) => (
-                        <SelectItem key={g} value={String(g)}>
-                          Grade {g}
+                      {GRADE_LEVEL_SELECT_OPTIONS.map(({ value, label }) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -373,6 +405,14 @@ export function ClassSettingsModal({
                 </div>
               </div>
             </div>
+
+            <CoTeachersPanel
+              classId={classId}
+              teacherRows={teacherRows}
+              setTeacherRows={setTeacherRows}
+              meId={meId}
+              description="Other teachers can manage this class with you. They must already have a teacher account. Changes apply when you save."
+            />
 
             {/* Join Code */}
             <div className="space-y-4">

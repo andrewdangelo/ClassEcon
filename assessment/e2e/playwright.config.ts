@@ -18,7 +18,11 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : [["list"]],
+  reporter: [
+    ["list"],
+    ["html", { open: "never", outputFolder: path.resolve(__dirname, "artifacts/html-report") }],
+    ["junit", { outputFile: path.resolve(__dirname, "artifacts/junit/results.xml") }],
+  ],
   outputDir: path.resolve(__dirname, "artifacts/test-results"),
   globalSetup: path.resolve(__dirname, "support/global-setup.ts"),
   use: {
