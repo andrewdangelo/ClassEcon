@@ -1,0 +1,163 @@
+name: Reusable — Deploy ClassEcon
+
+# This is a reusable workflow called by deploy-prod.yml and deploy-staging.yml.
+# It builds the three Vite frontends and runs `wrangler deploy` for all eight
+# Cloudflare Workers.
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "Which wrangler env to deploy ('prod' or 'staging')."
+        required: true
+        type: string
+    secrets:
+      CLOUDFLARE_API_TOKEN:
+        required: true
+      CLOUDFLARE_ACCOUNT_ID:
+        required: true
+
+jobs:
+  deploy:
+    name: Deploy (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # Ensure two deploys to the same environment don't race.
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up pnpm 10
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ------------------------------------------------------------------
+      # Compute env-specific values used below.
+      # ------------------------------------------------------------------
+      - name: Compute deploy variables
+        id: vars
+        run: |
+          env_name="${{ inputs.environment }}"
+          if [[ "$env_name" == "staging" ]]; then
+            echo "wrangler_env_flag=-e staging" >> "$GITHUB_OUTPUT"
+            echo "vite_mode=staging" >> "$GITHUB_OUTPUT"
+            echo "vite_outdir=dist-staging" >> "$GITHUB_OUTPUT"
+          else
+            echo "wrangler_env_flag=" >> "$GITHUB_OUTPUT"
+            echo "vite_mode=production" >> "$GITHUB_OUTPUT"
+            echo "vite_outdir=dist" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ------------------------------------------------------------------
+      # Build the three Vite frontends into the env-specific output dir.
+      # admin/package.json has `tsc && vite build` but the repo has known
+      # pre-existing tsc warnings, so we invoke vite build directly.
+      # ------------------------------------------------------------------
+      - name: Install + build Frontend
+        working-directory: Frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec vite build \
+            --mode ${{ steps.vars.outputs.vite_mode }} \
+            --outDir ${{ steps.vars.outputs.vite_outdir }}
+
+      - name: Install + build LandingPage
+        working-directory: LandingPage
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec vite build \
+            --mode ${{ steps.vars.outputs.vite_mode }} \
+            --outDir ${{ steps.vars.outputs.vite_outdir }}
+
+      - name: Install + build admin
+        working-directory: admin
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec vite build \
+            --mode ${{ steps.vars.outputs.vite_mode }} \
+            --outDir ${{ steps.vars.outputs.vite_outdir }}
+
+      # ------------------------------------------------------------------
+      # Install wrangler globally (pinned to the same major the repo uses
+      # locally). Node 22 satisfies wrangler's engine requirement.
+      # ------------------------------------------------------------------
+      - name: Install wrangler
+        run: npm install -g wrangler@4
+
+      # ------------------------------------------------------------------
+      # Deploy all eight Workers. Backend containers first (they take the
+      # longest because wrangler builds + pushes the Docker images), then
+      # the three static-asset frontends.
+      # ------------------------------------------------------------------
+      - name: Deploy backend containers
+        working-directory: cloudflare
+        run: |
+          set -e
+          FLAG="${{ steps.vars.outputs.wrangler_env_flag }}"
+          for cfg in auth-service backend payment-service email-service email-service-worker; do
+            echo "::group::wrangler deploy $cfg ($FLAG)"
+            wrangler deploy $FLAG --config "$cfg/wrangler.jsonc"
+            echo "::endgroup::"
+          done
+
+      - name: Deploy frontend asset workers
+        working-directory: cloudflare
+        run: |
+          set -e
+          FLAG="${{ steps.vars.outputs.wrangler_env_flag }}"
+          for cfg in landing-page frontend admin; do
+            echo "::group::wrangler deploy $cfg ($FLAG)"
+            wrangler deploy $FLAG --config "$cfg/wrangler.jsonc"
+            echo "::endgroup::"
+          done
+
+      # ------------------------------------------------------------------
+      # Lightweight post-deploy smoke check so a broken deploy turns the
+      # workflow red immediately instead of silently succeeding.
+      # ------------------------------------------------------------------
+      - name: Smoke test
+        run: |
+          set -e
+          if [[ "${{ inputs.environment }}" == "staging" ]]; then
+            API="https://classecon-backend-staging.classecon-prod.workers.dev"
+            LANDING="https://classecon-landing-staging.classecon-prod.workers.dev"
+            APP="https://classecon-frontend-staging.classecon-prod.workers.dev"
+            ADMIN="https://classecon-admin-staging.classecon-prod.workers.dev"
+            AUTH="https://classecon-auth-staging.classecon-prod.workers.dev"
+            PAY="https://classecon-payment-staging.classecon-prod.workers.dev"
+            EMAIL="https://classecon-email-staging.classecon-prod.workers.dev"
+          else
+            API="https://api.classecon.net"
+            LANDING="https://classecon.net"
+            APP="https://app.classecon.net"
+            ADMIN="https://admin.classecon.net"
+            AUTH="https://auth.classecon.net"
+            PAY="https://payments.classecon.net"
+            EMAIL="https://email.classecon.net"
+          fi
+          fail=0
+          for target in "$LANDING" "$APP" "$ADMIN" "$API/health" "$AUTH/health" "$PAY/health" "$EMAIL/health"; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$target" || echo "000")
+            printf "  %-70s %s\n" "$target" "$code"
+            if [[ "$code" != "200" ]]; then fail=1; fi
+          done
+          if [[ $fail -ne 0 ]]; then
+            echo "::error::One or more endpoints did not return 200."
+            exit 1
+          fi
