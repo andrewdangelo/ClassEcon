@@ -389,6 +389,31 @@ export const GET_ADMIN_DASHBOARD_STATS = gql`
       newUsersToday
       newUsersThisWeek
       newUsersThisMonth
+      totalWaitlistSignups
+      totalWaitlistReferrals
+      topWaitlistBoostPoints
+    }
+  }
+`
+
+export const ADMIN_GET_WAITLIST_ENTRIES = gql`
+  query AdminGetWaitlistEntries($search: String, $limit: Int, $offset: Int) {
+    adminWaitlistEntries(search: $search, limit: $limit, offset: $offset) {
+      nodes {
+        id
+        email
+        name
+        role
+        school
+        signupOrder
+        referralCode
+        referredByCode
+        successfulReferrals
+        boostPoints
+        displayPosition
+        createdAt
+      }
+      totalCount
     }
   }
 `

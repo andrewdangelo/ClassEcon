@@ -6,9 +6,24 @@ const JOIN_WAITLIST_MUTATION = `
     joinWaitlist(input: $input) {
       success
       message
+      referralCode
+      referralLink
+      successfulReferrals
+      boostPoints
+      displayPosition
     }
   }
 `;
+
+type JoinWaitlistResponse = {
+  success: boolean;
+  message?: string;
+  referralCode?: string | null;
+  referralLink?: string | null;
+  successfulReferrals?: number | null;
+  boostPoints?: number | null;
+  displayPosition?: number | null;
+};
 
 export default function WaitlistPage() {
   const [formData, setFormData] = useState({
@@ -21,6 +36,11 @@ export default function WaitlistPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [result, setResult] = useState<JoinWaitlistResponse | null>(null);
+  const referralCodeFromUrl = new URLSearchParams(window.location.search)
+    .get('ref')
+    ?.trim()
+    .toUpperCase();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +61,7 @@ export default function WaitlistPage() {
               role: formData.role,
               school: formData.school.trim() || undefined,
               approximateStudents: formData.students || undefined,
+              referralCode: referralCodeFromUrl || undefined,
             },
           },
         }),
@@ -50,11 +71,12 @@ export default function WaitlistPage() {
         setFormError(json.errors[0]?.message || 'Something went wrong.');
         return;
       }
-      const row = json.data?.joinWaitlist;
+      const row = json.data?.joinWaitlist as JoinWaitlistResponse | undefined;
       if (!row?.success) {
         setFormError(row?.message || 'Could not join the waitlist right now.');
         return;
       }
+      setResult(row);
       setSubmitted(true);
     } catch {
       setFormError('Network error. Please try again.');
@@ -75,6 +97,21 @@ export default function WaitlistPage() {
             <p className="mt-3 text-ce-ink-muted">
               We will email <span className="font-medium text-ce-ink">{formData.email}</span> with next steps.
             </p>
+            <div className="mt-6 rounded-2xl bg-ce-muted/60 p-5 text-left text-sm text-ce-ink ring-1 ring-ce-border">
+              <p>
+                Current waitlist position:
+                <span className="ml-2 font-semibold text-ce-accent">#{result?.displayPosition ?? '—'}</span>
+              </p>
+              <p className="mt-2">
+                Successful referrals:
+                <span className="ml-2 font-semibold">{result?.successfulReferrals ?? 0}</span>
+              </p>
+              {result?.referralLink && (
+                <p className="mt-3 break-all rounded-xl bg-ce-canvas px-3 py-2 text-xs ring-1 ring-ce-border">
+                  {result.referralLink}
+                </p>
+              )}
+            </div>
             <div className="mt-8 rounded-2xl bg-ce-warm-soft p-6 text-left text-sm text-ce-ink ring-1 ring-ce-border">
               <p className="font-display font-bold text-ce-ink">Founding member perks</p>
               <ul className="mt-4 space-y-2">
@@ -225,6 +262,11 @@ export default function WaitlistPage() {
                 <p className="text-center text-xs text-ce-ink-muted">
                   By joining you agree to receive product updates. Unsubscribe anytime.
                 </p>
+                {referralCodeFromUrl && (
+                  <p className="text-center text-xs font-medium text-ce-accent">
+                    Referral code applied: {referralCodeFromUrl}
+                  </p>
+                )}
               </form>
             </div>
           </div>

@@ -19,3 +19,4 @@ export * from "./Fine";
 export * from "./BetaAccessCode";
 export * from "./Subscription";
 export * from "./AuditLog";
+export * from "./WaitlistEntry";
