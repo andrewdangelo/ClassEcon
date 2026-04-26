@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { GraphQLError } from 'graphql';
 import { requireService, type GraphQLContext } from '../context';
 import {
   createEmail2FAToken,
@@ -16,7 +17,7 @@ import {
   checkPasswordResetRateLimits,
 } from '../../services/rateLimit';
 import { enqueueTransactionalEmail, templates } from '../../services/delivery';
-import { env, getAllowedRedirectOrigins, authLogger } from '../../config';
+import { env, getAllowedRedirectOrigins, authLogger, sendEmail } from '../../config';
 
 // Input validation schemas
 const emailSchema = z.string().email().toLowerCase().trim();
@@ -53,6 +54,10 @@ const sendWaitlistWelcomeInputSchema = z.object({
   referralLink: z.string().url(),
   progressLink: z.string().url(),
 });
+
+const throwUserInputError = (message: string): never => {
+  throw new GraphQLError(message, { extensions: { code: 'BAD_USER_INPUT' } });
+};
 
 /**
  * Validate redirect URL against allowed origins
@@ -105,7 +110,7 @@ export const authResolvers = {
           { email: validated.email, userId: validated.userId, error: rateLimitResult.error },
           '2FA rate limited'
         );
-        throw new Error(rateLimitResult.error);
+        throwUserInputError(rateLimitResult.error || 'Too many verification requests.');
       }
 
       // Generate OTP and create token
@@ -114,13 +119,29 @@ export const authResolvers = {
       // Generate email content
       const { html, text } = templates.email2FA(code);
 
-      // Enqueue email for delivery
-      await enqueueTransactionalEmail({
-        toEmail: validated.email,
+      // OTP emails are time-sensitive, so send immediately instead of waiting
+      // for the periodic queue worker.
+      const delivery = await sendEmail({
+        to: validated.email,
+        from: env.FROM_EMAIL,
         subject: 'Your verification code',
         html,
         text,
       });
+      if (!delivery.success) {
+        authLogger.error(
+          {
+            email: validated.email,
+            userId: validated.userId,
+            error: delivery.error,
+          },
+          '2FA delivery failed'
+        );
+        throw new GraphQLError(
+          'Could not send verification email right now. Please try again in a minute.',
+          { extensions: { code: 'BAD_USER_INPUT' } }
+        );
+      }
 
       authLogger.info(
         { email: validated.email, userId: validated.userId },
@@ -153,7 +174,7 @@ export const authResolvers = {
       );
 
       if (!result.success) {
-        throw new Error(result.error || 'Verification failed');
+        throwUserInputError(result.error || 'Verification failed');
       }
 
       return true;
@@ -179,7 +200,7 @@ export const authResolvers = {
           { email: validated.email, redirectUrl: validated.redirectUrl },
           'Invalid redirect URL for password reset'
         );
-        throw new Error('Invalid redirect URL');
+        throwUserInputError('Invalid redirect URL');
       }
 
       // Check rate limits
@@ -194,7 +215,7 @@ export const authResolvers = {
           { email: validated.email, error: rateLimitResult.error },
           'Password reset rate limited'
         );
-        throw new Error(rateLimitResult.error);
+        throwUserInputError(rateLimitResult.error || 'Too many password reset requests.');
       }
 
       // Generate reset token
@@ -210,13 +231,29 @@ export const authResolvers = {
       // Generate email content
       const { html, text } = templates.passwordReset(resetUrl);
 
-      // Enqueue email for delivery
-      await enqueueTransactionalEmail({
-        toEmail: validated.email,
+      // Password reset should also be delivered immediately to avoid token
+      // delays while queued.
+      const delivery = await sendEmail({
+        to: validated.email,
+        from: env.FROM_EMAIL,
         subject: 'Reset your password',
         html,
         text,
       });
+      if (!delivery.success) {
+        authLogger.error(
+          {
+            email: validated.email,
+            userId: validated.userId,
+            error: delivery.error,
+          },
+          'Password reset delivery failed'
+        );
+        throw new GraphQLError(
+          'Could not send reset email right now. Please try again in a minute.',
+          { extensions: { code: 'BAD_USER_INPUT' } }
+        );
+      }
 
       authLogger.info(
         { email: validated.email, userId: validated.userId },
@@ -244,7 +281,7 @@ export const authResolvers = {
       const result = await consumePasswordReset(validated.email, validated.token);
 
       if (!result.success) {
-        throw new Error(result.error || 'Token validation failed');
+        throwUserInputError(result.error || 'Token validation failed');
       }
 
       return true;
