@@ -171,18 +171,46 @@ push_email() {
   put "$w" ADMIN_TOKEN "$EMAIL_ADMIN_TOKEN"
   put "$w" WEBHOOK_SECRET "$EMAIL_WEBHOOK_SECRET"
   put "$w" UNSUBSCRIBE_HMAC_SECRET "$UNSUBSCRIBE_HMAC_SECRET"
-  # EmailService validates env at startup and exits if neither a working SMTP
-  # host nor a Resend API key is configured. If the operator hasn't filled in
-  # a real Resend key yet, push a non-placeholder stub so the container can
-  # start and pass its health check. Actual sending will fail until a real
-  # key is pushed, which is acceptable for initial smoke tests.
-  if [[ -z "$RESEND_API_KEY" || "$RESEND_API_KEY" == *REPLACE* ]]; then
-    put "$w" RESEND_API_KEY "re_smoketest_placeholder_not_for_sending"
-  else
+  local has_smtp_host="0"
+  local has_resend_key="0"
+  local requested_transport="${EMAIL_TRANSPORT:-auto}"
+
+  if [[ -n "${SMTP_HOST:-}" && "${SMTP_HOST}" != *REPLACE* ]]; then
+    has_smtp_host="1"
+    put "$w" SMTP_HOST "$SMTP_HOST"
+    put "$w" SMTP_PORT "${SMTP_PORT:-587}"
+    put "$w" SMTP_SECURE "${SMTP_SECURE:-false}"
+    put "$w" SMTP_REJECT_UNAUTHORIZED "${SMTP_REJECT_UNAUTHORIZED:-true}"
+    # SMTP relay mode may intentionally leave auth blank.
+    put "$w" SMTP_USER "${SMTP_USER:-}"
+    put "$w" SMTP_PASS "${SMTP_PASS:-}"
+  fi
+
+  if [[ -n "${RESEND_API_KEY:-}" && "${RESEND_API_KEY}" != *REPLACE* ]]; then
+    has_resend_key="1"
     put "$w" RESEND_API_KEY "$RESEND_API_KEY"
   fi
+
+  # Keep the worker bootable for smoke tests when neither SMTP nor Resend
+  # are configured in the bundle.
+  if [[ "$has_smtp_host" == "0" && "$has_resend_key" == "0" ]]; then
+    put "$w" RESEND_API_KEY "re_smoketest_placeholder_not_for_sending"
+    requested_transport="resend"
+  fi
+
+  # If transport is placeholder/empty, infer from configured credentials.
+  if [[ -z "$requested_transport" || "$requested_transport" == *REPLACE* ]]; then
+    if [[ "$has_smtp_host" == "1" ]]; then
+      requested_transport="smtp"
+    elif [[ "$has_resend_key" == "1" ]]; then
+      requested_transport="resend"
+    else
+      requested_transport="resend"
+    fi
+  fi
+
+  put "$w" EMAIL_TRANSPORT "$requested_transport"
   put "$w" FROM_EMAIL "$FROM_EMAIL"
-  put "$w" EMAIL_TRANSPORT resend
   put "$w" NODE_ENV production
   put "$w" APP_URL "$APP_URL"
   put "$w" ALLOWED_REDIRECT_ORIGINS "$CORS_ALL"
