@@ -19,6 +19,7 @@ node -e "const c=require('crypto');['JWT_SECRET','REFRESH_JWT_SECRET','SERVICE_A
 
 Legend: `S` = shared across services (must be identical), `U` = unique to
 that service, `X` = required, blank = not needed.
+`X*` = required only when using SMTP transport.
 
 | Secret | auth | email | email-worker | payment | backend |
 | --- | :---: | :---: | :---: | :---: | :---: |
@@ -32,7 +33,14 @@ that service, `X` = required, blank = not needed.
 | `EMAIL_ADMIN_TOKEN` (U email) | | X | X | | |
 | `EMAIL_WEBHOOK_SECRET` (U email) | | X | X | | |
 | `UNSUBSCRIBE_HMAC_SECRET` (U email) | | X | X | | |
-| `RESEND_API_KEY` | | X | X | | |
+| `EMAIL_TRANSPORT` (`auto` / `smtp` / `resend`) | | X | X | | |
+| `RESEND_API_KEY` (required when transport resolves to Resend) | | X | X | | |
+| `SMTP_HOST` | | X* | X* | | |
+| `SMTP_PORT` | | X* | X* | | |
+| `SMTP_SECURE` | | X* | X* | | |
+| `SMTP_USER` | | X* | X* | | |
+| `SMTP_PASS` | | X* | X* | | |
+| `SMTP_REJECT_UNAUTHORIZED` | | X* | X* | | |
 | `STRIPE_SECRET_KEY` | | | | X | |
 | `STRIPE_WEBHOOK_SECRET` | | | | X | |
 | `STRIPE_PRICE_*_MONTHLY` / `_YEARLY` (6 total) | | | | X | |
@@ -76,7 +84,9 @@ after the initial backend deploys.
 - `NODE_ENV=production`
 - `MONGODB_URI=` (same base as `DATABASE_URL`, no `/<db>` suffix)
 - `MONGODB_DB_NAME=email_service`
-- `EMAIL_TRANSPORT=resend`
+- `EMAIL_TRANSPORT=auto` (or explicit `smtp` / `resend`)
+- For SMTP mode (Google Workspace app-password or relay), set `SMTP_*` values.
+- For Resend mode, set `RESEND_API_KEY`.
 - `APP_URL=https://classecon-frontend.<sub>.workers.dev`
 - `ALLOWED_REDIRECT_ORIGINS=https://classecon-frontend.<sub>.workers.dev,https://classecon-landing.<sub>.workers.dev,https://classecon-admin.<sub>.workers.dev`
 
