@@ -89,6 +89,21 @@ export async function sendEmail2FA(params: { userId: string; email: string }): P
   await emailServiceGraphQL<{ sendEmail2FA: boolean }>(mutation, { input: params });
 }
 
+export async function sendWaitlistWelcomeEmail(params: {
+  email: string;
+  name?: string;
+  displayPosition: number;
+  referralLink: string;
+  progressLink: string;
+}): Promise<void> {
+  const mutation = `
+    mutation SendWaitlistWelcome($input: SendWaitlistWelcomeInput!) {
+      sendWaitlistWelcome(input: $input)
+    }
+  `;
+  await emailServiceGraphQL<{ sendWaitlistWelcome: boolean }>(mutation, { input: params });
+}
+
 export async function verifyEmail2FA(params: {
   userId: string;
   email: string;

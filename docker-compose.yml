@@ -191,6 +191,8 @@ services:
         VITE_GRAPHQL_URL: http://localhost:4000/graphql
     ports:
       - "5175:80"
+    environment:
+      PORT: "80"
     depends_on:
       backend:
         condition: service_healthy

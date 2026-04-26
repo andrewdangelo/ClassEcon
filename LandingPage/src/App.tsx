@@ -20,6 +20,7 @@ export default function App() {
             <Route path="/for-teachers" element={<ForTeachersPage />} />
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/waitlist" element={<WaitlistPage />} />
+            <Route path="/waitlist/progress" element={<WaitlistPage />} />
             <Route path="/contact" element={<ContactPage />} />
           </Routes>
         </main>
