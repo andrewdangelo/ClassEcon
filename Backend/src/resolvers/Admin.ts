@@ -8,10 +8,12 @@ import {
   Transaction,
   BetaAccessCode,
   AuditLog,
+  WaitlistEntry,
 } from "../models";
 import { requireAuth, toId, Ctx } from "./helpers";
 import { authClient } from "../services/auth-client";
 import { Types } from "mongoose";
+import { getDisplayPosition, WAITLIST_POSITION_OFFSET } from "../utils/waitlist";
 
 // Helper to check if user is an admin
 function requireAdmin(ctx: Ctx) {
@@ -72,6 +74,9 @@ export const AdminQuery = {
       newUsersToday,
       newUsersThisWeek,
       newUsersThisMonth,
+      totalWaitlistSignups,
+      totalWaitlistReferrals,
+      topWaitlistBoostPoints,
     ] = await Promise.all([
       User.countDocuments(),
       User.countDocuments({ role: "TEACHER" }),
@@ -93,6 +98,15 @@ export const AdminQuery = {
       User.countDocuments({ createdAt: { $gte: startOfToday } }),
       User.countDocuments({ createdAt: { $gte: startOfWeek } }),
       User.countDocuments({ createdAt: { $gte: startOfMonth } }),
+      WaitlistEntry.countDocuments(),
+      WaitlistEntry.aggregate([
+        { $group: { _id: null, total: { $sum: "$successfulReferrals" } } },
+      ]).then((r) => r[0]?.total ?? 0),
+      WaitlistEntry.findOne({})
+        .sort({ boostPoints: -1, successfulReferrals: -1 })
+        .select("boostPoints")
+        .lean()
+        .then((row) => row?.boostPoints ?? 0),
     ]);
 
     return {
@@ -114,7 +128,59 @@ export const AdminQuery = {
       newUsersToday,
       newUsersThisWeek,
       newUsersThisMonth,
+      totalWaitlistSignups,
+      totalWaitlistReferrals,
+      topWaitlistBoostPoints,
     };
+  },
+
+  async adminWaitlistEntries(
+    _: any,
+    { search, limit = 50, offset = 0 }: { search?: string; limit?: number; offset?: number },
+    ctx: Ctx
+  ) {
+    requireAdmin(ctx);
+
+    const safeLimit = Math.min(Math.max(limit, 1), 200);
+    const safeOffset = Math.max(offset, 0);
+    const filter: Record<string, any> = {};
+    if (search?.trim()) {
+      const rx = new RegExp(search.trim(), "i");
+      filter.$or = [
+        { email: rx },
+        { name: rx },
+        { role: rx },
+        { school: rx },
+        { referralCode: rx },
+      ];
+    }
+
+    const [nodesRaw, totalCount, rankRows] = await Promise.all([
+      WaitlistEntry.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(safeOffset)
+        .limit(safeLimit)
+        .lean()
+        .exec(),
+      WaitlistEntry.countDocuments(filter).exec(),
+      WaitlistEntry.find({})
+        .select("email signupOrder boostPoints createdAt")
+        .lean()
+        .exec(),
+    ]);
+
+    const nodes = nodesRaw.map((entry) => ({
+      ...entry,
+      id: entry._id.toString(),
+      displayPosition:
+        getDisplayPosition({
+          entries: rankRows,
+          email: entry.email,
+          positionOffset: WAITLIST_POSITION_OFFSET,
+        }) ?? WAITLIST_POSITION_OFFSET + 1,
+    }));
+
+    return { nodes, totalCount };
   },
 
   async adminUsers(

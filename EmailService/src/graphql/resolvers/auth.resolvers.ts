@@ -46,6 +46,14 @@ const consumePasswordResetInputSchema = z.object({
   token: tokenSchema,
 });
 
+const sendWaitlistWelcomeInputSchema = z.object({
+  email: emailSchema,
+  name: z.string().trim().min(1).max(80).optional(),
+  displayPosition: z.number().int().min(1),
+  referralLink: z.string().url(),
+  progressLink: z.string().url(),
+});
+
 /**
  * Validate redirect URL against allowed origins
  */
@@ -238,6 +246,48 @@ export const authResolvers = {
       if (!result.success) {
         throw new Error(result.error || 'Token validation failed');
       }
+
+      return true;
+    },
+
+    /**
+     * Send waitlist welcome email
+     */
+    sendWaitlistWelcome: async (
+      _parent: unknown,
+      {
+        input,
+      }: {
+        input: {
+          email: string;
+          name?: string;
+          displayPosition: number;
+          referralLink: string;
+          progressLink: string;
+        };
+      },
+      ctx: GraphQLContext
+    ): Promise<boolean> => {
+      requireService(ctx);
+      const validated = sendWaitlistWelcomeInputSchema.parse(input);
+      const { html, text } = templates.waitlistWelcome({
+        name: validated.name,
+        displayPosition: validated.displayPosition,
+        referralLink: validated.referralLink,
+        progressLink: validated.progressLink,
+      });
+
+      await enqueueTransactionalEmail({
+        toEmail: validated.email,
+        subject: 'You are on the ClassEcon waitlist',
+        html,
+        text,
+      });
+
+      authLogger.info(
+        { email: validated.email, displayPosition: validated.displayPosition },
+        'Waitlist welcome email sent'
+      );
 
       return true;
     },

@@ -134,6 +134,21 @@ export const typeDefs = [
     type JoinWaitlistResult {
       success: Boolean!
       message: String
+      referralCode: String
+      referralLink: String
+      successfulReferrals: Int
+      boostPoints: Int
+      displayPosition: Int
+    }
+
+    type WaitlistProgressResult {
+      success: Boolean!
+      message: String
+      referralCode: String
+      referralLink: String
+      successfulReferrals: Int
+      boostPoints: Int
+      displayPosition: Int
     }
 
     input JoinWaitlistInput {
@@ -142,6 +157,7 @@ export const typeDefs = [
       role: String
       school: String
       approximateStudents: String
+      referralCode: String
     }
 
     type User {
@@ -205,6 +221,31 @@ export const typeDefs = [
       newUsersToday: Int!
       newUsersThisWeek: Int!
       newUsersThisMonth: Int!
+      totalWaitlistSignups: Int!
+      totalWaitlistReferrals: Int!
+      topWaitlistBoostPoints: Int!
+    }
+
+    type AdminWaitlistEntry {
+      id: ID!
+      email: String!
+      name: String
+      role: String
+      school: String
+      approximateStudents: String
+      signupOrder: Int!
+      referralCode: String!
+      referredByCode: String
+      successfulReferrals: Int!
+      boostPoints: Int!
+      displayPosition: Int!
+      createdAt: DateTime!
+      updatedAt: DateTime!
+    }
+
+    type AdminWaitlistResult {
+      nodes: [AdminWaitlistEntry!]!
+      totalCount: Int!
     }
 
     type AuditLog {
@@ -726,6 +767,7 @@ export const typeDefs = [
       # Notifications
       notifications(userId: ID, limit: Int = 50, unreadOnly: Boolean = false): [Notification!]!
       unreadNotificationCount: Int!
+      waitlistProgress(email: String!, referralCode: String!): WaitlistProgressResult!
     }
 
     extend type Query {
@@ -834,6 +876,13 @@ export const typeDefs = [
         limit: Int = 50
         offset: Int = 0
       ): AuditLogResult!
+
+      # Waitlist management
+      adminWaitlistEntries(
+        search: String
+        limit: Int = 50
+        offset: Int = 0
+      ): AdminWaitlistResult!
     }
     
     type ClassStatistics {

@@ -78,6 +78,69 @@ export const templates = {
   },
 
   /**
+   * Waitlist welcome email with referral CTA
+   */
+  waitlistWelcome: (params: {
+    name?: string;
+    displayPosition: number;
+    referralLink: string;
+    progressLink: string;
+  }): { html: string; text: string } => {
+    const friendlyName = params.name?.trim() || 'there';
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You are on the ClassEcon waitlist</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 24px;">Welcome to the ClassEcon waitlist</h1>
+  </div>
+  <div style="background: #ffffff; padding: 36px 30px; border: 1px solid #e1e1e1; border-top: none; border-radius: 0 0 10px 10px;">
+    <p>Hi ${friendlyName},</p>
+    <p>Thanks for signing up. Your current waitlist position is:</p>
+    <div style="background: #f8fafc; border: 2px solid #2563eb; border-radius: 10px; padding: 20px; text-align: center; margin: 20px 0;">
+      <span style="font-size: 34px; font-weight: 700; color: #1e3a8a;">#${params.displayPosition}</span>
+    </div>
+    <p>Want to move up faster? Share your referral link:</p>
+    <div style="background: #f8fafc; border-radius: 8px; padding: 12px; margin: 12px 0; word-break: break-all; font-size: 13px; color: #334155;">
+      ${params.referralLink}
+    </div>
+    <p style="color: #334155; font-size: 14px;">
+      Every successful referral helps you climb the list. Hit 5 referrals to unlock a major position boost.
+    </p>
+    <p style="color: #334155; font-size: 14px;">
+      Check your current position anytime:
+      <br />
+      <a href="${params.progressLink}" style="color: #1d4ed8; text-decoration: underline;">${params.progressLink}</a>
+    </p>
+    <p style="color: #64748b; font-size: 12px; margin-top: 24px;">
+      If you did not request this, you can safely ignore this email.
+    </p>
+  </div>
+</body>
+</html>`;
+
+    const text = `Hi ${friendlyName},
+
+Thanks for joining the ClassEcon waitlist.
+Your current position: #${params.displayPosition}
+
+Share your referral link to move up:
+${params.referralLink}
+
+Every successful referral helps you climb the list.
+
+Check your progress anytime:
+${params.progressLink}`;
+
+    return { html, text };
+  },
+
+  /**
    * Campaign email wrapper with unsubscribe footer
    */
   campaignWrapper: (

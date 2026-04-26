@@ -20,6 +20,7 @@ import {
   RedemptionRequest,
   Fine,
   BetaAccessCode,
+  WaitlistEntry,
 } from "../models";
 import {
   requireAuth,
@@ -42,6 +43,7 @@ import {
   sendEmail2FA,
   verifyEmail2FA,
   subscribeMailingList,
+  sendWaitlistWelcomeEmail,
   sendPasswordResetEmail,
   consumePasswordResetToken,
 } from "../services/email-service-client";
@@ -53,6 +55,14 @@ import {
   removeUserFromClassByRole,
 } from "../utils/membership.helpers";
 import { performSelfServiceAccountDeletion } from "../services/personal-data";
+import {
+  WAITLIST_POSITION_OFFSET,
+  calculateTieredBoostPoints,
+  canAwardReferral,
+  generateReferralCode,
+  getDisplayPosition,
+  sanitizeReferralCode,
+} from "../utils/waitlist";
 
 export const Mutation = {
   async createClass(_: any, { input }: any, ctx: Ctx) {
@@ -868,13 +878,20 @@ export const Mutation = {
       return { success: false, message: "Please enter a valid email address." };
     }
 
+    const name = input?.name ? String(input.name).slice(0, 80).trim() : undefined;
+    const role = input?.role ? String(input.role).slice(0, 40).trim() : undefined;
+    const school = input?.school ? String(input.school).slice(0, 80).trim() : undefined;
+    const approximateStudents = input?.approximateStudents
+      ? String(input.approximateStudents).slice(0, 40).trim()
+      : undefined;
+    const inboundReferralCode = sanitizeReferralCode(input?.referralCode);
+
     const tags = ["waitlist"];
-    if (input?.name) tags.push(`name:${String(input.name).slice(0, 80)}`);
-    if (input?.role) tags.push(`role:${String(input.role).slice(0, 40)}`);
-    if (input?.school) tags.push(`school:${String(input.school).slice(0, 80)}`);
-    if (input?.approximateStudents) {
-      tags.push(`students:${String(input.approximateStudents).slice(0, 40)}`);
-    }
+    if (name) tags.push(`name:${name}`);
+    if (role) tags.push(`role:${role}`);
+    if (school) tags.push(`school:${school}`);
+    if (approximateStudents) tags.push(`students:${approximateStudents}`);
+    if (inboundReferralCode) tags.push(`referral:${inboundReferralCode}`);
 
     if (!isEmailServiceConfigured()) {
       console.warn("[joinWaitlist] Email service not configured");
@@ -882,8 +899,108 @@ export const Mutation = {
     }
 
     try {
+      const existingEntry = await WaitlistEntry.findOne({ email }).exec();
+      let entry = existingEntry;
+
+      if (existingEntry) {
+        existingEntry.name = name;
+        existingEntry.role = role;
+        existingEntry.school = school;
+        existingEntry.approximateStudents = approximateStudents;
+        await existingEntry.save();
+      } else {
+        const top = await WaitlistEntry.findOne({})
+          .sort({ signupOrder: -1 })
+          .select("signupOrder")
+          .lean()
+          .exec();
+        const nextOrder = (top?.signupOrder ?? 0) + 1;
+
+        let referralCode = "";
+        for (let i = 0; i < 6; i += 1) {
+          const candidate = generateReferralCode();
+          const clash = await WaitlistEntry.exists({ referralCode: candidate });
+          if (!clash) {
+            referralCode = candidate;
+            break;
+          }
+        }
+        if (!referralCode) {
+          throw new Error("Could not allocate referral code");
+        }
+
+        let referredByCode: string | null = null;
+        const inviter = inboundReferralCode
+          ? await WaitlistEntry.findOne({ referralCode: inboundReferralCode }).exec()
+          : null;
+        const shouldAward = canAwardReferral({
+          isExistingSignup: false,
+          inviterEmail: inviter?.email,
+          signupEmail: email,
+        });
+        if (shouldAward && inviter) {
+          referredByCode = inviter.referralCode;
+          inviter.successfulReferrals += 1;
+          inviter.boostPoints = calculateTieredBoostPoints(inviter.successfulReferrals);
+          await inviter.save();
+        }
+
+        entry = await WaitlistEntry.create({
+          email,
+          name,
+          role,
+          school,
+          approximateStudents,
+          signupOrder: nextOrder,
+          referralCode,
+          referredByCode,
+          successfulReferrals: 0,
+          boostPoints: 0,
+        });
+      }
+
       await subscribeMailingList({ email, tags });
-      return { success: true, message: "You are on the list." };
+      const rankingRows = await WaitlistEntry.find({})
+        .select("email signupOrder boostPoints createdAt")
+        .lean()
+        .exec();
+      const displayPosition = getDisplayPosition({
+        entries: rankingRows,
+        email,
+        positionOffset: WAITLIST_POSITION_OFFSET,
+      });
+
+      const appBaseUrl = (env.LANDING_PAGE_URL || env.FRONTEND_URL || "").replace(/\/$/, "");
+      const referralLink =
+        appBaseUrl && entry?.referralCode
+          ? `${appBaseUrl}/waitlist?ref=${entry.referralCode}`
+          : null;
+      const progressLink =
+        appBaseUrl && entry?.referralCode
+          ? `${appBaseUrl}/waitlist/progress?ref=${entry.referralCode}`
+          : null;
+
+      if (!existingEntry && referralLink && progressLink && displayPosition) {
+        sendWaitlistWelcomeEmail({
+          email,
+          name,
+          displayPosition,
+          referralLink,
+          progressLink,
+        }).catch((emailErr) => {
+          console.error("[joinWaitlist] welcome email failed", emailErr);
+        });
+      }
+
+      return {
+        success: true,
+        message: existingEntry ? "You are already on the list." : "You are on the list.",
+        referralCode: entry?.referralCode ?? null,
+        referralLink,
+        successfulReferrals: entry?.successfulReferrals ?? 0,
+        boostPoints: entry?.boostPoints ?? 0,
+        displayPosition,
+      };
     } catch (err) {
       console.error("[joinWaitlist]", err);
       return { success: false, message: "Could not complete signup. Please try again later." };

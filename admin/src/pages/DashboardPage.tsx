@@ -1,5 +1,5 @@
 import { useQuery } from '@apollo/client'
-import { GET_ADMIN_DASHBOARD_STATS, GET_ADMIN_SUBSCRIPTION_STATS, ADMIN_GET_USERS, ADMIN_GET_CLASSES, ADMIN_GET_AUDIT_LOGS } from '@/graphql/queries'
+import { GET_ADMIN_DASHBOARD_STATS, GET_ADMIN_SUBSCRIPTION_STATS, ADMIN_GET_USERS, ADMIN_GET_CLASSES, ADMIN_GET_AUDIT_LOGS, ADMIN_GET_WAITLIST_ENTRIES } from '@/graphql/queries'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -15,6 +15,7 @@ import {
   Clock,
   CreditCard,
   Crown,
+  Trophy,
 } from 'lucide-react'
 
 interface StatCardProps {
@@ -75,11 +76,17 @@ export function DashboardPage() {
     fetchPolicy: 'network-only',
   })
 
+  const { data: waitlistData, loading: waitlistLoading } = useQuery(ADMIN_GET_WAITLIST_ENTRIES, {
+    variables: { limit: 5 },
+    fetchPolicy: 'network-only',
+  })
+
   const stats = statsData?.adminDashboardStats
   const subscriptionStats = subscriptionData?.adminSubscriptionStats
   const recentUsers = usersData?.adminUsers?.nodes || []
   const recentClasses = classesData?.adminClasses || []
   const auditLogs = auditData?.adminAuditLogs?.nodes || []
+  const waitlistRows = waitlistData?.adminWaitlistEntries?.nodes || []
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -190,6 +197,31 @@ export function DashboardPage() {
           value={stats?.totalBetaCodes ?? 0}
           description={`${stats?.activeBetaCodes ?? 0} active, ${stats?.totalBetaCodeUses ?? 0} uses`}
           icon={Key}
+          loading={statsLoading}
+        />
+      </div>
+
+      {/* Waitlist Stats Grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <StatCard
+          title="Waitlist Signups"
+          value={stats?.totalWaitlistSignups ?? 0}
+          description="Total waitlist entries"
+          icon={Users}
+          loading={statsLoading}
+        />
+        <StatCard
+          title="Referral Conversions"
+          value={stats?.totalWaitlistReferrals ?? 0}
+          description="Successful referral signups"
+          icon={TrendingUp}
+          loading={statsLoading}
+        />
+        <StatCard
+          title="Top Boost Points"
+          value={stats?.topWaitlistBoostPoints ?? 0}
+          description="Highest referral boost earned"
+          icon={Trophy}
           loading={statsLoading}
         />
       </div>
@@ -343,6 +375,42 @@ export function DashboardPage() {
                       <Clock className="h-3 w-3" />
                       {formatDate(log.createdAt)}
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Waitlist Leaders */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="h-5 w-5" />
+              Waitlist Leaders
+            </CardTitle>
+            <CardDescription>
+              Top recent waitlist entries and referral progress
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {waitlistLoading ? (
+              <div className="text-center py-4 text-muted-foreground">Loading...</div>
+            ) : waitlistRows.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">No waitlist entries yet</div>
+            ) : (
+              <div className="space-y-3">
+                {waitlistRows.map((row: any) => (
+                  <div key={row.id} className="flex items-center justify-between">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">{row.email}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        Pos #{row.displayPosition} • {row.successfulReferrals} referrals • +{row.boostPoints} boost
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="ml-2">
+                      {row.referralCode}
+                    </Badge>
                   </div>
                 ))}
               </div>
