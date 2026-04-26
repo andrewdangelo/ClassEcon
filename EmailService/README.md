@@ -41,7 +41,7 @@ A production-grade email microservice with GraphQL API, Resend integration, Mong
 - Node.js 18+
 - pnpm
 - MongoDB (local or Atlas)
-- Resend account (free tier works)
+- Outbound mail: **Resend** API key and/or **SMTP** (including [Google Workspace SMTP](../docs/guides/GOOGLE_WORKSPACE_SMTP.md) — `smtp.gmail.com` + app password, or IP-based relay via `smtp-relay.gmail.com`)
 
 ### Local Development
 
@@ -80,7 +80,8 @@ pnpm worker         # Worker process
 | `PORT` | Yes | API server port (default: 4000) |
 | `MONGODB_URI` | Yes | MongoDB connection string |
 | `MONGODB_DB_NAME` | No | Database name (default: email_service) |
-| `RESEND_API_KEY` | Yes | Resend API key |
+| `RESEND_API_KEY` | One of mail backends | Resend API key (omit if using SMTP only) |
+| `SMTP_HOST` / `SMTP_*` | One of mail backends | SMTP (e.g. Google Workspace); see [.env.example](.env.example) and [Google Workspace SMTP](../docs/guides/GOOGLE_WORKSPACE_SMTP.md) |
 | `FROM_EMAIL` | Yes | Sender email address |
 | `APP_URL` | Yes | Frontend application URL |
 | `ADMIN_TOKEN` | Yes | Admin authentication token (32+ chars) |

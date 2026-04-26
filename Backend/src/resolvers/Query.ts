@@ -20,6 +20,7 @@ import {
   JobApplication,
   Employment,
   Fine,
+  WaitlistEntry,
 } from "../models";
 import { Role } from "../utils/enums";
 import {
@@ -33,6 +34,12 @@ import {
 } from "./helpers";
 import { buildPersonalDataExport } from "../services/personal-data";
 import { Types } from "mongoose";
+import { env } from "../config";
+import {
+  WAITLIST_POSITION_OFFSET,
+  getDisplayPosition,
+  sanitizeReferralCode,
+} from "../utils/waitlist";
 
 export const Query = {
   classes: (
@@ -52,6 +59,72 @@ export const Query = {
     if (id) return ClassModel.findById(id).lean().exec();
     if (slug) return ClassModel.findOne({ slug }).lean().exec();
     return null;
+  },
+
+  waitlistProgress: async (
+    _: any,
+    { email, referralCode }: { email: string; referralCode: string }
+  ) => {
+    const normalizedEmail = String(email || "")
+      .trim()
+      .toLowerCase();
+    const normalizedCode = sanitizeReferralCode(referralCode);
+
+    if (!normalizedEmail || !normalizedCode) {
+      return {
+        success: false,
+        message: "Please enter a valid email and referral code.",
+        referralCode: null,
+        referralLink: null,
+        successfulReferrals: null,
+        boostPoints: null,
+        displayPosition: null,
+      };
+    }
+
+    const entry = await WaitlistEntry.findOne({
+      email: normalizedEmail,
+      referralCode: normalizedCode,
+    })
+      .lean()
+      .exec();
+
+    if (!entry) {
+      return {
+        success: false,
+        message: "No waitlist profile found for that email and referral code.",
+        referralCode: null,
+        referralLink: null,
+        successfulReferrals: null,
+        boostPoints: null,
+        displayPosition: null,
+      };
+    }
+
+    const rankingRows = await WaitlistEntry.find({})
+      .select("email signupOrder boostPoints createdAt")
+      .lean()
+      .exec();
+    const displayPosition = getDisplayPosition({
+      entries: rankingRows,
+      email: entry.email,
+      positionOffset: WAITLIST_POSITION_OFFSET,
+    });
+
+    const appBaseUrl = (env.LANDING_PAGE_URL || env.FRONTEND_URL || "").replace(/\/$/, "");
+    const referralLink = appBaseUrl
+      ? `${appBaseUrl}/waitlist?ref=${entry.referralCode}`
+      : null;
+
+    return {
+      success: true,
+      message: "Progress loaded.",
+      referralCode: entry.referralCode,
+      referralLink,
+      successfulReferrals: entry.successfulReferrals,
+      boostPoints: entry.boostPoints,
+      displayPosition,
+    };
   },
 
   membershipsByClass: async (_: any, { classId, role }: any, ctx: any) => {

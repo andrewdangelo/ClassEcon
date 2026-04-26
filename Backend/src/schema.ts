@@ -141,6 +141,16 @@ export const typeDefs = [
       displayPosition: Int
     }
 
+    type WaitlistProgressResult {
+      success: Boolean!
+      message: String
+      referralCode: String
+      referralLink: String
+      successfulReferrals: Int
+      boostPoints: Int
+      displayPosition: Int
+    }
+
     input JoinWaitlistInput {
       email: String!
       name: String
@@ -757,6 +767,7 @@ export const typeDefs = [
       # Notifications
       notifications(userId: ID, limit: Int = 50, unreadOnly: Boolean = false): [Notification!]!
       unreadNotificationCount: Int!
+      waitlistProgress(email: String!, referralCode: String!): WaitlistProgressResult!
     }
 
     extend type Query {

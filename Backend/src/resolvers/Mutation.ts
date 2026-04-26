@@ -43,6 +43,7 @@ import {
   sendEmail2FA,
   verifyEmail2FA,
   subscribeMailingList,
+  sendWaitlistWelcomeEmail,
   sendPasswordResetEmail,
   consumePasswordResetToken,
 } from "../services/email-service-client";
@@ -974,6 +975,22 @@ export const Mutation = {
         appBaseUrl && entry?.referralCode
           ? `${appBaseUrl}/waitlist?ref=${entry.referralCode}`
           : null;
+      const progressLink =
+        appBaseUrl && entry?.referralCode
+          ? `${appBaseUrl}/waitlist/progress?ref=${entry.referralCode}`
+          : null;
+
+      if (!existingEntry && referralLink && progressLink && displayPosition) {
+        sendWaitlistWelcomeEmail({
+          email,
+          name,
+          displayPosition,
+          referralLink,
+          progressLink,
+        }).catch((emailErr) => {
+          console.error("[joinWaitlist] welcome email failed", emailErr);
+        });
+      }
 
       return {
         success: true,
