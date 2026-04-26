@@ -15,14 +15,8 @@ const envSchema = z
     MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
     MONGODB_DB_NAME: z.string().default('email_service'),
 
-    /** auto: use SMTP if SMTP_HOST set, else Resend if RESEND_API_KEY set */
-    EMAIL_TRANSPORT: z.enum(['auto', 'smtp', 'resend']).default('auto'),
-
-    // Resend (optional if using SMTP)
-    RESEND_API_KEY: z
-      .string()
-      .optional()
-      .transform((s) => (s && s.trim() ? s.trim() : undefined)),
+    /** SMTP is the only supported transport currently. */
+    EMAIL_TRANSPORT: z.enum(['smtp']).default('smtp'),
 
     // SMTP (optional if using Resend)
     SMTP_HOST: z
@@ -85,35 +79,12 @@ const envSchema = z
     ALLOWED_REDIRECT_ORIGINS: z.string().default(''),
   })
   .superRefine((data, ctx) => {
-    const mode = data.EMAIL_TRANSPORT;
-    const hasSmtp = Boolean(data.SMTP_HOST);
-    const hasResend = Boolean(data.RESEND_API_KEY);
-
-    if (mode === 'auto') {
-      if (!hasSmtp && !hasResend) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message:
-            'Set SMTP_HOST for SMTP and/or RESEND_API_KEY for Resend (EMAIL_TRANSPORT=auto requires at least one).',
-          path: ['EMAIL_TRANSPORT'],
-        });
-      }
-    } else if (mode === 'smtp') {
-      if (!hasSmtp) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'SMTP_HOST is required when EMAIL_TRANSPORT=smtp',
-          path: ['SMTP_HOST'],
-        });
-      }
-    } else if (mode === 'resend') {
-      if (!hasResend) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'RESEND_API_KEY is required when EMAIL_TRANSPORT=resend',
-          path: ['RESEND_API_KEY'],
-        });
-      }
+    if (!data.SMTP_HOST) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'SMTP_HOST is required when EMAIL_TRANSPORT=smtp',
+        path: ['SMTP_HOST'],
+      });
     }
   });
 
@@ -136,13 +107,8 @@ export const env = parseEnv();
 /**
  * Resolved outbound transport. With EMAIL_TRANSPORT=auto, SMTP wins when SMTP_HOST is set.
  */
-export const getMailTransport = (): 'smtp' | 'resend' => {
-  const mode = env.EMAIL_TRANSPORT;
-  if (mode === 'smtp') return 'smtp';
-  if (mode === 'resend') return 'resend';
-  if (env.SMTP_HOST) return 'smtp';
-  if (env.RESEND_API_KEY) return 'resend';
-  throw new Error('No mail transport configured (SMTP_HOST or RESEND_API_KEY)');
+export const getMailTransport = (): 'smtp' => {
+  return 'smtp';
 };
 
 // Helper to get allowed redirect origins as array

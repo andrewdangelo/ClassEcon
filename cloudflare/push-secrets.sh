@@ -172,8 +172,7 @@ push_email() {
   put "$w" WEBHOOK_SECRET "$EMAIL_WEBHOOK_SECRET"
   put "$w" UNSUBSCRIBE_HMAC_SECRET "$UNSUBSCRIBE_HMAC_SECRET"
   local has_smtp_host="0"
-  local has_resend_key="0"
-  local requested_transport="${EMAIL_TRANSPORT:-auto}"
+  local requested_transport="${EMAIL_TRANSPORT:-smtp}"
 
   if [[ -n "${SMTP_HOST:-}" && "${SMTP_HOST}" != *REPLACE* ]]; then
     has_smtp_host="1"
@@ -186,28 +185,10 @@ push_email() {
     put "$w" SMTP_PASS "${SMTP_PASS:-}"
   fi
 
-  if [[ -n "${RESEND_API_KEY:-}" && "${RESEND_API_KEY}" != *REPLACE* ]]; then
-    has_resend_key="1"
-    put "$w" RESEND_API_KEY "$RESEND_API_KEY"
+  if [[ "$has_smtp_host" == "0" ]]; then
+    echo "  WARN $w::SMTP_HOST not configured; email delivery will fail"
   fi
-
-  # Keep the worker bootable for smoke tests when neither SMTP nor Resend
-  # are configured in the bundle.
-  if [[ "$has_smtp_host" == "0" && "$has_resend_key" == "0" ]]; then
-    put "$w" RESEND_API_KEY "re_smoketest_placeholder_not_for_sending"
-    requested_transport="resend"
-  fi
-
-  # If transport is placeholder/empty, infer from configured credentials.
-  if [[ -z "$requested_transport" || "$requested_transport" == *REPLACE* ]]; then
-    if [[ "$has_smtp_host" == "1" ]]; then
-      requested_transport="smtp"
-    elif [[ "$has_resend_key" == "1" ]]; then
-      requested_transport="resend"
-    else
-      requested_transport="resend"
-    fi
-  fi
+  requested_transport="smtp"
 
   put "$w" EMAIL_TRANSPORT "$requested_transport"
   put "$w" FROM_EMAIL "$FROM_EMAIL"

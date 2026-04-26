@@ -29,7 +29,7 @@ export class EmailServiceContainer extends Container<Env> {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const container = getContainer(env.EMAIL_CONTAINER, "singleton");
+    const container = getContainer(env.EMAIL_CONTAINER, "singleton-v2");
     return container.fetch(request);
   },
 } satisfies ExportedHandler<Env>;

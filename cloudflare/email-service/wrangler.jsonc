@@ -36,7 +36,7 @@
         {
           "class_name": "EmailServiceContainer",
           "image": "../../EmailService/Dockerfile",
-          "max_instances": 1,
+          "max_instances": 2,
           "instance_type": "basic"
         }
       ],

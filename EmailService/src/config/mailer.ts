@@ -1,20 +1,14 @@
 /**
- * Unified outbound email: SMTP or Resend based on EMAIL_TRANSPORT / env.
+ * Unified outbound email via SMTP.
  */
 
-import { getMailTransport } from './env';
-import { sendViaResend } from './resend';
 import { sendViaSmtp } from './smtp';
 import type { SendEmailParams, SendEmailResult } from './emailTypes';
 
 export type { SendEmailParams, SendEmailResult } from './emailTypes';
 
 export const sendEmail = async (params: SendEmailParams): Promise<SendEmailResult> => {
-  const transport = getMailTransport();
-  if (transport === 'smtp') {
-    return sendViaSmtp(params);
-  }
-  return sendViaResend(params);
+  return sendViaSmtp(params);
 };
 
 export const sendBatchEmails = async (

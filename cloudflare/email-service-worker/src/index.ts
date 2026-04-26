@@ -36,7 +36,7 @@ export default {
 
   // Cron trigger wakes the worker container every 5 minutes.
   async scheduled(_event: ScheduledEvent, env: Env): Promise<void> {
-    const container = getContainer(env.EMAIL_WORKER_CONTAINER, "singleton");
+    const container = getContainer(env.EMAIL_WORKER_CONTAINER, "singleton-v2");
     await container.start();
   },
 } satisfies ExportedHandler<Env>;
